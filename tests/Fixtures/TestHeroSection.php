@@ -14,6 +14,7 @@ final class TestHeroSection extends Component implements Sectionable
     public function __construct(
         public string $heading = '',
         public string $layout = 'image-right',
+        public ?string $photo = null,
     ) {}
 
     public static function schema(): Schema
@@ -23,7 +24,8 @@ final class TestHeroSection extends Component implements Sectionable
             ->select('layout', label: 'Layout', options: [
                 'image-left' => 'Image on left',
                 'image-right' => 'Image on right',
-            ])->mapsToClass(fn (string $value) => $value === 'image-left' ? 'flex-row-reverse' : 'flex-row');
+            ])->mapsToClass(fn (string $value) => $value === 'image-left' ? 'flex-row-reverse' : 'flex-row')
+            ->image('photo', label: 'Photo');
     }
 
     public function with(): array

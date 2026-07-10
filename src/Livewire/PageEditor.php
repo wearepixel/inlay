@@ -8,6 +8,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 use WearePixel\BladePageBuilder\Actions\PublishPage;
 use WearePixel\BladePageBuilder\Models\Page;
 use WearePixel\BladePageBuilder\Models\PageSection;
@@ -18,12 +20,17 @@ use WearePixel\BladePageBuilder\Support\SectionRenderer;
 
 final class PageEditor extends Component
 {
+    use WithFileUploads;
+
     public Page $page;
 
     public ?int $selectedSectionId = null;
 
     /** @var array<string, mixed> */
     public array $editingProps = [];
+
+    /** @var array<string, mixed> */
+    public array $imageUploads = [];
 
     public function mount(Page $page): void
     {
@@ -89,6 +96,22 @@ final class PageEditor extends Component
 
     public function updatedEditingProps(): void
     {
+        $this->persistEditingProps();
+    }
+
+    public function updatedImageUploads(mixed $value, string $key): void
+    {
+        if (! $value instanceof TemporaryUploadedFile) {
+            return;
+        }
+
+        $this->validate([
+            "imageUploads.{$key}" => ['image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
+        ]);
+
+        $path = $value->store('page-builder', config('blade-page-builder.disk', 'public'));
+
+        $this->editingProps[$key] = $path;
         $this->persistEditingProps();
     }
 

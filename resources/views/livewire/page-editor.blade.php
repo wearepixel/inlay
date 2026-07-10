@@ -6,4 +6,15 @@
             </li>
         @endforeach
     </ul>
+
+    @if ($selectedSchema)
+        <div>
+            @foreach ($selectedSchema->fields() as $field)
+                @include('blade-page-builder::fields.' . $field->type->value, [
+                    'field' => $field,
+                    'modelPath' => "editingProps.{$field->name}",
+                ])
+            @endforeach
+        </div>
+    @endif
 </div>

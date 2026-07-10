@@ -24,7 +24,7 @@ it('adds a section with default props derived from its schema', function () {
     $section = $page->sections()->first();
 
     expect($section->section_type)->toBe('test-hero')
-        ->and($section->props)->toBe(['heading' => '', 'layout' => '']);
+        ->and($section->props)->toBe(['heading' => '', 'layout' => '', 'photo' => '']);
 });
 
 it('persists drag-reordering', function () {
