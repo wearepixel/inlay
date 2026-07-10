@@ -11,6 +11,7 @@ use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use WearePixel\BladePageBuilder\Actions\PublishPage;
+use WearePixel\BladePageBuilder\Actions\RestorePageRevision;
 use WearePixel\BladePageBuilder\Models\Page;
 use WearePixel\BladePageBuilder\Models\PageSection;
 use WearePixel\BladePageBuilder\Schema\FieldType;
@@ -25,6 +26,8 @@ final class PageEditor extends Component
     public Page $page;
 
     public ?int $selectedSectionId = null;
+
+    public bool $showingHistory = false;
 
     /** @var array<string, mixed> */
     public array $editingProps = [];
@@ -121,6 +124,22 @@ final class PageEditor extends Component
         $this->dispatch('page-published');
     }
 
+    public function toggleHistory(): void
+    {
+        $this->showingHistory = ! $this->showingHistory;
+    }
+
+    public function restore(int $revisionId): void
+    {
+        $revision = $this->page->revisions()->findOrFail($revisionId);
+
+        app(RestorePageRevision::class)->execute($revision, auth()->id());
+
+        $this->selectedSectionId = null;
+        $this->editingProps = [];
+        $this->showingHistory = false;
+    }
+
     public function render(): View
     {
         return view('blade-page-builder::livewire.page-editor', [
@@ -128,6 +147,7 @@ final class PageEditor extends Component
             'availableSections' => app(SectionRegistry::class)->slugs(),
             'selectedSchema' => $this->resolveSelectedSchema(),
             'previewHtml' => $this->renderPreview(),
+            'revisions' => $this->page->revisions()->get(),
         ]);
     }
 

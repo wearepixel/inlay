@@ -46,6 +46,23 @@
             class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
             Publish
         </button>
+
+        <button type="button" wire:click="toggleHistory" class="w-full text-sm text-gray-600 underline">
+            Version history
+        </button>
+
+        @if ($showingHistory)
+            <ul class="space-y-2">
+                @foreach ($revisions as $revision)
+                    <li class="flex items-center justify-between rounded-md border border-gray-200 p-2 text-sm">
+                        <span>{{ $revision->label ?? $revision->created_at->toDayDateTimeString() }}</span>
+                        <button type="button" wire:click="restore({{ $revision->id }})" class="text-blue-600">
+                            Restore
+                        </button>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
     </div>
 
     <div class="col-span-1">
