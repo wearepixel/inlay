@@ -56,3 +56,10 @@ class HeroSplit extends \Illuminate\View\Component implements \WearePixel\BladeP
 ```blade
 <x-page-builder::render :page="$page" />
 ```
+
+## Security note: `richtext` and `link` fields
+
+Both field types carry content supplied by whoever has access to the page editor, and both end up in your section templates' markup.
+
+- **`link`**: the package restricts the `url` sub-value to `http://`, `https://`, `mailto:`, and relative URLs, rejecting other schemes (e.g. `javascript:`) before the value is ever persisted. You can render it into an `href` attribute without adding your own scheme check.
+- **`richtext`**: the package does **not** sanitize this field's HTML. If your section template renders it with `{!! !!}` (required to preserve formatting), any markup an editor enters is output as-is. This is safe only if you trust everyone with editor access; if you don't, sanitize the value yourself (e.g. with an HTML purifier) before rendering it raw.
