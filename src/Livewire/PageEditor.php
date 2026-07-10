@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WearePixel\BladePageBuilder\Livewire;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use WearePixel\BladePageBuilder\Actions\PublishPage;
@@ -34,11 +35,13 @@ final class PageEditor extends Component
      */
     public function updateOrder(array $orderedIds): void
     {
-        foreach ($orderedIds as $index => $id) {
-            PageSection::whereKey($id)
-                ->where('page_id', $this->page->id)
-                ->update(['order' => $index]);
-        }
+        DB::transaction(function () use ($orderedIds) {
+            foreach ($orderedIds as $index => $id) {
+                PageSection::whereKey($id)
+                    ->where('page_id', $this->page->id)
+                    ->update(['order' => $index]);
+            }
+        });
     }
 
     public function addSection(string $slug): void
