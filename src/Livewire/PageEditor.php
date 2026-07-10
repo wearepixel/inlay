@@ -79,8 +79,10 @@ final class PageEditor extends Component
             ->where('page_id', $this->page->id)
             ->firstOrFail();
 
+        $schema = app(SectionRegistry::class)->resolve($section->section_type)::schema();
+
         $this->selectedSectionId = $sectionId;
-        $this->editingProps = $section->props ?? [];
+        $this->editingProps = $this->filterPropsAgainstSchema($section->props ?? [], $schema);
     }
 
     public function addRepeaterItem(string $fieldName): void
@@ -186,8 +188,53 @@ final class PageEditor extends Component
             return;
         }
 
-        PageSection::whereKey($this->selectedSectionId)
+        $section = PageSection::whereKey($this->selectedSectionId)
             ->where('page_id', $this->page->id)
-            ->update(['props' => $this->editingProps]);
+            ->first();
+
+        if (! $section) {
+            return;
+        }
+
+        $schema = app(SectionRegistry::class)->resolve($section->section_type)::schema();
+
+        $this->editingProps = $this->filterPropsAgainstSchema($this->editingProps, $schema);
+
+        $section->update(['props' => $this->editingProps]);
+    }
+
+    /**
+     * Livewire public properties are settable by the client for any nested key,
+     * not just the ones rendered by the schema-driven form. Drop anything that
+     * isn't a declared field before it reaches storage or the section renderer.
+     *
+     * @param  array<string, mixed>  $props
+     * @return array<string, mixed>
+     */
+    private function filterPropsAgainstSchema(array $props, Schema $schema): array
+    {
+        $filtered = [];
+
+        foreach ($schema->fields() as $field) {
+            if (! array_key_exists($field->name, $props)) {
+                continue;
+            }
+
+            $value = $props[$field->name];
+            $itemSchema = $field->itemSchema;
+
+            $filtered[$field->name] = match (true) {
+                $field->type === FieldType::Repeater && $itemSchema instanceof Schema => is_array($value)
+                    ? array_values(array_map(
+                        fn (mixed $item): array => $this->filterPropsAgainstSchema(is_array($item) ? $item : [], $itemSchema),
+                        $value,
+                    ))
+                    : [],
+                $field->type === FieldType::Group && $itemSchema instanceof Schema => $this->filterPropsAgainstSchema(is_array($value) ? $value : [], $itemSchema),
+                default => $value,
+            };
+        }
+
+        return $filtered;
     }
 }
