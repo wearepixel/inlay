@@ -6,10 +6,12 @@ use Livewire\Livewire;
 use WearePixel\BladePageBuilder\Livewire\PageEditor;
 use WearePixel\BladePageBuilder\Models\Page;
 use WearePixel\BladePageBuilder\Tests\Fixtures\TestFaqSection;
+use WearePixel\BladePageBuilder\Tests\Fixtures\TestGroupSection;
 
 beforeEach(function () {
     config(['blade-page-builder.sections' => [
         'test-faq' => TestFaqSection::class,
+        'test-group' => TestGroupSection::class,
     ]]);
 });
 
@@ -31,4 +33,17 @@ it('adds and removes repeater items, persisting each edit', function () {
     $test->call('removeRepeaterItem', 'items', 0)->assertOk();
 
     expect($section->fresh()->props['items'])->toBe([]);
+});
+
+it('defaults a Group field to an array, not an empty string, when a section is added', function () {
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->call('addSection', 'test-group')
+        ->assertOk();
+
+    $section = $page->sections()->first();
+
+    expect($section->section_type)->toBe('test-group')
+        ->and($section->props)->toBe(['author' => []]);
 });
