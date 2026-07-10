@@ -28,6 +28,8 @@ abstract class TestCase extends Orchestra
             'database' => ':memory:',
             'prefix' => '',
         ]);
+
+        $app['view']->addLocation(__DIR__.'/Fixtures/views');
     }
 
     protected function defineDatabaseMigrations(): void
