@@ -17,7 +17,7 @@ final class Page extends Model
     ];
 
     protected $attributes = [
-        'status' => 'draft',
+        'status' => PageStatus::Draft->value,
     ];
 
     public function sections(): HasMany
