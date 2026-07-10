@@ -60,7 +60,7 @@ final class PageEditor extends Component
 
         $props = [];
         foreach ($componentClass::schema()->fields() as $field) {
-            $props[$field->name] = $field->type === FieldType::Repeater ? [] : '';
+            $props[$field->name] = in_array($field->type, [FieldType::Repeater, FieldType::Group], true) ? [] : '';
         }
 
         $section = $this->page->sections()->create([
@@ -255,11 +255,29 @@ final class PageEditor extends Component
     {
         $value = is_array($value) ? $value : [];
 
+        $url = is_string($value['url'] ?? null) ? $value['url'] : '';
+
         return [
             'label' => is_string($value['label'] ?? null) ? $value['label'] : '',
-            'url' => is_string($value['url'] ?? null) ? $value['url'] : '',
+            'url' => $this->isAllowedUrlScheme($url) ? $url : '',
             'new_tab' => is_scalar($value['new_tab'] ?? null) ? (bool) $value['new_tab'] : false,
         ];
+    }
+
+    /**
+     * Consuming apps render the Link field's `url` directly into an `href`
+     * attribute. Blade's HTML-attribute escaping neutralises HTML-special
+     * characters but not a dangerous URI scheme, so a value like
+     * `javascript:alert(1)` would otherwise persist and execute on click.
+     * Allow only http(s), mailto, and relative URLs (scheme-less).
+     */
+    private function isAllowedUrlScheme(string $url): bool
+    {
+        if (! str_contains($url, ':')) {
+            return true;
+        }
+
+        return (bool) preg_match('/^(https?|mailto):/i', $url);
     }
 
     /**

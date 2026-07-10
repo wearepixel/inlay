@@ -89,3 +89,40 @@ it('preserves a legitimate Link field value through editingProps', function () {
         'new_tab' => true,
     ]);
 });
+
+it('strips a javascript: URL from a Link field rather than persisting it', function () {
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $section = $page->sections()->create([
+        'section_type' => 'test-cta',
+        'order' => 0,
+        'props' => ['cta' => ['label' => '', 'url' => '', 'new_tab' => false]],
+    ]);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->call('selectSection', $section->id)
+        ->set('editingProps.cta.label', 'Click me')
+        ->set('editingProps.cta.url', 'javascript:alert(1)')
+        ->assertOk();
+
+    expect($section->fresh()->props['cta'])->toBe([
+        'label' => 'Click me',
+        'url' => '',
+        'new_tab' => false,
+    ]);
+});
+
+it('allows a relative URL through a Link field unchanged', function () {
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $section = $page->sections()->create([
+        'section_type' => 'test-cta',
+        'order' => 0,
+        'props' => ['cta' => ['label' => '', 'url' => '', 'new_tab' => false]],
+    ]);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->call('selectSection', $section->id)
+        ->set('editingProps.cta.url', '/about')
+        ->assertOk();
+
+    expect($section->fresh()->props['cta']['url'])->toBe('/about');
+});
