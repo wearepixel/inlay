@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WearePixel\BladePageBuilder\Tests;
 
+use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use WearePixel\BladePageBuilder\BladePageBuilderServiceProvider;
 
@@ -15,13 +16,15 @@ abstract class TestCase extends Orchestra
     protected function getPackageProviders($app): array
     {
         return [
-            \Livewire\LivewireServiceProvider::class,
+            LivewireServiceProvider::class,
             BladePageBuilderServiceProvider::class,
         ];
     }
 
     protected function defineEnvironment($app): void
     {
+        $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
+
         $app['config']->set('database.default', 'testing');
         $app['config']->set('database.connections.testing', [
             'driver' => 'sqlite',

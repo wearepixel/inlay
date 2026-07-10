@@ -6,6 +6,7 @@ namespace WearePixel\BladePageBuilder;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 use WearePixel\BladePageBuilder\Support\SectionRegistry;
 use WearePixel\BladePageBuilder\View\Components\RenderPage;
 
@@ -28,5 +29,7 @@ final class BladePageBuilderServiceProvider extends ServiceProvider
         ], 'blade-page-builder-config');
 
         Blade::component('page-builder::render', RenderPage::class);
+
+        Livewire::addNamespace('page-builder', classNamespace: 'WearePixel\\BladePageBuilder\\Livewire');
     }
 }
