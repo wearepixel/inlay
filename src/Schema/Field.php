@@ -11,7 +11,7 @@ final class Field
     public ?Closure $classResolver = null;
 
     /**
-     * @param array<string, mixed> $options
+     * @param  array<string, mixed>  $options
      */
     public function __construct(
         public readonly string $name,

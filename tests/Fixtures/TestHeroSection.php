@@ -31,7 +31,7 @@ final class TestHeroSection extends Component implements Sectionable
     public function with(): array
     {
         return [
-            'layoutClass' => static::schema()->field('layout')?->resolveClass($this->layout),
+            'layoutClass' => self::schema()->field('layout')?->resolveClass($this->layout),
         ];
     }
 

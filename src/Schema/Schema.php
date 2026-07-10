@@ -16,7 +16,7 @@ final class Schema
 
     public static function make(): self
     {
-        return new self();
+        return new self;
     }
 
     public function text(string $name, string $label): self
@@ -45,7 +45,7 @@ final class Schema
     }
 
     /**
-     * @param array<string, string> $options
+     * @param  array<string, string>  $options
      */
     public function select(string $name, string $label, array $options): self
     {
@@ -93,7 +93,7 @@ final class Schema
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param  array<string, mixed>  $options
      */
     private function addField(string $name, FieldType $type, string $label, array $options = [], ?Schema $itemSchema = null): self
     {

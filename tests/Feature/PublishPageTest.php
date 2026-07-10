@@ -11,7 +11,7 @@ it('snapshots the current sections into a revision and marks the page published'
     $page->sections()->create(['section_type' => 'test-hero', 'order' => 0, 'props' => ['heading' => 'Hi']]);
     $page->sections()->create(['section_type' => 'test-hero', 'order' => 1, 'props' => ['heading' => 'Bye']]);
 
-    $revision = (new PublishPage())->execute($page, createdBy: 7, label: 'Initial publish');
+    $revision = (new PublishPage)->execute($page, createdBy: 7, label: 'Initial publish');
 
     expect($revision->page_id)->toBe($page->id)
         ->and($revision->created_by)->toBe(7)

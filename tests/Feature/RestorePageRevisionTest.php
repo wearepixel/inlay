@@ -10,14 +10,14 @@ it('overwrites live sections from a revision snapshot and creates a new revision
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $page->sections()->create(['section_type' => 'test-hero', 'order' => 0, 'props' => ['heading' => 'Original']]);
 
-    $original = (new PublishPage())->execute($page);
+    $original = (new PublishPage)->execute($page);
 
     $page->sections()->first()->update(['props' => ['heading' => 'Edited']]);
-    (new PublishPage())->execute($page);
+    (new PublishPage)->execute($page);
 
     expect($page->revisions()->count())->toBe(2);
 
-    $restored = (new RestorePageRevision(new PublishPage()))->execute($original, createdBy: 3);
+    $restored = (new RestorePageRevision(new PublishPage))->execute($original, createdBy: 3);
 
     expect($page->sections()->first()->props)->toBe(['heading' => 'Original'])
         ->and($page->revisions()->count())->toBe(3)

@@ -10,7 +10,7 @@ use WearePixel\BladePageBuilder\Contracts\Sectionable;
 final class SectionRegistry
 {
     /**
-     * @param array<string, class-string<Sectionable>> $sections
+     * @param  array<string, class-string<Sectionable>>  $sections
      */
     public function __construct(private readonly array $sections) {}
 

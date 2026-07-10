@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace WearePixel\BladePageBuilder\Support;
 
+use Illuminate\View\Component;
+
 final class SectionRenderer
 {
     public function __construct(private readonly SectionRegistry $registry) {}
 
     /**
-     * @param iterable<array{section_type: string, props: array<string, mixed>}> $sections
+     * @param  iterable<array{section_type: string, props: array<string, mixed>}>  $sections
      */
     public function render(iterable $sections): string
     {
@@ -18,7 +20,7 @@ final class SectionRenderer
         foreach ($sections as $section) {
             $componentClass = $this->registry->resolve($section['section_type']);
 
-            /** @var \Illuminate\View\Component $component */
+            /** @var Component $component */
             $component = new $componentClass(...$section['props']);
 
             $data = array_merge(

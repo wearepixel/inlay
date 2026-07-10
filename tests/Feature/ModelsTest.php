@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use WearePixel\BladePageBuilder\Enums\PageStatus;
 use WearePixel\BladePageBuilder\Models\Page;
-use WearePixel\BladePageBuilder\Models\PageRevision;
-use WearePixel\BladePageBuilder\Models\PageSection;
 
 it('relates pages to sections and revisions, and casts props/snapshot as arrays', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
