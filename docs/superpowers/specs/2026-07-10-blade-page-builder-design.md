@@ -3,6 +3,23 @@
 Date: 2026-07-10
 Status: Approved for planning
 
+## Amendment (2026-07-10, post-implementation)
+
+The "Editor stack" decision below cited Livewire 3 apps (nourishd, specifically) as a
+portability target. During implementation, a final-review pass discovered that Livewire
+3.x and 4.x require mutually exclusive component-registration APIs for a namespaced tag
+like `<livewire:page-builder::page-editor>` — v4 only resolves such tags via
+`addNamespace()` (added in v4.0.0-beta.1, absent from the entire 3.x line), while the
+originally-planned `Livewire::component()` call doesn't resolve namespaced tags on v4 at
+all. There is no single registration call that works on both majors.
+
+Decision (human sign-off): ship `wearepixel/blade-page-builder` requiring Livewire `^4.0`
+only. Portability to Livewire-3 apps (nourishd included) is a known, accepted limitation
+rather than a v1 requirement — retrofitting into a Livewire-3 app is deferred to
+sub-project 3 (Retrofit) and would need either a version-conditional registration shim or
+a flat (non-namespaced) component tag name, revisited if that retrofit work materializes
+against an app that hasn't upgraded to Livewire 4 by then.
+
 ## Context
 
 Pixel wants to offer clients a drag-and-drop page building experience comparable to
