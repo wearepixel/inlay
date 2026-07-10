@@ -206,7 +206,11 @@ final class PageEditor extends Component
     /**
      * Livewire public properties are settable by the client for any nested key,
      * not just the ones rendered by the schema-driven form. Drop anything that
-     * isn't a declared field before it reaches storage or the section renderer.
+     * isn't a declared field, and coerce each declared field's value to the
+     * shape its FieldType expects, before it reaches storage or the section
+     * renderer — a declared scalar field (e.g. a Text field) can still be set
+     * to an array via the same wire:model mechanism, which would otherwise
+     * reach the section component constructor and throw a fatal TypeError.
      *
      * @param  array<string, mixed>  $props
      * @return array<string, mixed>
@@ -231,10 +235,50 @@ final class PageEditor extends Component
                     ))
                     : [],
                 $field->type === FieldType::Group && $itemSchema instanceof Schema => $this->filterPropsAgainstSchema(is_array($value) ? $value : [], $itemSchema),
-                default => $value,
+                $field->type === FieldType::Link => $this->filterLinkValue($value),
+                default => $this->filterScalarValue($value),
             };
         }
 
         return $filtered;
+    }
+
+    /**
+     * The Link field's Blade partial binds `label`, `url`, and `new_tab` as
+     * separate sub-paths (resources/views/fields/link.blade.php), so its
+     * value is a structured array rather than a plain scalar. Validate its
+     * own sub-keys instead of coercing the whole value to a string.
+     *
+     * @return array{label: string, url: string, new_tab: bool}
+     */
+    private function filterLinkValue(mixed $value): array
+    {
+        $value = is_array($value) ? $value : [];
+
+        return [
+            'label' => is_string($value['label'] ?? null) ? $value['label'] : '',
+            'url' => is_string($value['url'] ?? null) ? $value['url'] : '',
+            'new_tab' => is_scalar($value['new_tab'] ?? null) ? (bool) $value['new_tab'] : false,
+        ];
+    }
+
+    /**
+     * Text, Textarea, Richtext, Image, and Select fields all bind to a single
+     * scalar model path and are consumed as plain `string` section component
+     * constructor parameters. Reject non-scalar values (arrays, objects) that
+     * a client could otherwise inject via wire:model rather than passing them
+     * through unchecked.
+     */
+    private function filterScalarValue(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        return '';
     }
 }
