@@ -2,6 +2,7 @@
 
 Date: 2026-08-02
 Status: Founding manifesto — read before any future architecture, table, route, or service is discussed.
+Revision note: this replaces the first draft of this document, which narrowed the product too far into a marketing-website page builder. The correction below is not cosmetic — it changes the audience, the product category, and the fundamental building block. `docs/product-redirection-plan.md` has been reconciled against it; see that document's reconciliation appendix for exactly what changed as a result.
 
 This document does not describe what the software does. It describes why it should exist at all, and what it must never become. Every future technical decision should be checked against this document, not the other way around.
 
@@ -9,55 +10,76 @@ This document does not describe what the software does. It describes why it shou
 
 ## Why does this project exist?
 
-Every Laravel agency and every serious solo developer eventually hits the same moment: a client, a founder, or a marketer says "can I edit this myself?" — and there is no good answer.
+Every Laravel developer building something real eventually reaches the same moment: a client, a merchandiser, a customer-success team, or a founder needs to change something on a live application — a campaign page, a category's merchandising, a promo banner, an onboarding flow — and there is no good way to let them, without either handing them access to code they shouldn't touch or making a developer the permanent bottleneck for routine changes.
 
 The honest options today are all compromises:
 
-- **WordPress** gives you a real visual editor, at the cost of your entire stack. You stop writing Blade and start writing PHP inside someone else's plugin architecture, inheriting a second ecosystem's security surface, update cadence, and hosting requirements, just to let someone change a hero heading.
-- **Statamic** is the closest relative in spirit — Laravel-native, code-first, genuinely well built — but it wants to _be_ your application. Adopting it usually means modeling your content inside Statamic's collections and blueprints, not bolting visual editing onto domain models and components you've already written.
-- **Filament** and **Nova** solve a different problem beautifully: CRUD over your Eloquent models for your internal team. Neither has a concept of a visual canvas, because neither is trying to. Handing a marketer a table of fields is not the same as letting them arrange a page.
-- **Craft CMS** shares WordPress's category problem with better craftsmanship — it's still not Laravel, and it still asks you to model your content inside its system rather than yours.
-- **Builder.io** solves the visual part well, but it is a hosted, framework-agnostic SaaS. The integration model centers Builder's cloud, not your Laravel application, and the content it produces is not something you own the way you own a database table.
-- **Gutenberg** is WordPress's own answer to "make it more like a page builder," and developers have spent a decade fighting the markup it produces and the JavaScript-heavy editing model it imposes on a PHP application.
-- **Rolling your own** is what almost everyone actually does, and it is the real competitor this project has to beat. Every agency converges on the same shape eventually — a slug-to-component registry and a JSON blob of props — because it's the obviously correct architecture. But it's built once, under deadline, for one client, and it never gets the polish, the drag-and-drop, the revision history, or the security hardening that a real product deserves, because it was never treated as a product. It's built to survive one project, not to be trusted with the next fifty.
+- **WordPress** gives you a real visual editor, at the cost of your entire application. You don't bolt WordPress onto a custom Laravel ecommerce platform — you'd be running two separate applications, bridging data between them, for the sake of letting someone edit a landing page.
+- **Statamic** is the closest relative in spirit — Laravel-native, code-first, genuinely well built — but it is a platform for _building the application_. Adopting it means modeling your content inside Statamic's collections and blueprints from the start, not layering safe visual composition onto a custom Laravel application that already exists, with its own domain models, its own frontend, and its own way of doing things.
+- **Filament** and **Nova** solve a different, real problem beautifully: full CRUD administration over Eloquent models, for the people who run the business. Neither has, or is trying to have, a concept of a visual canvas for arranging a customer-facing experience. Handing a merchandiser a form to edit a `products` table row is not the same as letting them arrange a campaign landing page built from a `Hero`, a `ProductGrid`, and a `CountdownBanner` that a developer already wrote.
+- **Craft CMS** shares WordPress's category problem with better craftsmanship — still not Laravel, still asking a team to model their content inside its own system rather than the one they've already built.
+- **Builder.io** is the closest category match — a genuine visual layer for composing existing components — but it's a hosted, JS-framework-first SaaS platform. The structure of your content lives in Builder's cloud, not your database, and its component model assumes a React or Vue codebase, not a Laravel application built on Blade and Livewire.
+- **Gutenberg** is WordPress's own attempt at a page-builder-style editor, and it inherits every one of WordPress's category problems, plus a decade of developer frustration with the markup and the editing model it imposes on a PHP application.
+- **Rolling your own** is the real competitor. Almost every serious Laravel team eventually builds some version of a slug-to-component registry with a JSON props column, because it's the obviously correct shape. But it's built once, under deadline, for one project, and it never gets the polish, the guardrails, or the safety a real product deserves — because it was never treated as one. It's built to survive one launch, not to be trusted with the next fifty.
 
-Nobody in the Laravel ecosystem is solving this properly. Not "nobody has tried" — plenty of teams have built their own version of exactly this, this repository's own history included. Nobody has made it _good enough to stop rebuilding_. That is the gap. This project exists to be the version an agency builds once, at the quality of a real product, and never has to build again — for their own team, and eventually, for the entire Laravel ecosystem.
+Nobody in the Laravel ecosystem has made this good enough to stop rebuilding. That is the gap. This project exists to be the version a team builds once, at the quality of a real product, and never has to build again — not just for marketing sites, but for any developer-built frontend experience a non-developer needs to safely compose or configure inside an application that already exists.
 
 ---
 
 ## Who is this for?
 
-**The ideal customer is a Laravel agency or a solo Laravel developer who builds marketing sites, content-driven public pages, or a SaaS product's own marketing surface, and who has already written (or is about to write) real Blade or Livewire components for that content.** They are not looking for a CMS. They are looking to stop being the person who edits the homepage by hand every time someone asks.
+**The relevant boundary is not "marketing website versus application." The relevant boundary is whether a developer wants to expose safe visual composition of components they've already built.** That boundary cuts across public marketing pages, ecommerce merchandising, authenticated account experiences, and configurable regions inside an application screen alike.
 
-- **Solo developers** — yes, strongly. A solo developer doing client work is the person most punished by "can you just change this text" requests arriving forever after launch. This gives them an exit.
-- **Agencies** — yes, this is the primary audience, and it always has been. This is the feature every agency rebuilds per client, worse each time under worse deadlines. One good version, reused across every engagement, is a direct multiplier on margin and on reputation.
-- **SaaS founders** — yes, specifically for the marketing shell around the product: landing pages, pricing, campaign pages. Not for the application itself.
-- **Enterprise teams** — partially. An enterprise team inside a Laravel shop that wants to let its marketing department manage pages, yes. An enterprise team that wants multi-approval governance, translation management, and a headless content API as a platform — not yet, and possibly never; that is a different, heavier product.
-- **Internal applications** — no. Internal tools need forms and tables over business data, not a visual canvas for composing marketing pages. That is Filament's and Nova's job, and they already do it well.
-- **Marketing websites** — yes, unambiguously the core use case. This is a marketing-page tool that happens to be able to live inside any Laravel application, not an application framework that happens to also build pages.
+Concretely, this covers experiences like:
+
+- campaign and landing pages
+- collection and category merchandising for an ecommerce storefront
+- product grids and featured collections backed by real, live application data
+- promotion banners and countdown-driven campaigns
+- buying guides and editorial content
+- store-locator and availability modules
+- forms that submit into the host application's own logic
+- loyalty and rewards content
+- customer-portal surfaces and account dashboards
+- onboarding experiences
+- authenticated content generally
+- any other frontend experience a developer has built and is willing to expose to controlled composition
+
+**The ideal customer is a Laravel developer, team, or agency who has already built (or is building) real Blade or Livewire components for a real application, and wants specific, developer-chosen parts of that application's frontend to be safely composed and configured by someone who isn't a developer** — without giving up ownership of the code, the data, or the frontend they already built.
+
+- **Solo developers** — yes. The person most punished by "can you just change this" requests arriving forever after launch, on a marketing page or inside the app itself.
+- **Agencies** — yes, still the primary audience. This is the feature every agency rebuilds per client, worse each time, and it now extends past the marketing site into every custom application they ship.
+- **SaaS founders** — yes, and no longer only for the marketing shell. A SaaS product's onboarding flow, its account dashboard's configurable widgets, its in-app promotional surfaces — all genuine candidates, alongside the marketing site.
+- **Enterprise teams** — yes, for teams that want to hand specific, bounded frontend composition to a non-developer team (merchandising, content, growth) without handing over arbitrary CRUD access. Not yet for teams that need heavyweight, multi-approval content governance or translation management as a platform.
+- **Internal applications** — a genuine but secondary case. An internal tool's dashboard occasionally benefits from letting an ops team rearrange a set of developer-built widgets — the same underlying capability applies — but this is not the product's center of gravity, and building for it explicitly is not a first-release concern.
+- **Marketing websites** — still a core, obvious use case. Just no longer the _only_ one, and no longer the lens the whole product is designed through.
+
+**This still does not replace Filament or Nova, and it is important to be precise about why.** Filament and Nova exist to give a developer _full, arbitrary CRUD administration_ over their own Eloquent models — the tool of a developer building internal tooling for people who are trusted with the business's raw data. This project exists to give a developer a way to expose a _narrow, pre-approved, visually composable slice_ of their own frontend to someone who should never have arbitrary data access at all. A merchandiser using this product cannot query the database, cannot edit a model they weren't given a field for, and cannot do anything a developer didn't explicitly allow. Filament and Nova are power tools for people who are supposed to have power. This is a safety-railed tool for people who are supposed to have exactly the amount of power a developer chose to give them, and no more. The two are not competitors — a single application might reasonably run both, for different teams, for different reasons.
 
 **Who should not install this:**
 
-- Anyone who wants a headless content API with no admin UI of its own — this is not that, and pretending otherwise would betray the whole point.
-- Anyone who wants a no-code tool that lets a non-developer _invent_ new kinds of content from nothing — this always requires a developer to define what's possible first. If the goal is zero developer involvement, ever, this is the wrong tool.
-- Anyone building a data-heavy internal dashboard — reach for Filament or Nova instead.
+- Anyone who wants a headless content API with no admin UI of its own.
+- Anyone who wants a no-code tool that lets a non-developer _invent_ new frontend capability from nothing — every experience this composes was written by a developer first.
+- Anyone building a general-purpose internal data-administration tool — reach for Filament or Nova.
 - Anyone who needs enterprise content governance (multi-locale workflows, approval chains, compliance audit trails) on day one.
 
 ---
 
 ## What should this product become?
 
-Five years from now, ignoring every current technical limitation: this should be the package a Laravel developer reaches for as reflexively as they reach for Livewire when they need interactivity, or Filament when they need an admin panel. Not "the page builder people settle for" — the page builder people are a little proud to have chosen.
+This is not, first and foremost, a CMS with a page builder attached to it. **It is a visual composition and editing layer for existing Laravel applications.** It may provide CMS-shaped capabilities — pages, routing, drafts, publishing, navigation, media, revisions — but those exist to support developer-built frontend composition, not to define the whole product. A team should never feel like they adopted a CMS. They should feel like they gave specific, chosen parts of their own application a safe way to be rearranged by someone who isn't a developer.
+
+Five years from now, ignoring every current technical limitation: this should be the package a Laravel developer reaches for as reflexively as they reach for Livewire when they need interactivity, or Filament when they need an admin panel — except reached for on projects nobody would call "a CMS site." A custom ecommerce platform, a SaaS product, an internal tool with a configurable dashboard — all plausible places to find it installed, none of them "a website" in the way that would once have implied "you'd use WordPress for that."
 
 If it succeeds, here is what people would say about it:
 
-- "We stopped building this ourselves the day we found it."
-- "It's the only page builder I've used that a developer actually recommended to another developer."
-- "It doesn't feel like WordPress wearing a Laravel costume. It feels like it was always supposed to exist."
-- "Our clients love using it, and our developers don't resent building for it."
+- "We stopped building this ourselves the day we found it — and not just for the marketing site."
+- "It's the only visual-composition tool I've used that didn't feel like smuggling a CMS into a real application."
+- "Our merchandising team updates the homepage collections themselves now. Nobody on engineering has to touch it."
 - "It's the kind of package where you read the source once and just trust it after that."
+- "It doesn't try to be everything. It's really good at the one thing it does."
 
-The reputation to earn is craftsmanship and restraint — the same reputation Livewire earned for making server-driven interactivity feel inevitable, and Filament earned for making admin panels feel like a solved problem. Not the biggest page builder. The one nobody feels the need to replace.
+The reputation to earn is craftsmanship and restraint, in service of a category nobody else has served properly: safe, developer-controlled visual composition _inside_ a real, custom-built Laravel application — not instead of one.
 
 ---
 
@@ -65,65 +87,66 @@ The reputation to earn is craftsmanship and restraint — the same reputation Li
 
 This list matters more than any feature list. Every future decision gets checked against it.
 
-- **It will never allow visual HTML editing.** An editor arranges and fills in components a developer wrote. They never touch markup.
-- **It will never allow arbitrary CSS or class editing.** Presentation is the developer's decision, made once, in code, not remade per-page by whoever is editing content that day.
-- **It will never store generated HTML as canonical content.** The database holds structured, typed, queryable data — component identity and props — never a rendered blob that only means something once interpreted back through a specific version of a specific template.
-- **It will never lock a developer in.** No proprietary content format, no format only this package can read, no dependency that can't be cleanly removed, no data that isn't sitting in the host application's own database in a shape a developer could read with `SELECT *` if they had to.
-- **It will never require a proprietary component format.** A component is a real Blade or Livewire class the developer already knows how to write, test, and reason about — not a DSL, not a schema file in a format invented for this package.
-- **It will never rely on magic.** No behavior a developer can't trace by reading the code. No reflection-based wiring they can't step through, no convention so clever it becomes a mystery six months later.
-- **It will never try to replace code.** It composes what a developer built. It does not generate functionality, business logic, or design decisions on anyone's behalf.
-- **It will never force a specific frontend stack, build tool, or design system on the host application.** The moment it starts dictating how a consuming app builds its frontend, it has stopped being a page builder and started being a framework, which is not what it is for.
-- **It will never become a general-purpose content-type modeling platform.** It solves _page composition_. It is not trying to become Craft or Contentful, with forty field types and an ambition to model every kind of content an application might ever have.
-- **It will never build a plugin or theme marketplace as a business model.** No paid-plugin economy, no walled garden. The value is the craft of the thing itself, not a storefront bolted onto it.
-- **It will never become the place business logic lives.** It records what is on a page. It does not decide how the business works.
+- **It will never allow visual HTML editing.** An editor arranges and configures components a developer wrote. They never touch markup.
+- **It will never allow arbitrary CSS or class editing.** Presentation is the developer's decision, made once, in code.
+- **It will never store generated HTML as canonical content.** The database holds structured, typed, queryable data — component identity, configuration, and placement — never a rendered blob.
+- **It will never lock a developer in.** No proprietary content format, no format only this package can read, no dependency that can't be cleanly removed.
+- **It will never require a proprietary component format.** A component is a real Blade or Livewire class the developer already knows how to write and test.
+- **It will never rely on magic.** No behavior a developer can't trace by reading the code.
+- **It will never try to replace code.** It composes and configures what a developer built. It does not generate functionality, business logic, or design decisions.
+- **It will never let an editor create new business functionality.** Composition is not development. Arranging and configuring existing, developer-approved components is the ceiling.
+- **It will never copy business data into page storage merely to display it.** A selected collection, a filtered product set, a customer's booking availability — the underlying domain data stays owned by the host application's own models, resolved live, never duplicated into the builder's own tables.
+- **It will never force a specific frontend stack, build tool, or design system on the host application.** The moment it starts dictating how a consuming app builds its frontend, it has stopped being a composition layer and started being a framework.
+- **It will never force the host application to reorganise itself around it.** It installs into an application that already exists, on the application's own terms. It never asks a team to remodel their domain, their routing, or their frontend to fit its conventions.
+- **It will never become a general-purpose content-type modeling platform.** It solves _safe composition of developer-built frontend_. It is not trying to become Craft or Contentful.
+- **It will never build a plugin or theme marketplace as a business model.**
+- **It will never become the place business logic lives.** It records what's composed and configured. It does not decide how the business works.
 
 ---
 
 ## Core philosophy
 
-These are not borrowed from another product's values page. They are what falls out of actually trying to solve this problem honestly.
-
-1. **The component is the unit of truth.** Not the page, not a template, not a block library — a real class a developer wrote, tested, and can `git blame`.
-2. **Developers own the code. Editors own the content.** The line between those two never blurs, in either direction.
-3. **An editor can never do more than a developer explicitly allowed.** Every editable field is a deliberate decision, not a default.
-4. **Content stays structured, forever.** Never a blob of markup, never a format that only means something inside this package's own renderer.
-5. **Nothing is invented on anyone's behalf.** The package renders what was built. It does not generate markup, styling, or behavior.
-6. **A constraint is a feature.** A form that limits what's possible produces better content, more reliably, than a canvas that permits everything.
-7. **Your data is yours.** It lives in your migrations, in your database, queryable with the tools you already know.
-8. **Boring is the goal, not the insult.** Publishing, drafts, and revisions should work exactly as a Laravel developer already expects, with zero surprises.
-9. **It should feel like it could have shipped with Laravel.** Same restraint, same conventions, same instinct for convention over configuration.
-10. **An install should look finished, not scaffolded.** The admin is complete on day one — never a bare component the developer is expected to style themselves.
-11. **New power comes from writing a new component, never from a hidden setting.** Capability grows in code, where it can be reviewed, tested, and understood.
-12. **A developer is never trapped.** No format, dependency, or convention that can't be cleanly walked away from.
-13. **Every feature request is measured against one question: does this belong in the developer's own component instead?** Most of the time, the honest answer is yes.
-14. **Trust compounds one boring release at a time.** This runs on infrastructure a client's business depends on. It should never feel experimental.
-15. **A developer should never have to babysit an editor, and an editor should never need to wait on a developer for routine work.** Both of those failures are the same failure, seen from different sides.
-16. **Restraint is where the delight lives.** The calmest interface wins over the most powerful-looking one, every time.
-17. **A revision history is a promise, not a feature.** Nothing an editor does should ever be truly, quietly destructive.
-18. **If it can't be explained in one honest sentence, it isn't ready.**
+1. **The component is the unit of truth.** A real class a developer wrote, tested, and can `git blame` — never a rendered blob.
+2. **Developers define the components, behaviour, and boundaries. Editors compose the experience.** This is the central promise, and every other principle here is a consequence of it.
+3. **An editor can never do more than a developer explicitly allowed.** Every editable field, every placement rule, every constraint is a deliberate decision.
+4. **Content stays structured, forever.** Configuration is data; markup is code. The two never trade places.
+5. **Business data is never duplicated into the builder to display it.** A component resolves what it needs live, from the application it was built for.
+6. **Nothing is invented on anyone's behalf.** The package renders and enforces what was built and defined. It generates nothing.
+7. **A constraint is a feature.** A guardrail that limits what's possible produces safer, more reliable outcomes than a canvas that permits everything — this matters more, not less, once real application functionality is in scope.
+8. **Your data is yours.** It lives in your migrations, in your database, queryable with the tools you already know.
+9. **Boring is the goal, not the insult.** Publishing, drafts, and revisions work exactly as a Laravel developer already expects.
+10. **It should feel like it could have shipped with Laravel.** Same restraint, same conventions, same instinct for convention over configuration.
+11. **An install should look finished, not scaffolded.**
+12. **New power comes from writing a new component or a new constraint, never from a hidden setting.**
+13. **A developer is never trapped.** No format, dependency, or convention that can't be cleanly walked away from.
+14. **It installs into an application. It does not ask the application to reorganise around it.**
+15. **Every feature request is measured against one question: does this belong in the developer's own component or constraint definition instead?** Most of the time, the honest answer is yes.
+16. **Trust compounds one boring release at a time.** This runs on infrastructure a real business depends on, including in places far more sensitive than a marketing page.
+17. **Restraint is where the delight lives.** The calmest interface wins over the most powerful-looking one.
+18. **A revision history is a promise, not a feature.** Nothing an editor does should ever be truly, quietly destructive.
 19. **It earns its place by disappearing into the host application — never the other way around.**
 
 ---
 
 ## The emotional experience
 
-If Statamic feels calm, Laravel feels elegant, Linear feels fast, Ray feels joyful, and Forge feels trustworthy — this should feel **composed**. Both meanings at once: the emotional state of someone who is unhurried and sure of themselves, and the literal act of arranging something with care. That double meaning is not a coincidence; it is the whole point.
+If Statamic feels calm, Laravel feels elegant, Linear feels fast, Ray feels joyful, and Forge feels trustworthy — this should feel **composed**. Both meanings at once: the emotional state of someone unhurried and sure of themselves, and the literal act of arranging something with care. Now that the product's reach extends into real application surfaces — an ecommerce collection page, an authenticated account dashboard — that second meaning matters even more: "composed" is also the opposite of "improvised," which is exactly the risk when a client is arranging something wired into real inventory, real customers, or real bookings.
 
-For a developer, the feeling is **relief** — the quiet exhale of watching a category of chore disappear. Not excitement, not novelty. Relief, the way a good ORM or a well-designed queue system feels: "oh, thank god, I don't have to think about this anymore."
+For a developer, the feeling is **relief** — watching a category of chore disappear, and trusting that it disappeared safely, even on the parts of the application that actually matter.
 
-For an editor, the feeling is **quiet competence** — the confidence of someone handed a small, well-organized toolbox where every tool is exactly where they expect it, rather than a warehouse of possibilities they're afraid to touch. They should never feel like they're operating software. They should feel like they're arranging a page.
+For an editor, the feeling is **quiet competence** — the confidence of someone handed a small, well-organized toolbox where every tool is exactly where they expect it. On an ecommerce collection page, that confidence has to be earned harder than on a marketing page: they should feel just as safe rearranging a `ProductGrid` bound to real inventory as they do editing a heading, because the guardrails around what can be removed, required, or reordered are exactly as considered as the fields themselves.
 
 What that means, concretely, in every surface of the product:
 
-- **Visual design** — unhurried and generous. Real whitespace, not dashboard density. A restrained neutral palette with a single confident accent used only where it means something (draft vs. published, an error, a warning) — never decoration for its own sake.
-- **Interaction design** — every action confirms itself quietly. Saving is a small, unobtrusive state, never a modal demanding acknowledgment. Nothing requires a second guess. Drag-and-drop has real weight and easing behind it — it should feel physically satisfying to drop a section into place, not mechanical.
-- **Typography** — a highly legible, workmanlike interface face, and monospace only where it's telling the truth about something technical (a component handle, a field name) — never a decorative face pretending this is a "creative tool."
-- **Spacing** — closer to a well-set document than a data-dense dashboard. Content is allowed to breathe because the product's job is to help someone think about content, not to cram in controls.
-- **Animation** — minimal, fast, and purposeful. Motion exists to clarify a state change — a section sliding into its new position after a drop — never as decoration, and never so much of it that it starts to feel like it's performing for the user instead of helping them.
-- **Colour** — mostly neutral. Colour is reserved for meaning, not mood — status, warnings, the one accent that says "this is the important action on this screen."
-- **Language** — plain and first-person-friendly. "Publish," not "Deploy content object." Errors explain what to do next, never apologize, never hide behind jargon.
-- **Discoverability** — nothing important is three clicks deep in a settings modal. Adding a section should feel like opening a small, curated shelf, not scrolling an infinite catalogue.
-- **Onboarding** — the first five minutes should feel like the tool already understands the application it was installed into. A sensible default page, a real preview, never an empty screen staring back at a confused new user.
+- **Visual design** — unhurried and generous. Real whitespace, not dashboard density. A restrained neutral palette with a single confident accent used only where it means something — never decoration for its own sake.
+- **Interaction design** — every action confirms itself quietly. Nothing requires a second guess. A locked or required component should read as obviously, calmly non-negotiable — never as a mysterious button that doesn't work.
+- **Typography** — a highly legible, workmanlike interface face, monospace only where it's telling the truth about something technical.
+- **Spacing** — closer to a well-set document than a data-dense dashboard.
+- **Animation** — minimal, fast, and purposeful. Motion clarifies a state change, never performs.
+- **Colour** — mostly neutral. Reserved for meaning: draft vs. published, a warning, a locked or required component, the one confident accent for the primary action on a screen.
+- **Language** — plain and first-person-friendly. "Publish," not "Deploy content object." A locked component says why it's locked, not just that it is.
+- **Discoverability** — nothing important is three clicks deep. Adding a component feels like opening a small, curated shelf — and on a page with real constraints, the shelf itself is already the right size, because components that don't belong there were never offered.
+- **Onboarding** — the first five minutes should feel like the tool already understands the application it was installed into.
 
 Every future UI decision should be checked against one question: does this still feel composed?
 
@@ -131,86 +154,75 @@ Every future UI decision should be checked against one question: does this still
 
 ## What is the fundamental building block?
 
-The architecture work that preceded this document proposed four concepts: Sections, Modules, Layouts, and Templates. Held up against the value placed on conceptual simplicity here, three of those four don't survive scrutiny as _separate_ concepts, and the fourth survives only in a much smaller form.
+**Everything rendered by the builder is fundamentally a Component.** One interface, one registration path, one rendering pipeline. That conclusion survives the broadened vision — if anything, it's stronger now: an ecommerce `ProductGrid`, a marketing `Hero`, and a site-wide `MarketingLayout` are all, mechanically, a class a developer wrote that turns configuration into rendered output. Inventing separate registration ceremonies for each would have mirrored CMS taxonomy without a reason rooted in how this system actually works.
 
-**Sections and Modules are the same thing wearing a label.** A "module" was already, technically, nothing more than a section whose own code happens to reach into the host application's data. That difference lives entirely inside the component's own implementation — it requires no separate interface, no separate registration verb, and no separate rendering path. Calling it out as a distinct _concept_ borrows CMS taxonomy (Craft's "modules," WordPress's dynamic blocks) without a real reason rooted in this system. It survives only as an optional label in a picker's grouping — a hint for a human browsing a list, never a distinction the code needs to know about.
+But collapsing to one concept does not mean pretending every component behaves identically at runtime, and the correction here matters: **components differ in capability, not in kind.** A component declares what it can do through a small, honest set of optional capabilities, not through which of four historical CMS boxes it was placed in:
 
-**A layout is the same primitive, placed in a different slot.** A layout renders a header, navigation, footer, and a place for page content to appear — but "a component that accepts a slot for what goes inside it" is not architecturally different from any other component. It doesn't need its own interface. It needs one piece of metadata: where it's allowed to be used. A component marked as usable as a layout is placed once, around everything else, instead of being one of several things composed within the page.
+- **Placed inside page content** — the default. Most components: a `Hero`, a `ProductGrid`, a `PromoBanner`.
+- **Wraps page content** — what the earlier draft of this vision called a "Layout." A component that renders the rest of the composition as its own slot, rather than sitting alongside it. This is a real behavioral difference from an ordinary component — it needs somewhere to put "everything else" — but it does not need its own interface, registry, or registration verb. It needs one declared capability.
+- **Accepts child components** — a genuinely new capability worth naming honestly: a component that composes other components inside itself (a two-column layout region, a tabbed group), rather than sitting flat in the page's own list. This is a real, distinct runtime behavior — recursive rendering — and the architecture should support it as a capability from the start, even if the first release's editor doesn't yet offer nested drag-and-drop for it.
+- **Requires application context** — a component that needs something the _page's surrounding request_ supplies, beyond its own stored configuration: the collection currently being viewed, the authenticated customer, the booking being managed. This is what used to be gestured at as "a Module" — but the honest distinction was never about registration, it was about whether a component needs context handed to it versus resolving everything itself.
+- **Constrained placement** — appears only once, cannot be removed, cannot be reordered — these are not properties of the component's own class at all. They are decisions about a _specific page's_ use of that component, made by whoever defines what that kind of page is allowed to contain. Baking them into the component itself would conflate "what this component is capable of" with "what a particular page is allowed to do with it" — two different questions with two different owners.
 
-**A template is the genuine outlier, and it survives in a much smaller form.** A template isn't rendered at all — it's a constraint ("these components are allowed," "start new pages with this arrangement"). Forcing it to be a fourth registered, renderable concept would be dishonest to what it actually is. It doesn't need to exist as a code contract from day one. If it earns its place at all, it earns it as _data_ — a saved starting arrangement of real components, something closer to "duplicate this page as a starting point" than to a class a developer implements. Most teams don't need governance over what's allowed together on day one. They need a sensible default, which is a much smaller problem.
+That last point is the second correction worth making explicit: **not every constraint belongs on the Component.** A `ProductGrid` component doesn't inherently know it's required on every collection page, or that it can't be removed from one — that's a fact about _collection pages_, not about `ProductGrid` itself. The same component might be optional and freely removable on a marketing landing page and mandatory, locked, and un-reorderable on an ecommerce collection page. That distinction needs its own place to live, separate from the component — a **Page Definition**: a developer-authored, non-rendering class that says what a given kind of page is allowed, required, and forbidden to contain. A Page Definition is not a Component. It renders nothing. It is policy, not presentation, and treating it as a fifth flavor of Component would be exactly the false equivalence this correction is meant to rule out.
 
-**The answer: everything is a Component.** One interface. One registration path. One rendering pipeline. What used to be four concepts collapses into one thing — a component a developer wrote — described by metadata about where it's allowed to appear, not by which of four boxes it was forced into. Conceptual simplicity was worth more here than matching a decade of CMS terminology, and the system is better for giving it up.
+So the model is genuinely simple, without being falsely simple: **one Component concept, described by a small set of honest capabilities, plus one separate, non-rendering Page Definition concept that governs what a specific kind of page may do with the components available to it.** Two things, not five — but two things that are actually different in kind, not one thing wearing five labels.
 
 ---
 
 ## The developer experience
 
-**Day 1.** Install it, register a couple of Blade components that already exist in the application, create the first page, and feel something close to surprise: it already looks finished. Not a scaffold waiting to be styled — a real, considered admin screen, on day one, with nothing to configure before it looks like a product.
+**Day 1.** Install it, register a few Blade components that already exist in the application — a marketing `Hero` alongside a real, data-backed `ProductGrid` — create the first page, and feel something close to surprise: it already looks finished, and the `ProductGrid` renders real inventory in the preview, not a placeholder.
 
-**Week 1.** The bespoke content sections that used to live in raw Blade views have been rewritten as real components. A client or a marketer is editing the homepage without supervision. The Slack message that used to say "can you change the hero text" has stopped arriving.
+**Week 1.** A merchandiser is rearranging a collection page's featured products without supervision. A marketer is composing a campaign landing page from the same admin. The Slack messages that used to say "can you change the homepage collection" and "can you update the hero text" have both stopped arriving — not because two different systems were built, but because one was.
 
-**Month 6.** A dozen components exist, shared as a convention across several projects at the same agency. Starting a new client engagement's "let them edit their own homepage" requirement takes an afternoon, not a sprint, because it was solved once and reused, not rebuilt.
+**Month 6.** A library of components spans marketing content and real application surfaces — collection merchandising, a store locator, a loyalty banner — shared as a convention across projects. Starting a new engagement's "let the client manage this" requirement takes an afternoon, not a sprint, because both the marketing and the application-aware cases were solved once.
 
-**Year 3.** It has become invisible in the way genuinely good infrastructure becomes invisible — nobody remembers deciding to keep using it, the way nobody remembers deciding to keep using Eloquent. New hires are handed the docs and are productive the same day, because the whole thing still fits in someone's head.
+**Year 3.** It has become invisible in the way genuinely good infrastructure becomes invisible. New hires are handed the docs and are productive the same day, because the whole thing still fits in someone's head — one Component concept, one Page Definition concept, nothing more to remember.
 
-The way it avoids becoming cumbersome over that time is a discipline, not an accident: every new capability still has to arrive as a component a developer writes. The package's own surface area is not allowed to grow into a thousand configuration flags. It is allowed to grow only by getting quieter — fewer decisions required over time, not more.
+It avoids becoming cumbersome over that time by discipline: every new capability still arrives as a component a developer writes, or a constraint a developer declares. The package's own surface area is not allowed to grow into a thousand configuration flags. It grows by getting quieter, not louder.
 
 ---
 
 ## The editor experience
 
-A non-technical editor should experience this as arranging tiles on a board, not as operating software. They should never be confused about what they're allowed to touch — if a field is on the screen, it's safe to change; there is no dead-end setting, no field that silently does nothing, no way to see a raw code editor by accident. They should never be confused about what happens when they save — the change is immediate, visible, and safe, because nothing they do is ever truly destructive; there is always a way back.
+A non-technical editor should experience this as arranging tiles on a board, not as operating software — whether the board is a marketing page or an ecommerce collection page. They should never be confused about what they're allowed to touch: if a field is on the screen, it's safe to change. They should never be confused about what happens when they save: it's immediate, visible, and never truly destructive.
 
-They should be confused by exactly nothing that matters to their job, and given exactly zero access to anything that isn't theirs to touch: no CSS, no HTML, no component internals, no sense that there's a more powerful mode hiding somewhere they haven't found yet. The ceiling on their power is drawn once, by a developer, per component — full control over arrangement and over every field a developer chose to expose, and no control whatsoever over anything structural. That ceiling is a kindness, not a restriction: it's what makes it impossible for them to break something they didn't know they could break.
+On a page with real guardrails, they should also never be confused about _why_ something is locked, required, or unavailable — a required `ProductGrid` should read as obviously, calmly necessary, not as a mysterious restriction. The ceiling on their power is drawn once, per kind of page, by a developer: full control over arrangement and over every field a developer chose to expose, zero control over anything structural, and — on the pages that need it — zero ability to remove or disable the one component the business actually depends on. That ceiling is a kindness: it's what makes it impossible for them to break something they didn't know they could break, whether that something is a headline or a collection's product listing.
 
 ---
 
 ## The ecosystem
 
-This is not Horizon, which is a window onto a subsystem — queues — that already belongs entirely to Laravel core. It is not Pulse, a passive observability layer. It is not Forge, which is infrastructure and hosting, an entirely different category and a different kind of business.
+This is not Horizon, a window onto a subsystem — queues — that already belongs entirely to Laravel core. It is not Pulse, a passive observability layer. It is not Forge, infrastructure and hosting, an entirely different category and business.
 
-The closest philosophical relative is Filament — not because they compete, but because they solve mirrored problems with the same instinct for craft. Filament is the missing admin panel for a Laravel application's own Eloquent models. This is the missing content-editing surface for a Laravel application's own marketing and content pages. A single project might reasonably run both at once: Filament for the internal back office, this for the public-facing pages a non-developer needs to touch. Kinship, not overlap.
+The closest philosophical relative is Filament — not because they compete, but because they solve mirrored problems with the same instinct for craft. Filament is the missing administration surface for a Laravel application's own Eloquent models, for the people trusted with the business's raw data. This is the missing composition surface for a Laravel application's own developer-built frontend experiences, for the people who should touch only what a developer chose to expose. A single project might reasonably run both at once — Filament for the internal back office, this for every customer-facing surface a non-developer needs to touch, whether that's a marketing page or a collection's merchandising. Kinship, not overlap.
 
-It should feel like it belongs on the same shelf as Livewire, Filament, and the well-known Spatie packages — the tier of third-party Laravel software developers trust enough to stop asking "is this any good?" before installing it. It should never claim to be Laravel itself, and it should never try to. Its relationship to the rest of the ecosystem is complementary by design: built on Livewire rather than around it, happy to sit beside Filament rather than compete with it, and never reaching for territory — routing, auth, queues — that Laravel and its own first-party tools already own.
+It should feel like it belongs on the same shelf as Livewire, Filament, and the well-known Spatie packages — built on Livewire rather than around it, happy to sit beside Filament rather than compete with it, never reaching for territory Laravel and its own first-party tools already own.
 
 ---
 
 ## Naming
 
-"Page Builder" describes a category. It doesn't describe this project, and it never should have. Twenty candidates, each aiming for the same register as the rest of the Laravel ecosystem's naming — Forge, Horizon, Pulse, Nova, Vapor, Sail, Herd, Valet, Cashier, Scout, Sanctum, Fortify, Breeze, Envoyer, Dusk, Reverb, Pennant, Pint, Volt: short, evocative, often literal objects or crafts, never a compound "ContentFlow"-style startup name, never ending in "CMS."
+"Page Builder" describes a category, and it was already too narrow before this correction — it now actively undersells the product. It implies "a tool for building pages," when the corrected vision is "a tool for safely composing developer-built experiences inside an application that already exists." The earlier shortlist (Lattice, Loom, Draft) has been re-evaluated against that correction, and re-weighted: names that lean toward _content and pattern_ fit the old, narrower vision better than the corrected one, which leans toward _fitting safely into a real, working system_.
 
-1. **Anvil** — the tool something solid gets shaped on.
-2. **Loom** — weaving separate, structured pieces into one thing.
-3. **Lattice** — a structure that supports and shapes growth without dictating its exact form; the closest metaphor to schema-driven, developer-defined flexibility.
-4. **Cairn** — a deliberately placed, composed structure, built one piece at a time.
-5. **Plinth** — the quiet foundation something else is displayed on.
-6. **Vellum** — fine material meant to be written on and kept.
-7. **Draft** — a genuine double meaning with the product's own draft-then-publish model; unusually ownable.
-8. **Ledger** — a record of exactly what's true, though it risks reading as financial software at a glance.
-9. **Foyer** — the considered space a visitor experiences first.
-10. **Atlas** — a confident, timeless word for a collected set of composed pages.
-11. **Threshold** — the boundary between structure and content, crossed deliberately.
-12. **Bower** — a light garden structure; understated rather than literal.
-13. **Nave** — the open, structured space at the center of a building; distinctive and quiet.
-14. **Arbor** — a structure built to support something growing.
-15. **Kiln** — where raw material is fired into something finished and durable.
-16. **Truss** — blunt, honest, structural — no pretense about it.
-17. **Parlour** — a composed room, prepared in advance for someone to be received in.
-18. **Marquee** — the headline structure, a little bolder than the rest of the list.
-19. **Cornerstone** — the first stone a structure is built from; more literal, safer, less distinctive than the rest of this list.
-20. **Hearth** — the calm, central point a room is arranged around.
+- **Lattice** — still strong. A structure that supports and shapes what grows through it, without dictating its exact form — arguably a better fit now than before, since it reads as structural/engineering rather than editorial.
+- **Fixture** — new, and the strongest fit for the correction: a fixture is a permanent, fitted part of a working system (an electrical or plumbing fixture), which is precisely what this product is — something installed into and made part of an application that already exists, not a standalone canvas beside it.
+- **Inlay** — new: a piece set carefully into a larger surface it was made to fit — a strong, premium-feeling metaphor for "composing something new into an application that already exists," with a genuine craft connotation.
+- **Loom** — retained but weaker under the correction. Weaving separate pieces together still works mechanically, but the textile metaphor leans editorial/content in a way that undersells application-aware composition.
+- **Draft** — retained but weaker under the correction. The draft/publish pun is genuinely clever, but it describes a CMS-support feature, not the corrected core identity, which is no longer primarily about drafting content.
 
-If three had to be shortlisted: **Lattice**, for how precisely it captures a structure that shapes without constraining; **Loom**, for how naturally it carries the idea of composing separate pieces into one considered whole; and **Draft**, for being genuinely, cleverly ownable by a product whose entire model already revolves around drafting and publishing.
+**Recommendation: Fixture, Lattice, and Inlay**, in that order, as the strongest fits for the corrected vision — with **Fixture** the most honest single-word description of what this product actually does: installs into, and becomes a working part of, an application someone already built. The working package name stays unchanged until trademark, Composer-namespace, and domain availability are checked separately — nothing here commits to a rename.
 
 ---
 
 ## Mission statement
 
-**One sentence.** We give Laravel developers a way to let anyone compose a page from the components they already built, without giving up their code, their data, or their craft.
+**One sentence.** Developers define the components, behaviour, and boundaries. Editors compose the experience.
 
-**One paragraph.** This exists because the Laravel ecosystem has never had a proper answer to "can I edit this myself?" — only compromises borrowed from other ecosystems, or bespoke tools built once, under deadline, and never trusted again. It gives a developer a way to write real Blade components, decide exactly what's safe for someone else to touch, and hand over a genuinely well-built admin experience for arranging and publishing pages built from those components — with drafts, previews, and revision history that behave the way a Laravel developer already expects everything else in their stack to behave. It never generates markup, never invents functionality, and never asks a developer to give up ownership of their own code or data to get there.
+**One paragraph.** This exists because the Laravel ecosystem has never had a proper answer to "can someone who isn't a developer safely change part of this application?" — only compromises borrowed from other ecosystems, or bespoke tools built once, under deadline, that only ever covered the marketing page and never the parts of the application that actually mattered. It gives a developer a way to write real Blade or Livewire components — for a landing page, for a product grid backed by real inventory, for an authenticated account surface — decide exactly what's safe for someone else to configure and arrange, and declare exactly what a given kind of page is and isn't allowed to do with those components. Everything else — composition, drafting, previewing, publishing, and a full history of every change — is handled by software good enough that nobody involved has to build it themselves again. It never generates markup, never invents functionality, never duplicates business data it doesn't own, and never asks the host application to reorganise itself to make room for it.
 
-**One page.** For as long as Laravel developers have built for clients, marketers, and founders, there has been a moment at the end of every project where someone who isn't a developer needs to be able to change something on a page, and the developer has had to choose between compromises: hand the entire stack over to WordPress, adopt a full CMS platform that wants to own the application, build something bespoke and hope it survives contact with a real editor, or simply agree to be the person who edits the homepage forever. None of those are a solution. They're the least bad option available, chosen under deadline, and quietly resented afterward. This exists to end that choice. It starts from a simple, non-negotiable premise: a developer writes real code, decides deliberately what part of that code is safe to hand over, and everything else — the page composition, the drafting, the previewing, the publishing, the history of every change ever made — is handled by a piece of software good enough that nobody involved ever has to think about building it themselves again. Content stays structured and owned by the application it lives in, never trapped inside a proprietary format or a blob of generated markup. The developer never loses control of their code. The editor never gains more power than was deliberately given to them. Every decision this project makes, from its architecture to the words used in its interface, is weighed against a single test: does this feel like it could have shipped with Laravel itself, built with the same restraint, the same craft, and the same refusal to make the developer holding it feel like they compromised. If it succeeds, it will not be remembered as the biggest page builder available to Laravel developers. It will be remembered as the one that made every other option feel unnecessary.
+**One page.** For as long as Laravel developers have built for clients, merchandisers, and founders, there has been a moment where someone who isn't a developer needs to change something real — a campaign page, a collection's featured products, an account dashboard's layout — and the developer has had to choose between compromises: hand the whole stack over to WordPress, adopt a platform that wants to own the application, build something bespoke that only ever covers the marketing page and quietly stays fragile everywhere else, or simply agree to be the person who makes these changes forever. None of those are a solution. They're the least bad option available, chosen under deadline. This exists to end that choice, everywhere it shows up — not just on the homepage. It starts from a simple, non-negotiable premise: a developer writes real components, decides deliberately what's safe to hand over, declares exactly what a given kind of page is and isn't allowed to contain, and everything else is handled by a piece of software nobody has to think about building again. Content and configuration stay structured, and business data stays exactly where it already lived, resolved live rather than copied. The developer never loses control of their code, their data, or their domain. The editor never gains more power than was deliberately given to them, whether they're editing a headline or rearranging a collection page built on real inventory. Every decision this project makes is weighed against a single test: does this feel like it could have shipped with Laravel itself, built with the same restraint and the same refusal to make the developer holding it feel like they compromised. If it succeeds, it will not be remembered as the biggest page builder available to Laravel developers. It will be remembered as the reason "page builder" stopped being the right word for what it actually does.
 
 ---
 
@@ -218,7 +230,7 @@ If three had to be shortlisted: **Lattice**, for how precisely it captures a str
 
 _(Taylor Otwell: "So... what does it do?")_
 
-"You write your Blade components exactly like you already do. We give you an admin screen where someone who isn't a developer can drag those components onto a page, fill in only the fields you decided were safe to hand over, preview it exactly as it'll appear live, and publish it — with a full version history, so nothing they do is ever truly destructive. Nothing gets generated, nothing gets stored as raw HTML, and you never lose ownership of your own code. It's the 'let the client edit their own homepage' feature every agency ends up building badly, under deadline, at least once a year. We built it once, properly, so nobody has to build it again."
+"You write real Blade or Livewire components exactly like you already do — a hero section, a product grid backed by your real inventory, whatever your application actually needs. We give you an admin screen where someone who isn't a developer can compose those components onto a page, fill in only the fields you decided were safe to hand over, and publish it — with a full version history, and with guardrails you define so they can't remove or break the parts of the page your business actually depends on. Nothing gets generated, no business data gets copied somewhere it doesn't belong, and you never lose ownership of your own code. It's not a CMS bolted onto your app. It's the missing layer that lets you safely hand over composition of the frontend experiences you've already built."
 
 ---
 
@@ -226,10 +238,10 @@ _(Taylor Otwell: "So... what does it do?")_
 
 Ten years from now, success looks like this, and none of it is measured in revenue or stars.
 
-A developer joining a Laravel agency for the first time is handed the same set of expectations as they'd be handed for testing, for queues, for authentication — and this is one of them, without anyone needing to justify why. It isn't a tool the agency chose after evaluating alternatives. It's simply part of how a Laravel project gets built, the way Eloquent is part of how a Laravel project gets built, no longer something anyone remembers deciding to adopt.
+A developer joining a Laravel team is handed the same set of expectations as they'd be handed for testing, for queues, for authentication — and this is one of them, without anyone needing to justify why, on a project that would never have been called "a CMS site." It's simply part of how a Laravel application gets built when part of its frontend needs to be safely handed to someone who isn't a developer.
 
-Agencies stop pitching "custom CMS development" as a line item, because the honest answer to "can our client edit their own site" became a solved problem years earlier, and everyone in the room already knows it. The margin an agency used to lose rebuilding this feature per client, worse each time, becomes margin they keep, and the quality their clients receive goes up because nobody is improvising it under deadline anymore.
+Agencies stop pitching "custom content management" as a separate line item for the marketing site and a separate, harder conversation for "letting the client manage the collection pages," because both were the same solved problem years earlier. The margin that used to be lost rebuilding this — worse, twice, once for content and once for commerce — becomes margin kept, and the quality every client receives goes up because nobody is improvising it under deadline.
 
-A developer somewhere writes a blog post — the kind that used to be titled "how I built a custom page builder for my Laravel app" — and instead it's titled "why I stopped building my own." Newer developers read the source, the way people once read Laravel's own source to learn what good PHP looked like, and come away with a clearer idea of what a well-mannered Laravel package is supposed to feel like: restrained, honest about what it does and doesn't do, and utterly unsurprising to work with.
+A developer somewhere writes a blog post — the kind that used to be titled "how I built a custom page builder for my Laravel app" — and instead it's titled "why I stopped building my own, even for the parts of the app that actually mattered." Newer developers read the source the way people once read Laravel's own source to learn what a well-mannered package looks like, and come away with a clearer idea of what "developer owns the code, editor owns the composition" actually means in practice, on a real application, not just a demo.
 
-Nobody describes it as "a page builder for Laravel," the same way nobody describes Livewire as "a way to avoid writing JavaScript" anymore — the category label stops being how people talk about it, because it has quietly become the answer, not one option among several. Its indispensability isn't loud. It's the kind you only notice by trying to imagine the ecosystem without it, and finding that hard to do.
+Nobody describes it as "a page builder for Laravel," the same way nobody describes Livewire as "a way to avoid writing JavaScript" anymore — the category label stops fitting, because it quietly became the answer for something broader than the label ever implied. Its indispensability isn't loud. It's the kind you only notice by trying to imagine building a real, custom Laravel application without it, and finding that harder than you expected.
