@@ -17,11 +17,15 @@ use Attribute;
 #[Attribute(Attribute::TARGET_CLASS)]
 final class ComponentMeta
 {
+    /**
+     * @param  array<int, string>  $keywords  extra terms the component picker's search matches against, alongside the label, category, and description
+     */
     public function __construct(
         public ?string $label = null,
         public string $category = 'Uncategorised',
         public string $description = '',
         public ?string $icon = null,
         public ?string $thumbnail = null,
+        public array $keywords = [],
     ) {}
 }

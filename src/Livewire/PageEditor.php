@@ -6,6 +6,7 @@ namespace WearePixel\Inlay\Livewire;
 
 use BackedEnum;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -217,18 +218,76 @@ final class PageEditor extends Component
         $this->editingProps = [];
         $this->showingHistory = false;
         $this->bumpPreview();
+        $this->dispatch('revision-restored');
     }
 
     public function render(): View
     {
+        $schema = $this->resolveSelectedSettings();
+        $components = collect(app(SectionRegistry::class)->all());
+
         return view('inlay::livewire.page-editor', [
             'title' => "{$this->page->title} · Inlay",
             'sections' => $this->page->sections()->orderBy('order')->get(),
-            'availableComponents' => collect(app(SectionRegistry::class)->all())->groupBy(fn ($component) => $component->category),
-            'selectedSchema' => $this->resolveSelectedSettings(),
+            'availableComponents' => $components->groupBy(fn ($component) => $component->category),
+            // A slug => {label, icon} lookup for the component picker's
+            // "recent" row, which tracks recently-added handles client-side
+            // (localStorage) and needs enough metadata to render a compact
+            // chip for one without a further round trip.
+            'componentLookup' => $components->mapWithKeys(fn ($component) => [
+                $component->slug => ['label' => $component->label, 'icon' => $component->icon],
+            ]),
+            'selectedSchema' => $schema,
+            'inspectorTabs' => $this->inspectorTabs($schema),
             'previewUrl' => $this->previewUrl(),
             'revisions' => $this->page->revisions()->get(),
         ]);
+    }
+
+    /**
+     * The settings inspector's tab > group > field structure, computed once
+     * here rather than with nested loops in the view. A component that
+     * never calls Settings::tab() ends up with exactly one tab (label
+     * null), which the view renders flat with no tab bar - tab navigation
+     * only ever appears once a component actually declares more than one.
+     *
+     * @return Collection<int, array{label: string|null, groups: Collection<int, array{label: string|null, fields: Collection<int, Setting>}>}>
+     */
+    private function inspectorTabs(?Settings $schema): Collection
+    {
+        $tabs = collect();
+
+        if (! $schema) {
+            return $tabs;
+        }
+
+        foreach (collect($schema->fields())->groupBy(fn (Setting $field) => $field->tab ?? '') as $tabKey => $fields) {
+            $groups = collect();
+
+            foreach ($fields->groupBy(fn (Setting $field) => $field->group ?? '') as $groupKey => $groupFields) {
+                $groups->push([
+                    'label' => $this->blankToNull((string) $groupKey),
+                    'fields' => $groupFields->values(),
+                ]);
+            }
+
+            $tabs->push([
+                'label' => $this->blankToNull((string) $tabKey),
+                'groups' => $groups,
+            ]);
+        }
+
+        return $tabs;
+    }
+
+    /**
+     * A native ?string return type, deliberately not narrower - the caller
+     * cares only that a blank key means "no tab/group", not that a
+     * non-blank one is provably non-empty.
+     */
+    private function blankToNull(string $value): ?string
+    {
+        return $value === '' ? null : $value;
     }
 
     private function previewUrl(): string
@@ -297,6 +356,7 @@ final class PageEditor extends Component
 
         $section->update(['settings' => $stored]);
         $this->bumpPreview();
+        $this->dispatch('setting-saved');
     }
 
     /**

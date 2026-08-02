@@ -1,5 +1,5 @@
 <div class="inlay-repeater">
-    <p class="inlay-field__label" style="margin-bottom: 10px;">{{ $field->label }}</p>
+    @include('inlay::fields.partials.label', ['field' => $field])
 
     @foreach (($editingProps[$field->name] ?? []) as $index => $item)
         <div class="inlay-repeater__item" wire:key="repeater-{{ $field->name }}-{{ $index }}">

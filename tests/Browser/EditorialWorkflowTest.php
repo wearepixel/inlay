@@ -52,11 +52,21 @@ it('opens the component picker, searches, and adds a component grouped by catego
     $editor->click('@open-picker')
         ->assertVisible('@picker-search')
         ->assertSee('Headers') // BrowserHeroSection's #[ComponentMeta] category
-        ->assertSee('Uncategorised'); // TestFaqSection has no #[ComponentMeta]
+        ->assertSee('Uncategorised') // TestFaqSection has no #[ComponentMeta]
+        // Regression check: opening the picker evaluates the "recent
+        // components" Alpine expression even with an empty recent list - a
+        // manual review caught this throwing a ReferenceError because the
+        // method it called was never actually implemented.
+        ->assertNoJavaScriptErrors();
 
     $editor->fill('@picker-search', 'Hero')
         ->assertVisible('@picker-card-hero')
-        ->assertMissing('@picker-card-faq');
+        ->assertMissing('@picker-card-faq')
+        // Regression check: a search that DOES match something must not
+        // also show the "no results" message (a real bug found during
+        // manual review - the message's own x-show read the wrong
+        // element's descendants and reported zero matches unconditionally).
+        ->assertMissing('.inlay-picker__no-results');
 
     $editor->click('@picker-card-hero')->assertMissing('@picker-search');
 

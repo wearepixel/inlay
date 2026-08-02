@@ -60,6 +60,7 @@ final class ComponentLoader
             sourceType: ComponentSourceType::SingleFile,
             sourceIdentifier: $path,
             settings: $this->applyDeclaredDefaults($component->handle(), $component->resolvedSettings()),
+            keywords: $component->resolvedKeywords(),
         );
     }
 

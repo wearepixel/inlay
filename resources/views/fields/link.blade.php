@@ -1,7 +1,7 @@
+@include('inlay::fields.partials.label', ['field' => $field])
 <div class="inlay-field">
-    <label class="inlay-field__label">{{ $field->label }}</label>
-    <input type="text" placeholder="Label" wire:model.live.debounce.400ms="{{ $modelPath }}.label" class="inlay-input" style="margin-bottom: 6px;">
-    <input type="url" placeholder="URL" wire:model.live.debounce.400ms="{{ $modelPath }}.url" class="inlay-input" style="margin-bottom: 6px;">
+    <input type="text" placeholder="Label" wire:model.live.debounce.400ms="{{ $modelPath }}.label" class="inlay-input" style="margin-bottom: 6px;" data-test="setting-{{ $field->name }}-label">
+    <input type="url" placeholder="URL" wire:model.live.debounce.400ms="{{ $modelPath }}.url" class="inlay-input" style="margin-bottom: 6px;" data-test="setting-{{ $field->name }}-url">
     <label class="inlay-checkbox-row">
         <input type="checkbox" wire:model.live="{{ $modelPath }}.openInNewTab">
         Open in new tab

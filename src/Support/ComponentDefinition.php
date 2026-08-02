@@ -39,6 +39,10 @@ final readonly class ComponentDefinition
          * authoring styles.
          */
         public int $settingsVersion = 1,
+        /**
+         * @var array<int, string> extra terms the component picker's search matches against
+         */
+        public array $keywords = [],
     ) {}
 
     /**
@@ -68,6 +72,7 @@ final readonly class ComponentDefinition
             description: $this->description,
             icon: $this->icon,
             thumbnail: $this->thumbnail,
+            keywords: $this->keywords,
         );
     }
 }

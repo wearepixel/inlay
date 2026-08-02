@@ -27,6 +27,22 @@ final class Setting
     public ?string $enumClass = null;
 
     /**
+     * The named group/tab this field was declared under via
+     * Settings::group()/tab() - null for a field declared directly, which
+     * renders without a group wrapper or tab bar. Purely a presentation
+     * concern for the settings inspector.
+     */
+    public ?string $group = null;
+
+    public ?string $tab = null;
+
+    /**
+     * A short, optional callout shown next to the field's label in the
+     * inspector (e.g. "New", "Beta") - purely presentational.
+     */
+    public ?string $badge = null;
+
+    /**
      * @param  array<string, string>  $options  Resolved label map - populated
      *                                          immediately by Settings::options()
      *                                          whether given as a literal array
@@ -73,5 +89,27 @@ final class Setting
         $matches = ($effectiveSettings[$field] ?? null) === $value;
 
         return $this->negateVisibility ? ! $matches : $matches;
+    }
+
+    /**
+     * The client-side equivalent of isVisible(), reading Livewire's live
+     * (not-yet-persisted) editingProps state via Alpine's $wire, so the
+     * inspector can show/hide a conditional field instantly and animate the
+     * change - rather than waiting on a full round trip to re-render the
+     * field in or out of existence. Only meaningful for a top-level field;
+     * a field nested inside a repeater/group item still uses the
+     * server-rendered isVisible() check, since its dependency lives at a
+     * dynamic array path this expression doesn't attempt to address.
+     */
+    public function visibilityExpression(): ?string
+    {
+        if ($this->visibleWhen === null) {
+            return null;
+        }
+
+        [$field, $value] = $this->visibleWhen;
+        $comparison = "\$wire.editingProps['{$field}'] === ".json_encode($value);
+
+        return $this->negateVisibility ? "!({$comparison})" : $comparison;
     }
 }

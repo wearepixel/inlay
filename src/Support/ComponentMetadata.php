@@ -11,6 +11,9 @@ namespace WearePixel\Inlay\Support;
  */
 final readonly class ComponentMetadata
 {
+    /**
+     * @param  array<int, string>  $keywords
+     */
     public function __construct(
         public string $slug,
         public string $label,
@@ -18,5 +21,16 @@ final readonly class ComponentMetadata
         public string $description,
         public ?string $icon,
         public ?string $thumbnail,
+        public array $keywords = [],
     ) {}
+
+    /**
+     * Every term the component picker's search matches against.
+     *
+     * @return array<int, string>
+     */
+    public function searchTerms(): array
+    {
+        return [$this->label, $this->description, $this->category, ...$this->keywords];
+    }
 }

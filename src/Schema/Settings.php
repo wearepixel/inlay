@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WearePixel\Inlay\Schema;
 
 use BackedEnum;
+use Closure;
 use InvalidArgumentException;
 use LogicException;
 use WearePixel\Inlay\Support\SettingOptions;
@@ -69,6 +70,62 @@ final class Settings
     public function group(string $name, Settings $itemSchema): self
     {
         return $this->addField($name, FieldType::Group, $itemSchema);
+    }
+
+    /**
+     * Groups every field declared inside $callback under a named, collapsible
+     * heading in the settings inspector - purely a presentation concern, not
+     * a data shape (unlike group(), which declares a genuine nested-object
+     * FieldType::Group setting). Named section() rather than group() to
+     * avoid colliding with that existing, unrelated meaning.
+     *
+     * @param  Closure(self): void  $callback
+     */
+    public function section(string $label, Closure $callback): self
+    {
+        $nested = self::make();
+        $callback($nested);
+
+        foreach ($nested->fields() as $field) {
+            $field->group = $label;
+            $this->adopt($field);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Groups every field declared inside $callback under a named tab. Tab
+     * navigation only renders in the inspector when a component declares
+     * more than one - a single tab() call renders exactly like an ungrouped
+     * or section()-only definition. tab() and section() compose: a
+     * section() called inside a tab()'s callback produces a collapsible
+     * group within that tab.
+     *
+     * @param  Closure(self): void  $callback
+     */
+    public function tab(string $label, Closure $callback): self
+    {
+        $nested = self::make();
+        $callback($nested);
+
+        foreach ($nested->fields() as $field) {
+            $field->tab = $label;
+            $this->adopt($field);
+        }
+
+        return $this;
+    }
+
+    /**
+     * A short, optional callout shown next to the field's label in the
+     * inspector (e.g. "New", "Beta") - purely presentational.
+     */
+    public function badge(string $text): self
+    {
+        $this->requireLastField('badge')->badge = $text;
+
+        return $this;
     }
 
     public function label(string $label): self

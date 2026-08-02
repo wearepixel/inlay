@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use WearePixel\Inlay\Livewire\PageEditor;
 use WearePixel\Inlay\Models\Page;
 use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
+use WearePixel\Inlay\Tests\Fixtures\TestRequiredFieldSection;
 
 beforeEach(function () {
     config(['inlay.sections' => [
@@ -71,4 +72,33 @@ it('rejects a non-image upload and does not persist it to the selected section s
         ->assertHasErrors(['imageUploads.photo']);
 
     expect($section->fresh()->settings['photo'] ?? null)->toBeNull();
+});
+
+it('shows a calm inline hint for an empty required field, and hides it once filled', function () {
+    config(['inlay.sections' => ['test-required' => TestRequiredFieldSection::class]]);
+
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $section = $page->sections()->create(['handle' => 'test-required', 'order' => 0, 'settings' => []]);
+
+    // A required-but-empty field is a normal state while composing a page,
+    // not an error - it gets a calm hint, not the red styling reserved for
+    // a genuine validation failure (see the image-upload-rejection test
+    // above, which does use inlay-field__warning).
+    $test = Livewire::test(PageEditor::class, ['page' => $page])
+        ->call('selectSection', $section->id)
+        ->assertSeeHtml('inlay-field__hint');
+
+    $test->set('editingProps.heading', 'Filled in')
+        ->assertDontSeeHtml('inlay-field__hint');
+});
+
+it("shows an enum case's optional description under a Select field once it's the current value", function () {
+    config(['inlay.sections' => ['test-required' => TestRequiredFieldSection::class]]);
+
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $section = $page->sections()->create(['handle' => 'test-required', 'order' => 0, 'settings' => ['size' => 'large']]);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->call('selectSection', $section->id)
+        ->assertSee('Full-width, best for a strong first impression.');
 });

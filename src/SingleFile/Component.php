@@ -25,6 +25,9 @@ final class Component
 
     private ?string $thumbnail = null;
 
+    /** @var array<int, string> */
+    private array $keywords = [];
+
     private Settings $settings;
 
     private function __construct(private readonly string $handle)
@@ -79,6 +82,16 @@ final class Component
         return $this;
     }
 
+    /**
+     * @param  array<int, string>  $keywords
+     */
+    public function keywords(array $keywords): self
+    {
+        $this->keywords = $keywords;
+
+        return $this;
+    }
+
     public function handle(): string
     {
         return $this->handle;
@@ -107,6 +120,14 @@ final class Component
     public function resolvedThumbnail(): ?string
     {
         return $this->thumbnail;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function resolvedKeywords(): array
+    {
+        return $this->keywords;
     }
 
     public function resolvedSettings(): Settings

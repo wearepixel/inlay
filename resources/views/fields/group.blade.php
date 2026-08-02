@@ -1,5 +1,5 @@
 <div class="inlay-group">
-    <p class="inlay-field__label" style="margin-bottom: 10px;">{{ $field->label }}</p>
+    @include('inlay::fields.partials.label', ['field' => $field])
 
     @foreach ($field->itemSchema->fields() as $subField)
         @continue(! $subField->isVisible($editingProps[$field->name] ?? []))

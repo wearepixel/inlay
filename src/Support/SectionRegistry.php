@@ -99,6 +99,7 @@ final class SectionRegistry
             sourceType: ComponentSourceType::ClassBased,
             sourceIdentifier: $componentClass,
             settings: $settings,
+            keywords: $meta->keywords,
         );
     }
 

@@ -40,10 +40,10 @@ it('groups registered components by their #[ComponentMeta] category, defaulting 
         ->assertSee('A large banner with a heading and image.');
 });
 
-it("surfaces each component's picker metadata as a data-search attribute for client-side filtering", function () {
+it("surfaces each component's picker metadata (label, description, category, keywords) as a data-search attribute for client-side filtering", function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->call('openPicker')
-        ->assertSeeHtml('data-search="hero a large banner with a heading and image."');
+        ->assertSeeHtml('data-search="hero a large banner with a heading and image. headers"');
 });
