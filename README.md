@@ -310,6 +310,31 @@ final class Hero extends Component implements InlayComponent
 
 Only `http://`, `https://`, `mailto:`, and relative URLs are ever persisted - the package rejects other schemes (e.g. `javascript:`) before the value reaches storage, so you can render `$cta->url` into an `href` without adding your own scheme check.
 
+### `ImageValue`
+
+The `Image` field type hydrates into `WeArePixel\Inlay\Support\ImageValue`, not the bare disk-relative path the editor stores - your component never has to resolve `Storage::disk(...)->url(...)` itself. `ImageValue::__toString()` resolves the real URL, so echoing it directly is correct:
+
+```php
+use WeArePixel\Inlay\Attributes\Image;
+use WeArePixel\Inlay\Support\ImageValue;
+
+final class Hero extends Component implements InlayComponent
+{
+    public function __construct(
+        #[Image(label: 'Photo')]
+        public ?ImageValue $photo = null,
+    ) {}
+}
+```
+
+```blade
+@if ($photo)
+    <img src="{{ $photo }}" alt="">
+@endif
+```
+
+Type the parameter `?ImageValue $photo = null` if "no image" should behave like a genuinely absent value - `@if ($photo)` then works as expected. A non-nullable `ImageValue $photo = new ImageValue()` still gets a real instance with nothing uploaded (PHP objects are always truthy) - check `$photo->isEmpty()` explicitly in that case rather than `@if ($photo)`.
+
 ### Settings that conditionally affect Blade markup
 
 `visibleWhen()`/`hiddenWhen()` control whether a field appears in the settings inspector - they are a UI convenience only, never a security boundary (an undeclared or hidden setting can never be persisted regardless):

@@ -115,6 +115,10 @@ final class SectionRenderer
             return $setting->default->value;
         }
 
+        if ($raw && $setting->default instanceof ImageValue) {
+            return $setting->default->path;
+        }
+
         return $setting->default;
     }
 
@@ -130,6 +134,10 @@ final class SectionRenderer
             $link = $this->hydrateLink($value);
 
             return $raw ? ['label' => $link->label, 'url' => $link->url, 'openInNewTab' => $link->openInNewTab] : $link;
+        }
+
+        if ($setting->type === FieldType::Image) {
+            return $this->hydrateImage($setting, $value, $raw);
         }
 
         if ($setting->type === FieldType::Repeater && $setting->itemSchema !== null && is_array($value)) {
@@ -210,6 +218,31 @@ final class SectionRenderer
             url: is_string($value['url'] ?? null) ? $value['url'] : '',
             openInNewTab: is_scalar($value['openInNewTab'] ?? null) ? (bool) $value['openInNewTab'] : false,
         );
+    }
+
+    /**
+     * The raw form (the editor's own editingProps) always stays the bare
+     * disk-relative path string - Livewire has to serialise it, and the
+     * inspector's own image field partial resolves that path to a URL
+     * itself for its thumbnail. Only real rendering hydrates it into an
+     * ImageValue, and only when there's actually a path to resolve - a
+     * setting explicitly declared nullable (`?ImageValue $x = null`) gets a
+     * real null for "no image" rather than an always-truthy empty instance,
+     * matching what a component author would naturally write `@if ($x)` for.
+     */
+    private function hydrateImage(Setting $setting, mixed $value, bool $raw): string|ImageValue|null
+    {
+        $path = is_string($value) ? $value : '';
+
+        if ($raw) {
+            return $path;
+        }
+
+        if ($path === '' && $setting->nullable) {
+            return null;
+        }
+
+        return new ImageValue($path);
     }
 
     /**

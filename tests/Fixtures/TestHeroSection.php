@@ -11,6 +11,7 @@ use WeArePixel\Inlay\Attributes\Image;
 use WeArePixel\Inlay\Attributes\Select;
 use WeArePixel\Inlay\Attributes\Text;
 use WeArePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Support\ImageValue;
 
 #[ComponentMeta(label: 'Hero', category: 'Headers', description: 'A large banner with a heading and image.', icon: '🖼')]
 final class TestHeroSection extends Component implements InlayComponent
@@ -21,7 +22,7 @@ final class TestHeroSection extends Component implements InlayComponent
         #[Select(label: 'Layout')]
         public TestHeroLayout $layout = TestHeroLayout::ImageRight,
         #[Image(label: 'Photo')]
-        public ?string $photo = null,
+        public ?ImageValue $photo = null,
     ) {}
 
     /**

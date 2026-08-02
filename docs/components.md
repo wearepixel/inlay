@@ -40,7 +40,7 @@ Declare a setting directly on the constructor parameter it maps to, using one of
 | `Number`   | Integer or float                                                                                                                |
 | `Toggle`   | Boolean                                                                                                                         |
 | `Select`   | One value from a labeled set (a backed enum, or a literal options array)                                                        |
-| `Image`    | A single uploaded file path                                                                                                     |
+| `Image`    | A single uploaded file, hydrated to `ImageValue`                                                                                |
 | `Link`     | Hydrates to `LinkValue` (label, url, openInNewTab)                                                                              |
 
 There is no `Repeater` or `Group` attribute - a repeatable/grouped item schema has no single constructor parameter to attach to, so those two are fluent-only.
@@ -296,6 +296,28 @@ public function __construct(
 ```
 
 Only `http://`, `https://`, `mailto:`, and relative (scheme-less) URLs are ever persisted; anything else (e.g. `javascript:...`) is rejected before it reaches storage, at the point an editor saves it - you can render `$cta->url` into an `href` attribute without adding your own scheme check.
+
+## `ImageValue`
+
+The `Image` field type hydrates to `WeArePixel\Inlay\Support\ImageValue`, not the bare disk-relative path the editor stores - so your component view never has to know which disk an upload landed on or call `Storage::disk(...)->url(...)` itself. `ImageValue::__toString()` resolves the real URL, so echoing it directly is correct:
+
+```php
+use WeArePixel\Inlay\Attributes\Image;
+use WeArePixel\Inlay\Support\ImageValue;
+
+public function __construct(
+    #[Image(label: 'Photo')]
+    public ?ImageValue $photo = null,
+) {}
+```
+
+```blade
+@if ($photo)
+    <img src="{{ $photo }}" alt="">
+@endif
+```
+
+Type the parameter `?ImageValue $photo = null` (as above) if you want "no image" to behave like a genuinely absent value - `@if ($photo)` then works exactly as you'd expect. A non-nullable `ImageValue $photo = new ImageValue()` still gets a real instance even with nothing uploaded, since PHP objects are always truthy regardless of their contents - check `$photo->isEmpty()` explicitly in that case, not `@if ($photo)`. Call `$photo->url()` instead of relying on `__toString()` if you need the resolved URL somewhere other than a plain Blade `{{ }}` echo (an attribute built with `Str::of()`, for example).
 
 ## Presentation stays host-owned
 

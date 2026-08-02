@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
@@ -57,6 +58,26 @@ it('skips a section with an unregistered handle instead of failing the whole pag
     expect($html)->toContain('Still works');
 
     Log::shouldHaveReceived('warning')->once();
+});
+
+it('hydrates a stored Image path into an ImageValue that resolves to a real Storage URL', function () {
+    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
+
+    $html = $renderer->render([
+        ['handle' => 'test-hero', 'settings' => ['heading' => 'Welcome', 'layout' => 'image-right', 'photo' => 'inlay/photo.png']],
+    ]);
+
+    expect($html)->toContain(Storage::disk('public')->url('inlay/photo.png'));
+});
+
+it('leaves a nullable Image field genuinely null when no photo is set, not an always-truthy empty value', function () {
+    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
+
+    $html = $renderer->render([
+        ['handle' => 'test-hero', 'settings' => ['heading' => 'Welcome', 'layout' => 'image-right']],
+    ]);
+
+    expect($html)->not->toContain('data-test="photo"');
 });
 
 it('falls back to the constructor default and keeps rendering when a stored enum value no longer matches a real case', function () {
