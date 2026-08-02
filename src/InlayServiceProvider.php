@@ -17,6 +17,7 @@ final class InlayServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/inlay.php', 'inlay');
 
         $this->app->singleton(SectionRegistry::class, fn () => SectionRegistry::fromConfig());
+        $this->app->singleton(InlayManager::class);
     }
 
     public function boot(): void

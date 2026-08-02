@@ -1,5 +1,7 @@
-<div class="mb-4">
-    <label class="mb-1 block text-sm font-medium text-gray-700">{{ $field->label }}</label>
-    <input type="text" wire:model.live.debounce.400ms="{{ $modelPath }}"
-        class="w-full rounded-md border-gray-300 shadow-sm">
+<div class="inlay-field">
+    <label class="inlay-field__label">{{ $field->label }}</label>
+    <input type="text" wire:model.live.debounce.400ms="{{ $modelPath }}" class="inlay-input" @if ($field->maxLength) maxlength="{{ $field->maxLength }}" @endif>
+    @if ($field->help)
+        <p class="inlay-field__help">{{ $field->help }}</p>
+    @endif
 </div>

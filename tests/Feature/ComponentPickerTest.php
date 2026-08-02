@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+use Livewire\Livewire;
+use WearePixel\Inlay\Livewire\PageEditor;
+use WearePixel\Inlay\Models\Page;
+use WearePixel\Inlay\Tests\Fixtures\TestFaqSection;
+use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
+
+beforeEach(function () {
+    config(['inlay.sections' => [
+        'test-hero' => TestHeroSection::class,
+        'test-faq' => TestFaqSection::class,
+    ]]);
+});
+
+it('stays closed until openPicker is called, and closes again on closePicker/addSection', function () {
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->assertSet('showingPicker', false)
+        ->call('openPicker')
+        ->assertSet('showingPicker', true)
+        ->call('closePicker')
+        ->assertSet('showingPicker', false)
+        ->call('openPicker')
+        ->call('addSection', 'test-hero')
+        ->assertSet('showingPicker', false);
+});
+
+it('groups registered components by their #[ComponentMeta] category, defaulting to Uncategorised', function () {
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->call('openPicker')
+        ->assertSeeHtml('Headers')
+        ->assertSeeHtml('Uncategorised')
+        ->assertSeeHtml('Hero')
+        ->assertSee('A large banner with a heading and image.');
+});
+
+it("surfaces each component's picker metadata as a data-search attribute for client-side filtering", function () {
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->call('openPicker')
+        ->assertSeeHtml('data-search="hero a large banner with a heading and image."');
+});

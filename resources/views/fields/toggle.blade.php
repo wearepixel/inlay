@@ -1,6 +1,9 @@
-<div class="mb-4">
-    <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+<div class="inlay-field">
+    <label class="inlay-checkbox-row">
         <input type="checkbox" wire:model.live="{{ $modelPath }}">
         {{ $field->label }}
     </label>
+    @if ($field->help)
+        <p class="inlay-field__help">{{ $field->help }}</p>
+    @endif
 </div>

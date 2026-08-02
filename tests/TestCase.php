@@ -6,6 +6,7 @@ namespace WearePixel\Inlay\Tests;
 
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
+use WearePixel\Inlay\Facades\Inlay;
 use WearePixel\Inlay\InlayServiceProvider;
 
 abstract class TestCase extends Orchestra
@@ -33,6 +34,11 @@ abstract class TestCase extends Orchestra
         ]);
 
         $app['view']->addLocation(__DIR__.'/Fixtures/views');
+    }
+
+    protected function defineRoutes($router): void
+    {
+        Inlay::routes();
     }
 
     protected function defineDatabaseMigrations(): void

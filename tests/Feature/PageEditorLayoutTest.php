@@ -20,7 +20,8 @@ it('renders the section list with drag data attributes, the add-section picker, 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->assertSee('data-section-id="'.$section->id.'"', escape: false)
         ->assertSee('test-hero')
-        ->assertSeeHtml('wire:click="addSection(\'test-hero\')"')
-        ->assertSeeHtml('$wire.updateOrder')
-        ->assertSee('Publish');
+        ->assertSeeHtml('x-data="inlaySortableTree"')
+        ->assertSee('Publish')
+        ->call('openPicker')
+        ->assertSeeHtml('wire:click="addSection(\'test-hero\')"');
 });

@@ -6,11 +6,13 @@ namespace WearePixel\Inlay\Tests\Fixtures;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
+use WearePixel\Inlay\Attributes\ComponentMeta;
 use WearePixel\Inlay\Attributes\Image;
 use WearePixel\Inlay\Attributes\Select;
 use WearePixel\Inlay\Attributes\Text;
 use WearePixel\Inlay\Contracts\InlayComponent;
 
+#[ComponentMeta(label: 'Hero', category: 'Headers', description: 'A large banner with a heading and image.', icon: '🖼')]
 final class TestHeroSection extends Component implements InlayComponent
 {
     public function __construct(

@@ -1,5 +1,7 @@
-<div class="mb-4">
-    <label class="mb-1 block text-sm font-medium text-gray-700">{{ $field->label }}</label>
-    <textarea wire:model.live.debounce.400ms="{{ $modelPath }}" rows="8"
-        class="w-full rounded-md border-gray-300 shadow-sm"></textarea>
+<div class="inlay-field">
+    <label class="inlay-field__label">{{ $field->label }}</label>
+    <textarea wire:model.live.debounce.400ms="{{ $modelPath }}" rows="8" class="inlay-textarea"></textarea>
+    @if ($field->help)
+        <p class="inlay-field__help">{{ $field->help }}</p>
+    @endif
 </div>

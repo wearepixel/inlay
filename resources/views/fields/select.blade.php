@@ -1,8 +1,11 @@
-<div class="mb-4">
-    <label class="mb-1 block text-sm font-medium text-gray-700">{{ $field->label }}</label>
-    <select wire:model.live="{{ $modelPath }}" class="w-full rounded-md border-gray-300 shadow-sm">
+<div class="inlay-field">
+    <label class="inlay-field__label">{{ $field->label }}</label>
+    <select wire:model.live="{{ $modelPath }}" class="inlay-select">
         @foreach ($field->options as $value => $optionLabel)
             <option value="{{ $value }}">{{ $optionLabel }}</option>
         @endforeach
     </select>
+    @if ($field->help)
+        <p class="inlay-field__help">{{ $field->help }}</p>
+    @endif
 </div>

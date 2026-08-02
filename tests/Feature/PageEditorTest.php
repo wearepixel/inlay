@@ -74,3 +74,41 @@ it('publishes the page', function () {
     expect($page->fresh()->status)->toBe(PageStatus::Published)
         ->and($page->revisions()->count())->toBe(1);
 });
+
+it('duplicates a section, copying its stored settings and selecting the copy', function () {
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $section = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => ['heading' => 'Original']]);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->call('duplicateSection', $section->id)
+        ->assertOk();
+
+    expect($page->sections()->count())->toBe(2);
+
+    $duplicate = $page->sections()->where('id', '!=', $section->id)->sole();
+
+    expect($duplicate->handle)->toBe('test-hero')
+        ->and($duplicate->settings)->toBe(['heading' => 'Original']);
+});
+
+it('deletes a section and clears the selection if it was selected', function () {
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $section = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->call('selectSection', $section->id)
+        ->assertSet('selectedSectionId', $section->id)
+        ->call('deleteSection', $section->id)
+        ->assertSet('selectedSectionId', null);
+
+    expect($page->sections()->count())->toBe(0);
+});
+
+it('bumps the preview version on a mutating action so the preview iframe is forced to reload', function () {
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->assertSet('previewVersion', 0)
+        ->call('addSection', 'test-hero')
+        ->assertSet('previewVersion', 1);
+});

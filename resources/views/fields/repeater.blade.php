@@ -1,19 +1,22 @@
-<div class="mb-4 space-y-3 rounded-md border border-gray-200 p-3">
-    <p class="text-sm font-medium text-gray-700">{{ $field->label }}</p>
+<div class="inlay-repeater">
+    <p class="inlay-field__label" style="margin-bottom: 10px;">{{ $field->label }}</p>
 
     @foreach (($editingProps[$field->name] ?? []) as $index => $item)
-        <div class="space-y-2 rounded-md border border-gray-100 p-2" wire:key="repeater-{{ $field->name }}-{{ $index }}">
+        <div class="inlay-repeater__item" wire:key="repeater-{{ $field->name }}-{{ $index }}">
             @foreach ($field->itemSchema->fields() as $subField)
+                @continue(! $subField->isVisible($item))
                 @include('inlay::fields.' . $subField->type->value, [
                     'field' => $subField,
                     'modelPath' => "editingProps.{$field->name}.{$index}.{$subField->name}",
                 ])
             @endforeach
-            <button type="button" wire:click="removeRepeaterItem('{{ $field->name }}', {{ $index }})"
-                class="text-sm text-red-600">Remove</button>
+            <button type="button" wire:click="removeRepeaterItem(@js($field->name), {{ $index }})" class="inlay-button inlay-button--small inlay-button--danger">Remove</button>
         </div>
     @endforeach
 
-    <button type="button" wire:click="addRepeaterItem('{{ $field->name }}')"
-        class="text-sm text-blue-600">Add item</button>
+    <button type="button" wire:click="addRepeaterItem(@js($field->name))" class="inlay-button inlay-button--small">+ Add item</button>
+
+    @if ($field->help)
+        <p class="inlay-field__help">{{ $field->help }}</p>
+    @endif
 </div>

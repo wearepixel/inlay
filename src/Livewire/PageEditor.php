@@ -7,7 +7,7 @@ namespace WearePixel\Inlay\Livewire;
 use BackedEnum;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\HtmlString;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -22,6 +22,7 @@ use WearePixel\Inlay\Support\ComponentDefinitionResolver;
 use WearePixel\Inlay\Support\SectionRegistry;
 use WearePixel\Inlay\Support\SectionRenderer;
 
+#[Layout('inlay::layout')]
 final class PageEditor extends Component
 {
     use WithFileUploads;
@@ -31,6 +32,17 @@ final class PageEditor extends Component
     public ?int $selectedSectionId = null;
 
     public bool $showingHistory = false;
+
+    public bool $showingPicker = false;
+
+    /**
+     * Bumped on every action that changes what the page renders, and used
+     * only as a query-string cache-buster on the preview iframe's src so a
+     * settings change always forces a fresh, real HTTP render of the
+     * host application's own frontend rather than a stale cached one -
+     * docs/v1-implementation-specification.md §18.
+     */
+    public int $previewVersion = 0;
 
     /** @var array<string, mixed> */
     public array $editingProps = [];
@@ -48,6 +60,14 @@ final class PageEditor extends Component
      */
     public function updateOrder(array $orderedIds): void
     {
+        // Every update is already scoped to this page's own rows, so a
+        // crafted id can never touch another page's sections - but without
+        // this, an arbitrarily large client-supplied array would still
+        // issue one bounded-but-real UPDATE per element. Clamp to this
+        // page's actual section ids first.
+        $ownedIds = $this->page->sections()->pluck('id')->all();
+        $orderedIds = array_values(array_intersect(array_map('intval', $orderedIds), $ownedIds));
+
         DB::transaction(function () use ($orderedIds) {
             foreach ($orderedIds as $index => $id) {
                 PageSection::whereKey($id)
@@ -55,6 +75,18 @@ final class PageEditor extends Component
                     ->update(['order' => $index]);
             }
         });
+
+        $this->bumpPreview();
+    }
+
+    public function openPicker(): void
+    {
+        $this->showingPicker = true;
+    }
+
+    public function closePicker(): void
+    {
+        $this->showingPicker = false;
     }
 
     public function addSection(string $slug): void
@@ -73,6 +105,41 @@ final class PageEditor extends Component
 
         $this->selectedSectionId = $section->id;
         $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($componentClass, []);
+        $this->showingPicker = false;
+        $this->bumpPreview();
+    }
+
+    public function duplicateSection(int $sectionId): void
+    {
+        $section = PageSection::whereKey($sectionId)
+            ->where('page_id', $this->page->id)
+            ->firstOrFail();
+
+        $duplicate = $this->page->sections()->create([
+            'handle' => $section->handle,
+            'order' => (int) ($this->page->sections()->max('order') + 1),
+            'settings' => $section->settings,
+        ]);
+
+        $componentClass = app(SectionRegistry::class)->resolve($duplicate->handle);
+
+        $this->selectedSectionId = $duplicate->id;
+        $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($componentClass, $duplicate->settings ?? []);
+        $this->bumpPreview();
+    }
+
+    public function deleteSection(int $sectionId): void
+    {
+        PageSection::whereKey($sectionId)
+            ->where('page_id', $this->page->id)
+            ->delete();
+
+        if ($this->selectedSectionId === $sectionId) {
+            $this->selectedSectionId = null;
+            $this->editingProps = [];
+        }
+
+        $this->bumpPreview();
     }
 
     public function selectSection(int $sectionId): void
@@ -150,17 +217,29 @@ final class PageEditor extends Component
         $this->selectedSectionId = null;
         $this->editingProps = [];
         $this->showingHistory = false;
+        $this->bumpPreview();
     }
 
     public function render(): View
     {
         return view('inlay::livewire.page-editor', [
+            'title' => "{$this->page->title} · Inlay",
             'sections' => $this->page->sections()->orderBy('order')->get(),
-            'availableSections' => app(SectionRegistry::class)->slugs(),
+            'availableComponents' => collect(app(SectionRegistry::class)->all())->groupBy(fn ($component) => $component->category),
             'selectedSchema' => $this->resolveSelectedSettings(),
-            'previewHtml' => $this->renderPreview(),
+            'previewUrl' => $this->previewUrl(),
             'revisions' => $this->page->revisions()->get(),
         ]);
+    }
+
+    private function previewUrl(): string
+    {
+        return route('inlay.pages.preview', $this->page).'?v='.$this->previewVersion;
+    }
+
+    private function bumpPreview(): void
+    {
+        $this->previewVersion++;
     }
 
     private function resolveSelectedSettings(): ?Settings
@@ -180,18 +259,6 @@ final class PageEditor extends Component
         $componentClass = app(SectionRegistry::class)->resolve($section->handle);
 
         return app(ComponentDefinitionResolver::class)->resolve($componentClass);
-    }
-
-    private function renderPreview(): HtmlString
-    {
-        $sections = $this->page->sections()->orderBy('order')->get()
-            ->map(fn (PageSection $section) => [
-                'handle' => $section->handle,
-                'settings' => $section->settings,
-            ])
-            ->all();
-
-        return new HtmlString(app(SectionRenderer::class)->render($sections));
     }
 
     /**
@@ -233,6 +300,7 @@ final class PageEditor extends Component
         $stored[$fieldName] = $coerced;
 
         $section->update(['settings' => $stored]);
+        $this->bumpPreview();
     }
 
     /**
