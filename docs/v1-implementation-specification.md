@@ -119,7 +119,7 @@ php artisan migrate
 ```
 
 ```php
-final class Hero extends \Illuminate\View\Component implements InlayComponent
+final class Hero extends \Illuminate\View\Component implements InlayBlock
 {
     public function __construct(
         public string $heading = 'Welcome',
@@ -280,12 +280,12 @@ One registration verb for the one renderable concept (`component`/`components`),
 ## 7. The public Component contract
 
 ```php
-interface InlayComponent
+interface InlayBlock
 {
 }
 ```
 
-**`InlayComponent` is a marker interface — it declares no methods.** An earlier draft of this document required `public static function settings(): Settings` on the interface itself, which is incompatible with also permitting attribute-only components that declare no `settings()` method at all — PHP cannot make an interface method simultaneously required and optional. `settings()` remains fully supported and is preferred for complex schemas, but it is one of two ways a component may declare its editor-facing metadata, not a contractual requirement:
+**`InlayBlock` is a marker interface — it declares no methods.** An earlier draft of this document required `public static function settings(): Settings` on the interface itself, which is incompatible with also permitting attribute-only components that declare no `settings()` method at all — PHP cannot make an interface method simultaneously required and optional. `settings()` remains fully supported and is preferred for complex schemas, but it is one of two ways a component may declare its editor-facing metadata, not a contractual requirement:
 
 ```php
 public static function settings(): Settings; // optional — present on the class if used
@@ -314,7 +314,7 @@ Unexposed, container-resolvable dependencies like `$products` above are satisfie
 **Registration must reject an attribute or `settings()` declaration with no corresponding constructor parameter** — the same validation direction as before, now stated alongside its converse: exposure is opt-in per parameter, and a declared setting with no parameter to attach to is a registration-time error, not a runtime one.
 
 ```php
-final class Hero extends Component implements InlayComponent
+final class Hero extends Component implements InlayBlock
 {
     public function __construct(
         public string $heading = 'Welcome',
@@ -420,7 +420,7 @@ The following fail immediately, with a clear developer-facing exception, at the 
 An optional, elegant authoring style for simple components, alongside — not instead of — the fluent `Settings::make()` API, which remains fully supported and is preferred for complex schemas.
 
 ```php
-final class Hero extends Component implements InlayComponent
+final class Hero extends Component implements InlayBlock
 {
     public function __construct(
         #[Text(label: 'Heading', help: 'Keep this under 80 characters', maxLength: 80)]
@@ -776,7 +776,7 @@ Not in v1: `navigations`/`navigation_items`, media-backed `site_settings` column
 Everything needed for the full sixteen-step journey (§3), in one release, using the one Blade renderer (§5):
 
 - `FieldType` gains `Toggle`/`Number`; `mapsToClass()` removed.
-- `InlayComponent`/`settings()`/`Settings`/`Setting` renames.
+- `InlayBlock`/`settings()`/`Settings`/`Setting` renames.
 - `Inlay::component()`/`components()`/`category()`/`pageDefinition()`.
 - Constructor-reflection type/default/nullability inference, with registration-time mismatch validation.
 - Optional PHP attribute authoring, merged with fluent declarations per §9's precedence rules.
@@ -884,7 +884,7 @@ The complete Blade-component composition workflow is stable. Blade components ma
 
 ## 26. Required final recommendations
 
-**Is `InlayComponent` the final public contract name?**
+**Is `InlayBlock` the final public contract name?**
 Yes.
 
 **Is `settings()` the final public declaration method?**

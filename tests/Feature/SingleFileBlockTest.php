@@ -9,32 +9,32 @@ use WeArePixel\Inlay\Enums\PageStatus;
 use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Livewire\PageEditor;
 use WeArePixel\Inlay\Models\Page;
-use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Tests\Fixtures\Spike\SpikeInlineWidget;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.sections' => []]);
+    config(['inlay.blocks' => []]);
     $this->fixturesPath = __DIR__.'/../Fixtures/single-file';
 });
 
-it('registers a single-file component explicitly', function () {
-    Inlay::singleFileComponent("{$this->fixturesPath}/hero.blade.php");
+it('registers a single-file block explicitly', function () {
+    Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
-    expect(app(SectionRegistry::class)->slugs())->toContain('single-file-hero');
+    expect(app(BlockRegistry::class)->slugs())->toContain('single-file-hero');
 });
 
 it('discovers every *.blade.php file directly inside a directory, using each file\'s own declared handle', function () {
-    Inlay::singleFileComponents("{$this->fixturesPath}/discoverable");
+    Inlay::singleFileBlocks("{$this->fixturesPath}/discoverable");
 
-    $slugs = app(SectionRegistry::class)->slugs();
+    $slugs = app(BlockRegistry::class)->slugs();
 
     expect($slugs)->toContain('discoverable-a')->toContain('discoverable-b');
 });
 
-it('renders a single-file component through the real view engine with resolved settings', function () {
-    Inlay::singleFileComponent("{$this->fixturesPath}/hero.blade.php");
+it('renders a single-file block through the real view engine with resolved settings', function () {
+    Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
     $html = app(SectionRenderer::class)->render([
         ['handle' => 'single-file-hero', 'settings' => ['heading' => 'Hello from a single file', 'showCta' => true]],
@@ -47,9 +47,9 @@ it('renders a single-file component through the real view engine with resolved s
         ->toContain('large'); // imageSize default
 });
 
-it('mounts and hydrates nested Livewire inside a single-file component\'s own markup', function () {
+it('mounts and hydrates nested Livewire inside a single-file block\'s own markup', function () {
     Livewire::component('spike-inline-widget', SpikeInlineWidget::class);
-    Inlay::singleFileComponent("{$this->fixturesPath}/nested-livewire.blade.php");
+    Inlay::singleFileBlock("{$this->fixturesPath}/nested-livewire.blade.php");
 
     $html = app(SectionRenderer::class)->render([
         ['handle' => 'single-file-nested-livewire', 'settings' => []],
@@ -58,9 +58,9 @@ it('mounts and hydrates nested Livewire inside a single-file component\'s own ma
     expect($html)->toContain('wire:snapshot');
 });
 
-it('appears in the component picker grouped by its own category, identically to a class-based component', function () {
-    config(['inlay.sections' => ['test-hero' => TestHeroSection::class]]);
-    Inlay::singleFileComponent("{$this->fixturesPath}/hero.blade.php");
+it('appears in the block picker grouped by its own category, identically to a class-based block', function () {
+    config(['inlay.blocks' => ['test-hero' => TestHeroSection::class]]);
+    Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
 
@@ -68,11 +68,11 @@ it('appears in the component picker grouped by its own category, identically to 
         ->call('openPicker')
         ->assertSeeHtml('Headers') // single-file-hero's category
         ->assertSeeHtml('Hero')
-        ->assertSeeHtml('A single-file hero component.');
+        ->assertSeeHtml('A single-file hero block.');
 });
 
 it('supports draft editing through the ordinary PageEditor flow with no special-casing', function () {
-    Inlay::singleFileComponent("{$this->fixturesPath}/hero.blade.php");
+    Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
 
@@ -85,8 +85,8 @@ it('supports draft editing through the ordinary PageEditor flow with no special-
     expect($page->sections()->sole()->settings)->toBe(['heading' => 'Edited via the editor']);
 });
 
-it('publishes a page composed of a single-file component', function () {
-    Inlay::singleFileComponent("{$this->fixturesPath}/hero.blade.php");
+it('publishes a page composed of a single-file block', function () {
+    Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $page->sections()->create(['handle' => 'single-file-hero', 'order' => 0, 'settings' => ['heading' => 'Published heading']]);
@@ -102,8 +102,8 @@ it('publishes a page composed of a single-file component', function () {
         ]);
 });
 
-it('restores a revision that includes a single-file component', function () {
-    Inlay::singleFileComponent("{$this->fixturesPath}/hero.blade.php");
+it('restores a revision that includes a single-file block', function () {
+    Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $page->sections()->create(['handle' => 'single-file-hero', 'order' => 0, 'settings' => ['heading' => 'Original']]);
@@ -117,20 +117,20 @@ it('restores a revision that includes a single-file component', function () {
     expect($page->sections()->first()->settings['heading'])->toBe('Original');
 });
 
-it('rejects a single-file component whose handle collides with an already-registered class-based one', function () {
-    config(['inlay.sections' => ['single-file-hero' => TestHeroSection::class]]);
+it('rejects a single-file block whose handle collides with an already-registered class-based one', function () {
+    config(['inlay.blocks' => ['single-file-hero' => TestHeroSection::class]]);
 
-    Inlay::singleFileComponent("{$this->fixturesPath}/hero.blade.php");
-})->throws(InvalidArgumentException::class, 'a class-based component is already registered for that handle');
+    Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
+})->throws(InvalidArgumentException::class, 'a class-based block is already registered for that handle');
 
-it('rejects two single-file components registered under the same handle', function () {
-    Inlay::singleFileComponent("{$this->fixturesPath}/hero.blade.php");
-    Inlay::singleFileComponent("{$this->fixturesPath}/hero.blade.php");
-})->throws(InvalidArgumentException::class, 'a single-file component is already registered for that handle');
+it('rejects two single-file blocks registered under the same handle', function () {
+    Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
+    Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
+})->throws(InvalidArgumentException::class, 'a single-file block is already registered for that handle');
 
-it('behaves no differently downstream than a class-based component with an equivalent shape', function () {
-    config(['inlay.sections' => ['test-hero' => TestHeroSection::class]]);
-    Inlay::singleFileComponent("{$this->fixturesPath}/hero.blade.php");
+it('behaves no differently downstream than a class-based block with an equivalent shape', function () {
+    config(['inlay.blocks' => ['test-hero' => TestHeroSection::class]]);
+    Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $classBased = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => ['heading' => 'Class-based']]);

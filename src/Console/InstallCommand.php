@@ -24,7 +24,7 @@ final class InstallCommand extends Command
         $this->components->bulletList([
             'Call Inlay::routes() from your own routes/web.php to register the admin.',
             "Set config('inlay.middleware') to guard it - the default ['web'] alone leaves it public.",
-            "Register your first component in config('inlay.sections').",
+            "Register your first block in config('inlay.blocks').",
             'Call Inlay::previewView() so the preview iframe renders using your real frontend.',
         ]);
 

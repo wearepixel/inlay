@@ -19,9 +19,9 @@ use WeArePixel\Inlay\Models\PageSection;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
-use WeArePixel\Inlay\Support\ComponentDefinition;
+use WeArePixel\Inlay\Support\BlockDefinition;
+use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionInstanceLabel;
-use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 
 #[Layout('inlay::layout')]
@@ -93,14 +93,14 @@ final class PageEditor extends Component
 
     public function addSection(string $slug): void
     {
-        $definition = app(SectionRegistry::class)->definition($slug);
+        $definition = app(BlockRegistry::class)->definition($slug);
 
         $section = $this->page->sections()->create([
             'handle' => $slug,
             'order' => (int) ($this->page->sections()->max('order') + 1),
-            // Deliberately sparse: a freshly-added component stores no
+            // Deliberately sparse: a freshly-added block stores no
             // overrides at all. Its fields resolve entirely from the
-            // component's own defaults until an editor changes one -
+            // block's own defaults until an editor changes one -
             // docs/v1-implementation-specification.md §12.
             'settings' => [],
         ]);
@@ -129,7 +129,7 @@ final class PageEditor extends Component
             'settings' => $section->settings,
         ]);
 
-        $definition = app(SectionRegistry::class)->definition($duplicate->handle);
+        $definition = app(BlockRegistry::class)->definition($duplicate->handle);
 
         $this->selectedSectionId = $duplicate->id;
         $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($definition, $duplicate->settings ?? []);
@@ -161,7 +161,7 @@ final class PageEditor extends Component
             ->where('page_id', $this->page->id)
             ->firstOrFail();
 
-        $definition = app(SectionRegistry::class)->definition($section->handle);
+        $definition = app(BlockRegistry::class)->definition($section->handle);
 
         $this->selectedSectionId = $sectionId;
         $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($definition, $section->settings ?? []);
@@ -249,22 +249,22 @@ final class PageEditor extends Component
             : null;
 
         if ($this->selectedSectionId && ! $selectedSection) {
-            // The selected component no longer exists - deleted from
+            // The selected block no longer exists - deleted from
             // another tab or session, since this session's own delete and
             // restore() already clear selectedSectionId themselves before
-            // reaching here. Fall back to the component tree rather than
-            // rendering a settings pane for a component that's gone.
+            // reaching here. Fall back to the block tree rather than
+            // rendering a settings pane for a block that's gone.
             $this->selectedSectionId = null;
             $this->editingProps = [];
             $this->dispatch('selection-cleared');
         }
 
         $selectedDefinition = $selectedSection
-            ? app(SectionRegistry::class)->definition($selectedSection->handle)
+            ? app(BlockRegistry::class)->definition($selectedSection->handle)
             : null;
 
         $schema = $selectedDefinition?->settings;
-        $components = collect(app(SectionRegistry::class)->all());
+        $blocks = collect(app(BlockRegistry::class)->all());
 
         return view('inlay::livewire.page-editor', [
             'title' => "{$this->page->title} · Inlay",
@@ -272,23 +272,23 @@ final class PageEditor extends Component
             // Display name + a best-guess instance detail (e.g. "Hero" /
             // "Welcome") for every section in the tree - see
             // SectionInstanceLabel. Keyed by section id so the view doesn't
-            // need to re-resolve each component's definition itself.
+            // need to re-resolve each block's definition itself.
             'sectionLabels' => $sections->mapWithKeys(fn (PageSection $section) => [
                 $section->id => $this->instanceLabel(
-                    app(SectionRegistry::class)->definition($section->handle),
+                    app(BlockRegistry::class)->definition($section->handle),
                     $section->settings ?? [],
                 ),
             ]),
             'selectedInstance' => $selectedDefinition
                 ? $this->instanceLabel($selectedDefinition, $selectedSection->settings ?? [])
                 : null,
-            'availableComponents' => $components->groupBy(fn ($component) => $component->category),
-            // A slug => {label, icon} lookup for the component picker's
+            'availableBlocks' => $blocks->groupBy(fn ($block) => $block->category),
+            // A slug => {label, icon} lookup for the block picker's
             // "recent" row, which tracks recently-added handles client-side
             // (localStorage) and needs enough metadata to render a compact
             // chip for one without a further round trip.
-            'componentLookup' => $components->mapWithKeys(fn ($component) => [
-                $component->slug => ['label' => $component->label, 'icon' => $component->icon],
+            'blockLookup' => $blocks->mapWithKeys(fn ($block) => [
+                $block->slug => ['label' => $block->label, 'icon' => $block->icon],
             ]),
             'selectedSchema' => $schema,
             'inspectorTabs' => $this->inspectorTabs($schema),
@@ -301,7 +301,7 @@ final class PageEditor extends Component
      * @param  array<string, mixed>  $storedSettings
      * @return array{name: string, detail: ?string}
      */
-    private function instanceLabel(ComponentDefinition $definition, array $storedSettings): array
+    private function instanceLabel(BlockDefinition $definition, array $storedSettings): array
     {
         return [
             'name' => $definition->name,
@@ -311,10 +311,10 @@ final class PageEditor extends Component
 
     /**
      * The settings inspector's tab > group > field structure, computed once
-     * here rather than with nested loops in the view. A component that
+     * here rather than with nested loops in the view. A block that
      * never calls Settings::tab() ends up with exactly one tab (label
      * null), which the view renders flat with no tab bar - tab navigation
-     * only ever appears once a component actually declares more than one.
+     * only ever appears once a block actually declares more than one.
      *
      * @return Collection<int, array{label: string|null, groups: Collection<int, array{label: string|null, fields: Collection<int, Setting>}>}>
      */
@@ -370,7 +370,7 @@ final class PageEditor extends Component
      * into whatever was already stored for this section - never the whole
      * editingProps array. This is the security boundary as much as it is the
      * sparse-storage mechanism: a setting with no matching declaration in the
-     * component's resolved definition is silently ignored here, so an
+     * block's resolved definition is silently ignored here, so an
      * editor can never persist a key a developer didn't expose, and
      * coercion always runs unconditionally, regardless of that field's
      * current visibleWhen() state.
@@ -389,7 +389,7 @@ final class PageEditor extends Component
             return;
         }
 
-        $definition = app(SectionRegistry::class)->definition($section->handle);
+        $definition = app(BlockRegistry::class)->definition($section->handle);
         $setting = $definition->settings->field($fieldName);
 
         if (! $setting) {
@@ -413,7 +413,7 @@ final class PageEditor extends Component
      * declared field's value to the shape its FieldType expects before it
      * reaches storage - a declared scalar field can still be set to an array
      * via the same wire:model mechanism, which would otherwise reach the
-     * component constructor and throw a fatal TypeError.
+     * block's constructor and throw a fatal TypeError.
      */
     private function coerceValue(Setting $setting, mixed $value): mixed
     {

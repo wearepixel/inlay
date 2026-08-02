@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Storage;
 use Stringable;
 
 /**
- * What an Image field hydrates to when a component is actually rendered -
- * never the bare disk-relative path SectionRenderer stores, so a component
+ * What an Image field hydrates to when a block is actually rendered -
+ * never the bare disk-relative path SectionRenderer stores, so a block's
  * view never has to know which disk it was uploaded to or how to turn that
  * path into a real URL. __toString() resolves the URL directly, so the
  * naive `<img src="{{ $image }}">` a developer reaches for first is
@@ -17,7 +17,7 @@ use Stringable;
  * first - the mistake this type exists to make impossible.
  *
  * Deliberately never null itself - the same convention LinkValue already
- * uses. A component that wants "no image" to behave like a genuinely
+ * uses. A block that wants "no image" to behave like a genuinely
  * absent value should type the parameter `?ImageValue $photo = null`
  * instead; SectionRenderer honours that nullability and only ever
  * constructs one of these when there is a real path to resolve. A

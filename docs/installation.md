@@ -1,6 +1,6 @@
 # Installation guide
 
-This walks a new Laravel developer from a fresh `composer require` through publishing their first page, using a `Hero` component as the running example. It assumes an existing Laravel 11, 12, or 13 application.
+This walks a new Laravel developer from a fresh `composer require` through publishing their first page, using a `Hero` block as the running example. It assumes an existing Laravel 11, 12, or 13 application.
 
 ## 1. Install the package
 
@@ -31,7 +31,7 @@ use WeArePixel\Inlay\Facades\Inlay;
 Inlay::routes();
 ```
 
-This registers the packaged admin under `/inlay` by default (`config('inlay.route_prefix')`). Visit `/inlay/pages` and you should see an empty page index - there's nothing to compose yet, because no component is registered.
+This registers the packaged admin under `/inlay` by default (`config('inlay.route_prefix')`). Visit `/inlay/pages` and you should see an empty page index - there's nothing to compose yet, because no block is registered.
 
 ## 4. Set your admin middleware
 
@@ -57,22 +57,22 @@ where `manage-pages` is a `Gate::define()` or policy ability your application de
 
 You do not need to do anything else to make this middleware apply to every admin action, not just the first page load - `Inlay::routes()` already handles registering it as [Livewire persistent middleware](https://livewire.laravel.com/docs/security#middleware-persistence-with-hierarchical-routing) for you. See the README's "[Why Livewire middleware persistence matters](../README.md#why-livewire-middleware-persistence-matters)" if you want the mechanical detail.
 
-## 5. Write your first Component
+## 5. Write your first block
 
-A Component is a normal Blade class component that implements `InlayComponent` - a marker interface with no required methods:
+A block is a normal Blade class component that implements `InlayBlock` - a marker interface with no required methods:
 
 ```php
-// app/Inlay/Components/Hero.php
-namespace App\Inlay\Components;
+// app/Inlay/Blocks/Hero.php
+namespace App\Inlay\Blocks;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WeArePixel\Inlay\Attributes\ComponentMeta;
+use WeArePixel\Inlay\Attributes\BlockMeta;
 use WeArePixel\Inlay\Attributes\Text;
-use WeArePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Contracts\InlayBlock;
 
-#[ComponentMeta(label: 'Hero', category: 'Headers', description: 'A page heading with introductory copy.')]
-final class Hero extends Component implements InlayComponent
+#[BlockMeta(label: 'Hero', category: 'Headers', description: 'A page heading with introductory copy.')]
+final class Hero extends Component implements InlayBlock
 {
     public function __construct(
         #[Text(label: 'Heading', maxLength: 80)]
@@ -84,13 +84,13 @@ final class Hero extends Component implements InlayComponent
 
     public function render(): View
     {
-        return view('components.hero');
+        return view('blocks.hero');
     }
 }
 ```
 
 ```blade
-{{-- resources/views/components/hero.blade.php --}}
+{{-- resources/views/blocks/hero.blade.php --}}
 <section class="hero">
     <h1>{{ $heading }}</h1>
     @if ($subheading)
@@ -102,8 +102,8 @@ final class Hero extends Component implements InlayComponent
 Register it by handle in `config/inlay.php`:
 
 ```php
-'sections' => [
-    'hero' => \App\Inlay\Components\Hero::class,
+'blocks' => [
+    'hero' => \App\Inlay\Blocks\Hero::class,
 ],
 ```
 
@@ -163,10 +163,10 @@ Route::get('/{page:slug}', function (Page $page) {
 </x-app-layout>
 ```
 
-Visit the page's slug on your site and you should see the published `Hero` component, styled by your own application's CSS - not Inlay's.
+Visit the page's slug on your site and you should see the published `Hero` block, styled by your own application's CSS - not Inlay's.
 
 ## Next steps
 
-- [docs/components.md](components.md) - the full component-authoring reference (fluent settings, enums, `LinkValue`, nested Livewire).
+- [docs/blocks.md](blocks.md) - the full block-authoring reference (fluent settings, enums, `LinkValue`, nested Livewire).
 - [docs/editor.md](editor.md) - the editor-facing workflow in plain language.
 - [README.md](../README.md#current-limitations) - what this release deliberately doesn't include yet.

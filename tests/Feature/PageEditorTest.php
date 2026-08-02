@@ -9,12 +9,12 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.sections' => [
+    config(['inlay.blocks' => [
         'test-hero' => TestHeroSection::class,
     ]]);
 });
 
-it('adds a section with no stored overrides, resolving effective settings from the component defaults', function () {
+it('adds a section with no stored overrides, resolving effective settings from the block defaults', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
@@ -24,7 +24,7 @@ it('adds a section with no stored overrides, resolving effective settings from t
     $section = $page->sections()->first();
 
     expect($section->handle)->toBe('test-hero')
-        // Sparse by design: a freshly-added component stores nothing at
+        // Sparse by design: a freshly-added block stores nothing at
         // all, relying entirely on its own constructor defaults until an
         // editor changes a field.
         ->and($section->settings)->toBe([]);

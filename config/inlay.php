@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'sections' => [],
+    'blocks' => [],
     'disk' => 'public',
 
     /*
@@ -19,7 +19,7 @@ return [
     | ['web'] leaves every admin action public. Inlay::routes() also
     | registers this same middleware as Livewire "persistent" middleware, so
     | it re-runs on every subsequent admin action (add/reorder/delete a
-    | component, persist a setting, publish), not just the first page load.
+    | block, persist a setting, publish), not just the first page load.
     |
     */
     'route_prefix' => 'inlay',

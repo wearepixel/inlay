@@ -9,7 +9,7 @@ use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.sections' => [
+    config(['inlay.blocks' => [
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
     ]]);
@@ -29,7 +29,7 @@ it('stays closed until openPicker is called, and closes again on closePicker/add
         ->assertSet('showingPicker', false);
 });
 
-it('groups registered components by their #[ComponentMeta] category, defaulting to Uncategorised', function () {
+it('groups registered blocks by their #[BlockMeta] category, defaulting to Uncategorised', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
@@ -40,7 +40,7 @@ it('groups registered components by their #[ComponentMeta] category, defaulting 
         ->assertSee('A large banner with a heading and image.');
 });
 
-it("surfaces each component's picker metadata (label, description, category, keywords) as a data-search attribute for client-side filtering", function () {
+it("surfaces each block's picker metadata (label, description, category, keywords) as a data-search attribute for client-side filtering", function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])

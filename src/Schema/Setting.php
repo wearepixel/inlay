@@ -7,7 +7,7 @@ namespace WeArePixel\Inlay\Schema;
 final class Setting
 {
     /**
-     * Populated by ComponentDefinitionResolver from the owning component's
+     * Populated by BlockDefinitionResolver from the owning block's
      * constructor, never by a developer. The constructor is the exclusive
      * source of truth for a top-level setting's nullability and default
      * value - see docs/v1-implementation-specification.md §8, §9.
@@ -20,7 +20,7 @@ final class Setting
 
     /**
      * @var class-string<\BackedEnum>|null Populated by
-     *                                     ComponentDefinitionResolver when the
+     *                                     BlockDefinitionResolver when the
      *                                     constructor parameter is
      *                                     enum-typed - never set directly.
      */
@@ -74,7 +74,7 @@ final class Setting
 
     /**
      * Purely a UI-rendering concern - never the security boundary. Validation
-     * and coercion (ComponentDefinitionResolver) run against every declared
+     * and coercion (BlockDefinitionResolver) run against every declared
      * setting unconditionally, regardless of what this returns.
      *
      * @param  array<string, mixed>  $effectiveSettings

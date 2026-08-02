@@ -1,10 +1,10 @@
 <?php
 
 use WeArePixel\Inlay\Schema\Settings;
-use WeArePixel\Inlay\SingleFile\Component;
+use WeArePixel\Inlay\SingleFile\Block;
 
-component(
-    Component::make('discoverable-b')
+block(
+    Block::make('discoverable-b')
         ->name('Discoverable B')
         ->settings(Settings::make()->text('heading')->label('Heading')->default('B'))
 );

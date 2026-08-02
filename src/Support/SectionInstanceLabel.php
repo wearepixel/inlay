@@ -9,8 +9,8 @@ use WeArePixel\Inlay\Schema\FieldType;
 
 /**
  * Turns a page section's raw stored settings into a short, human-readable
- * instance label for the component tree and settings header - "hero" and
- * "hero" for two different components tells an editor nothing; "Hero -
+ * instance label for the block tree and settings header - "hero" and
+ * "hero" for two different blocks tells an editor nothing; "Hero -
  * 'Welcome'" and "Hero - 'Our Story'" does. A safe, deterministic
  * heuristic: only ever reads a short plain-text field's value, never
  * textarea/richtext/image/select/repeater/group, so this can never surface
@@ -22,7 +22,7 @@ final class SectionInstanceLabel
 {
     /**
      * Checked in this order before falling back to the first declared Text
-     * field - a component author's own field names win the moment one of
+     * field - a block author's own field names win the moment one of
      * these matches, so this only ever acts as a fallback guess.
      */
     private const CANDIDATE_NAMES = ['heading', 'title', 'name', 'label'];
@@ -30,13 +30,13 @@ final class SectionInstanceLabel
     private const MAX_LENGTH = 40;
 
     /**
-     * The resolved text to show alongside the component's display name, or
+     * The resolved text to show alongside the block's display name, or
      * null when nothing suitable was found - the caller falls back to the
      * display name alone in that case.
      *
      * @param  array<string, mixed>  $storedSettings
      */
-    public static function detail(ComponentDefinition $definition, array $storedSettings): ?string
+    public static function detail(BlockDefinition $definition, array $storedSettings): ?string
     {
         $schema = $definition->settings;
         $override = $schema->instanceLabelField();
@@ -85,7 +85,7 @@ final class SectionInstanceLabel
     /**
      * @param  array<string, mixed>  $storedSettings
      */
-    private static function textValue(ComponentDefinition $definition, array $storedSettings, string $fieldName): ?string
+    private static function textValue(BlockDefinition $definition, array $storedSettings, string $fieldName): ?string
     {
         $value = array_key_exists($fieldName, $storedSettings)
             ? $storedSettings[$fieldName]

@@ -6,10 +6,10 @@ namespace WeArePixel\Inlay\Tests\Fixtures;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WeArePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Contracts\InlayBlock;
 use WeArePixel\Inlay\Schema\Settings;
 
-final class TestGroupSection extends Component implements InlayComponent
+final class TestGroupSection extends Component implements InlayBlock
 {
     public function __construct(
         public array $author = [],

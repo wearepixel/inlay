@@ -313,7 +313,7 @@
  * A contextual sidebar (structure OR settings, never both) plus a dominant
  * preview - the preview is the point of a visual composition tool, not the
  * settings form. 360px keeps the sidebar a stable width appropriate for
- * forms regardless of how many settings a component declares (its own
+ * forms regardless of how many settings a block declares (its own
  * content scrolls internally - see .inlay-editor__sidebar overflow-y -
  * rather than ever changing the column width); at common desktop widths
  * that leaves the preview at roughly 70-75% of the editor's width, per the
@@ -399,7 +399,7 @@
   display: none;
 }
 
-/* Component tree */
+/* Block tree */
 
 .inlay-tree {
   list-style: none;
@@ -536,11 +536,11 @@
 }
 
 /*
- * Component picker - a left-anchored drawer rather than a centered dialog.
+ * Block picker - a left-anchored drawer rather than a centered dialog.
  * The Add flow already needs a real dialog (it's modal - a scrim over the
  * whole editor, Escape closes it, focus starts in its search field), so a
  * left drawer costs nothing extra in JavaScript over a centered one: same
- * Alpine component (inlayComponentPicker), same keyboard handlers, same
+ * Alpine component (inlayBlockPicker), same keyboard handlers, same
  * focus-on-open. It's purely a positioning choice, made here in CSS - and
  * anchoring it to the same edge the contextual sidebar occupies makes the
  * picker read as an extension of that sidebar (the thing you're about to
@@ -1090,7 +1090,7 @@
   color: var(--inlay-published);
 }
 
-/* Recent components (picker) */
+/* Recent blocks (picker) */
 
 .inlay-picker__recent-title {
   padding: 12px 8px 6px;
@@ -1109,7 +1109,7 @@
   }
 }
 
-/* Small screen: one panel at a time (component tree/settings/history, or
+/* Small screen: one panel at a time (block tree/settings/history, or
    preview) via the segmented control in the topbar, rather than squeezing
    both into unusably narrow columns. Both panels stay in the DOM - only
    .inlay-mobile-hide's display:none is scoped to this breakpoint - so the

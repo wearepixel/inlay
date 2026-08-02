@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace WeArePixel\Inlay\Support;
 
 /**
- * The resolved, always-complete metadata for one registered component -
- * either declared via #[ComponentMeta] or defaulted from its slug, for the
- * admin's component picker.
+ * The resolved, always-complete metadata for one registered block -
+ * either declared via #[BlockMeta] or defaulted from its slug, for the
+ * admin's block picker.
  */
-final readonly class ComponentMetadata
+final readonly class BlockMetadata
 {
     /**
      * @param  array<int, string>  $keywords
@@ -25,7 +25,7 @@ final readonly class ComponentMetadata
     ) {}
 
     /**
-     * Every term the component picker's search matches against.
+     * Every term the block picker's search matches against.
      *
      * @return array<int, string>
      */

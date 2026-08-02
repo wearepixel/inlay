@@ -7,13 +7,13 @@ namespace WeArePixel\Inlay\SingleFile;
 use WeArePixel\Inlay\Schema\Settings;
 
 /**
- * The fluent declaration a single-file component's own PHP block builds
- * and passes to the global component() function - not a Blade component
+ * The fluent declaration a single-file block's own PHP block builds
+ * and passes to the global block() function - not a Blade component
  * class, and not related to Illuminate\View\Component. It exists only to
- * be compiled into a WeArePixel\Inlay\Support\ComponentDefinition by
- * SingleFileComponentLoader; nothing else ever holds a reference to it.
+ * be compiled into a WeArePixel\Inlay\Support\BlockDefinition by
+ * SingleFile\BlockLoader; nothing else ever holds a reference to it.
  */
-final class Component
+final class Block
 {
     private ?string $name = null;
 

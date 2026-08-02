@@ -11,7 +11,7 @@ use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestRequiredFieldSection;
 
 beforeEach(function () {
-    config(['inlay.sections' => [
+    config(['inlay.blocks' => [
         'test-hero' => TestHeroSection::class,
     ]]);
 });
@@ -75,7 +75,7 @@ it('rejects a non-image upload and does not persist it to the selected section s
 });
 
 it('shows a calm inline hint for an empty required field, and hides it once filled', function () {
-    config(['inlay.sections' => ['test-required' => TestRequiredFieldSection::class]]);
+    config(['inlay.blocks' => ['test-required' => TestRequiredFieldSection::class]]);
 
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-required', 'order' => 0, 'settings' => []]);
@@ -93,7 +93,7 @@ it('shows a calm inline hint for an empty required field, and hides it once fill
 });
 
 it("shows an enum case's optional description under a Select field once it's the current value", function () {
-    config(['inlay.sections' => ['test-required' => TestRequiredFieldSection::class]]);
+    config(['inlay.blocks' => ['test-required' => TestRequiredFieldSection::class]]);
 
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-required', 'order' => 0, 'settings' => ['size' => 'large']]);

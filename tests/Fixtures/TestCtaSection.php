@@ -6,11 +6,11 @@ namespace WeArePixel\Inlay\Tests\Fixtures;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WeArePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Contracts\InlayBlock;
 use WeArePixel\Inlay\Schema\Settings;
 use WeArePixel\Inlay\Support\LinkValue;
 
-final class TestCtaSection extends Component implements InlayComponent
+final class TestCtaSection extends Component implements InlayBlock
 {
     public function __construct(
         public ?LinkValue $cta = null,

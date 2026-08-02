@@ -16,11 +16,11 @@ use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
  *   unreliable, so the reorder *behaviour* is proven at the Livewire level
  *   in tests/Feature/PageEditorTest.php ("it persists drag-reordering").
  *   The test below only proves the drag UI itself is wired up.
- * - Locked/required Component enforcement (Page Definitions): that
+ * - Locked/required Block enforcement (Page Definitions): that
  *   subsystem does not exist in this release - see the completion report.
  */
 beforeEach(function () {
-    config(['inlay.sections' => [
+    config(['inlay.blocks' => [
         'hero' => BrowserHeroSection::class,
         'faq' => TestFaqSection::class,
     ]]);
@@ -36,7 +36,7 @@ it('creates a page from the index and opens its editor', function () {
         ->press('Create page')
         // Livewire's redirectRoute() after save() lands here.
         ->assertSee('Home')
-        ->assertSee('This page has no Components yet.');
+        ->assertSee('This page has no blocks yet.');
 
     expect(Page::sole())
         ->title->toBe('Home')
@@ -44,37 +44,37 @@ it('creates a page from the index and opens its editor', function () {
         ->status->toBe(PageStatus::Draft);
 });
 
-it('opens the component picker, searches, and adds a component grouped by category', function () {
+it('opens the block picker, searches, and adds a block grouped by category', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
 
     $editor->click('@open-picker')
         ->assertVisible('@picker-search')
-        ->assertSee('Headers') // BrowserHeroSection's #[ComponentMeta] category
-        ->assertSee('Uncategorised') // TestFaqSection has no #[ComponentMeta]
+        ->assertSee('Headers') // BrowserHeroSection's #[BlockMeta] category
+        ->assertSee('Uncategorised') // TestFaqSection has no #[BlockMeta]
         // Regression check: opening the picker evaluates the "recent
-        // components" Alpine expression even with an empty recent list - a
+        // blocks" Alpine expression even with an empty recent list - a
         // manual review caught this throwing a ReferenceError because the
         // method it called was never actually implemented.
         ->assertNoJavaScriptErrors();
 
     $editor->fill('@picker-search', 'Hero')
-        ->assertVisible('@picker-card-hero')
-        ->assertMissing('@picker-card-faq')
+        ->assertVisible('@picker-block-hero')
+        ->assertMissing('@picker-block-faq')
         // Regression check: a search that DOES match something must not
         // also show the "no results" message (a real bug found during
         // manual review - the message's own x-show read the wrong
         // element's descendants and reported zero matches unconditionally).
         ->assertMissing('.inlay-picker__no-results');
 
-    $editor->click('@picker-card-hero')->assertMissing('@picker-search');
+    $editor->click('@picker-block-hero')->assertMissing('@picker-search');
 
     $section = $page->sections()->sole();
     expect($section->handle)->toBe('hero');
 });
 
-it('selects a component, edits a setting, and shows conditional visibility', function () {
+it('selects a block, edits a setting, and shows conditional visibility', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -96,7 +96,7 @@ it('selects a component, edits a setting, and shows conditional visibility', fun
         ->assertMissing('@setting-ctaLabel');
 });
 
-it('duplicates, shows drag connectivity, and deletes a component', function () {
+it('duplicates, shows drag connectivity, and deletes a block', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -121,8 +121,8 @@ it('duplicates, shows drag connectivity, and deletes a component', function () {
     // contextual sidebar - the tree itself is a separate pane now, not
     // visible alongside it, so interacting with tree rows again means
     // going back first, exactly as a real editor would.
-    $editor->assertVisible('@back-to-components')
-        ->click('@back-to-components');
+    $editor->assertVisible('@back-to-blocks')
+        ->click('@back-to-blocks');
 
     // Proves the drag UI is connected (both rows are draggable handles
     // wired to the same Alpine component that calls $wire.updateOrder()) -

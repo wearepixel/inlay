@@ -9,7 +9,7 @@ use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestGroupSection;
 
 beforeEach(function () {
-    config(['inlay.sections' => [
+    config(['inlay.blocks' => [
         'test-faq' => TestFaqSection::class,
         'test-group' => TestGroupSection::class,
     ]]);

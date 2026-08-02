@@ -6,17 +6,17 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 
 /**
- * The two-pane editor redesign: a contextual sidebar (component tree OR a
- * selected component's settings, never both at once) beside a dominant
+ * The two-pane editor redesign: a contextual sidebar (block tree OR a
+ * selected block's settings, never both at once) beside a dominant
  * preview - replacing the old permanent three-column layout. See
  * InlayManager... no, see resources/dist/inlay.js's inlayEditorSidebar and
  * docs/editor.md for the interaction model this exercises.
  */
 beforeEach(function () {
-    config(['inlay.sections' => ['hero' => BrowserHeroSection::class]]);
+    config(['inlay.blocks' => ['hero' => BrowserHeroSection::class]]);
 });
 
-it('opens in component-tree mode by default, with the preview dominant and no permanent settings column', function () {
+it('opens in block-tree mode by default, with the preview dominant and no permanent settings column', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -37,7 +37,7 @@ it('opens in component-tree mode by default, with the preview dominant and no pe
     expect($previewWidth)->toBeGreaterThan($sidebarWidth * 1.5);
 });
 
-it('selecting a component replaces the tree with its settings, and back returns to the tree with focus restored', function () {
+it('selecting a block replaces the tree with its settings, and back returns to the tree with focus restored', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -52,7 +52,7 @@ it('selecting a component replaces the tree with its settings, and back returns 
         ->assertSee('Hero')
         ->assertSee('Welcome');
 
-    $editor->click('@back-to-components')
+    $editor->click('@back-to-blocks')
         ->assertVisible("@tree-item-{$section->id}")
         ->assertMissing('@setting-heading')
         // Still highlighted as selected, even though the sidebar no longer
@@ -84,13 +84,13 @@ it('opens settings with Enter and returns to the tree with Escape', function () 
         ->assertVisible("@tree-item-{$section->id}");
 });
 
-it('adding from the picker selects the new component and opens its settings', function () {
+it('adding from the picker selects the new block and opens its settings', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
 
     $editor->click('@open-picker')
-        ->click('@picker-card-hero')
+        ->click('@picker-block-hero')
         ->assertVisible('@setting-heading')
         ->assertSee('Hero');
 
@@ -98,7 +98,7 @@ it('adding from the picker selects the new component and opens its settings', fu
     $editor->assertMissing("@tree-item-{$section->id}");
 });
 
-it('safely returns to the tree if the selected component is deleted', function () {
+it('safely returns to the tree if the selected block is deleted', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -107,14 +107,14 @@ it('safely returns to the tree if the selected component is deleted', function (
 
     $editor->click("@tree-item-{$section->id}")
         ->assertVisible('@setting-heading')
-        ->click('@back-to-components');
+        ->click('@back-to-blocks');
 
     $editor->hover("@tree-item-{$section->id}")
         ->click("@delete-{$section->id}")
         ->wait(1);
 
     $editor->assertMissing('@setting-heading')
-        ->assertSee('This page has no Components yet.')
+        ->assertSee('This page has no blocks yet.')
         ->assertNoJavaScriptErrors();
 
     expect($page->sections()->count())->toBe(0);

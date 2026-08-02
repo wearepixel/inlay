@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 it('renders each section through its own Blade view with resolved effective settings', function () {
-    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         ['handle' => 'test-hero', 'settings' => ['heading' => 'Welcome', 'layout' => 'image-left']],
@@ -23,10 +23,10 @@ it('renders each section through its own Blade view with resolved effective sett
         ->toContain('flex-row"');
 });
 
-it('skips a section whose settings fail to construct its component instead of failing the whole page', function () {
+it('skips a section whose settings fail to construct its block instead of failing the whole page', function () {
     Log::spy();
 
-    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         // Simulates a bypass of PageEditor's validation reaching the
@@ -48,7 +48,7 @@ it('skips a section whose settings fail to construct its component instead of fa
 it('skips a section with an unregistered handle instead of failing the whole page', function () {
     Log::spy();
 
-    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         ['handle' => 'not-registered', 'settings' => []],
@@ -61,7 +61,7 @@ it('skips a section with an unregistered handle instead of failing the whole pag
 });
 
 it('hydrates a stored Image path into an ImageValue that resolves to a real Storage URL', function () {
-    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         ['handle' => 'test-hero', 'settings' => ['heading' => 'Welcome', 'layout' => 'image-right', 'photo' => 'inlay/photo.png']],
@@ -71,7 +71,7 @@ it('hydrates a stored Image path into an ImageValue that resolves to a real Stor
 });
 
 it('leaves a nullable Image field genuinely null when no photo is set, not an always-truthy empty value', function () {
-    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         ['handle' => 'test-hero', 'settings' => ['heading' => 'Welcome', 'layout' => 'image-right']],
@@ -83,7 +83,7 @@ it('leaves a nullable Image field genuinely null when no photo is set, not an al
 it('falls back to the constructor default and keeps rendering when a stored enum value no longer matches a real case', function () {
     Log::spy();
 
-    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         ['handle' => 'test-hero', 'settings' => ['heading' => 'Orphaned layout', 'layout' => 'no-longer-a-case']],

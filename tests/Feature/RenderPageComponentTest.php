@@ -8,7 +8,7 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.sections' => [
+    config(['inlay.blocks' => [
         'test-hero' => TestHeroSection::class,
     ]]);
 });

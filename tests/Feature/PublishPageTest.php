@@ -8,7 +8,7 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.sections' => [
+    config(['inlay.blocks' => [
         'test-hero' => TestHeroSection::class,
     ]]);
 });
@@ -30,7 +30,7 @@ it('snapshots fully-resolved effective settings for every section and marks the 
         ->and($page->fresh()->status)->toBe(PageStatus::Published);
 });
 
-it('does not change an already-published revision when the component default changes afterward', function () {
+it('does not change an already-published revision when the block default changes afterward', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
     $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
 

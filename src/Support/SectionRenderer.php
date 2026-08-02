@@ -13,13 +13,13 @@ use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 
 /**
- * Renders each registered component through Laravel's real view engine -
- * a class-based component through a genuine, compiled Blade component tag
+ * Renders each registered block through Laravel's real view engine -
+ * a class-based block through a genuine, compiled Blade component tag
  * (<x-dynamic-component> resolved via a registered alias, per the mechanism
  * proven in tests/Feature/RendererMechanismSpikeTest.php and documented in
- * docs/v1-implementation-specification.md §5); a single-file component
+ * docs/v1-implementation-specification.md §5); a single-file block
  * through View::file() against its own Blade file directly. Both paths are
- * real Blade compilation, never manual `new $componentClass(...)`
+ * real Blade compilation, never manual `new $blockClass(...)`
  * construction - which is what lets either kind's own view freely nest a
  * genuine, hydrating Livewire component with zero awareness on the
  * package's part.
@@ -27,7 +27,7 @@ use WeArePixel\Inlay\Schema\Setting;
 final class SectionRenderer
 {
     public function __construct(
-        private readonly SectionRegistry $registry,
+        private readonly BlockRegistry $registry,
     ) {}
 
     /**
@@ -47,11 +47,11 @@ final class SectionRenderer
                 $definition = $this->registry->definition($section['handle'] ?? '');
                 $settings = $this->resolveEffectiveSettings($definition, $section['settings'] ?? []);
 
-                $html .= $this->renderComponent($definition, $settings);
+                $html .= $this->renderBlock($definition, $settings);
             } catch (Throwable $exception) {
-                // A malformed or unresolvable component must not take down
-                // every other component on the page.
-                Log::warning('inlay: skipped a component that failed to render', [
+                // A malformed or unresolvable block must not take down
+                // every other block on the page.
+                Log::warning('inlay: skipped a block that failed to render', [
                     'handle' => $section['handle'] ?? null,
                     'exception' => $exception->getMessage(),
                 ]);
@@ -71,7 +71,7 @@ final class SectionRenderer
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    public function resolveEffectiveSettings(ComponentDefinition $definition, array $stored): array
+    public function resolveEffectiveSettings(BlockDefinition $definition, array $stored): array
     {
         return $this->resolveEffective($definition, $stored, raw: false);
     }
@@ -87,7 +87,7 @@ final class SectionRenderer
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    public function resolveEffectiveRawSettings(ComponentDefinition $definition, array $stored): array
+    public function resolveEffectiveRawSettings(BlockDefinition $definition, array $stored): array
     {
         return $this->resolveEffective($definition, $stored, raw: true);
     }
@@ -96,7 +96,7 @@ final class SectionRenderer
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    private function resolveEffective(ComponentDefinition $definition, array $stored, bool $raw): array
+    private function resolveEffective(BlockDefinition $definition, array $stored, bool $raw): array
     {
         $effective = [];
 
@@ -122,7 +122,7 @@ final class SectionRenderer
         return $setting->default;
     }
 
-    private function resolveValue(ComponentDefinition $definition, Setting $setting, mixed $value, bool $raw): mixed
+    private function resolveValue(BlockDefinition $definition, Setting $setting, mixed $value, bool $raw): mixed
     {
         if ($setting->type === FieldType::Select && $setting->enumClass !== null) {
             $enum = $this->hydrateEnum($definition, $setting, $value);
@@ -158,7 +158,7 @@ final class SectionRenderer
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    private function resolveNestedEffectiveSettings(ComponentDefinition $definition, Setting $setting, array $stored, bool $raw): array
+    private function resolveNestedEffectiveSettings(BlockDefinition $definition, Setting $setting, array $stored, bool $raw): array
     {
         $itemSchema = $setting->itemSchema;
 
@@ -181,7 +181,7 @@ final class SectionRenderer
      * falls back to the constructor default and logs a structured warning
      * for public rendering - docs/v1-implementation-specification.md §10.
      */
-    private function hydrateEnum(ComponentDefinition $definition, Setting $setting, mixed $value): mixed
+    private function hydrateEnum(BlockDefinition $definition, Setting $setting, mixed $value): mixed
     {
         if ($value instanceof BackedEnum) {
             return $value;
@@ -196,7 +196,7 @@ final class SectionRenderer
         }
 
         Log::warning('inlay: stored value no longer matches a valid enum case, using the constructor default', [
-            'component' => $definition->handle,
+            'block' => $definition->handle,
             'setting' => $setting->name,
             'enum' => $setting->enumClass,
             'value' => $value,
@@ -228,7 +228,7 @@ final class SectionRenderer
      * ImageValue, and only when there's actually a path to resolve - a
      * setting explicitly declared nullable (`?ImageValue $x = null`) gets a
      * real null for "no image" rather than an always-truthy empty instance,
-     * matching what a component author would naturally write `@if ($x)` for.
+     * matching what a block author would naturally write `@if ($x)` for.
      */
     private function hydrateImage(Setting $setting, mixed $value, bool $raw): string|ImageValue|null
     {
@@ -248,28 +248,28 @@ final class SectionRenderer
     /**
      * @param  array<string, mixed>  $settings
      */
-    private function renderComponent(ComponentDefinition $definition, array $settings): string
+    private function renderBlock(BlockDefinition $definition, array $settings): string
     {
         return match ($definition->sourceType) {
-            ComponentSourceType::ClassBased => $this->renderClassBasedComponent($definition->sourceIdentifier, $settings),
-            ComponentSourceType::SingleFile => $this->renderSingleFileComponent($definition->sourceIdentifier, $settings),
+            BlockSourceType::ClassBased => $this->renderClassBasedBlock($definition->sourceIdentifier, $settings),
+            BlockSourceType::SingleFile => $this->renderSingleFileBlock($definition->sourceIdentifier, $settings),
         };
     }
 
     /**
-     * @param  class-string  $componentClass
+     * @param  class-string  $blockClass
      * @param  array<string, mixed>  $settings
      */
-    private function renderClassBasedComponent(string $componentClass, array $settings): string
+    private function renderClassBasedBlock(string $blockClass, array $settings): string
     {
-        $alias = 'inlay-'.md5($componentClass);
+        $alias = 'inlay-'.md5($blockClass);
 
         // <x-dynamic-component> does not accept a fully-qualified class name
         // directly (confirmed against this package's pinned Laravel version -
         // see the spike test); it must be resolved through a registered
         // component alias instead. Registering is idempotent and cheap enough
         // to call on every render.
-        Blade::component($alias, $componentClass);
+        Blade::component($alias, $blockClass);
 
         $bindings = collect(array_keys($settings))
             ->map(fn (string $key) => ":{$key}=\"\$settings['{$key}']\"")
@@ -282,12 +282,12 @@ final class SectionRenderer
         // application, but the memoised compiler snapshots whatever aliases
         // existed at the *first* dynamic-component render ever, in that
         // process, and never refreshes, so an alias registered afterward
-        // (a second component class, a fresh application boot in a test
-        // suite, a queued worker that renders a component type it hasn't
+        // (a second block's class, a fresh application boot in a test
+        // suite, a queued worker that renders a block type it hasn't
         // seen yet) silently fails to resolve. Confirmed empirically by this
         // package's own spike (tests/Feature/RendererMechanismSpikeTest.php)
         // failing only when run after another test had already rendered a
-        // different aliased component in the same process.
+        // different aliased block in the same process.
         //
         // The alias is interpolated directly as a literal tag name instead
         // (<x-{$alias}>), which Blade compiles as an ordinary, non-dynamic
@@ -308,7 +308,7 @@ final class SectionRenderer
     }
 
     /**
-     * A single-file component has no class or alias to render through - its
+     * A single-file block has no class or alias to render through - its
      * own Blade file is rendered directly, via Laravel's real view engine
      * (View::file() compiles an arbitrary file path exactly like a
      * registered view). $settings are extracted into the view's scope by
@@ -317,7 +317,7 @@ final class SectionRenderer
      *
      * @param  array<string, mixed>  $settings
      */
-    private function renderSingleFileComponent(string $bladeFilePath, array $settings): string
+    private function renderSingleFileBlock(string $bladeFilePath, array $settings): string
     {
         return View::file($bladeFilePath, $settings)->render();
     }

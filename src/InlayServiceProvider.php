@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use WeArePixel\Inlay\Console\InstallCommand;
-use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\View\Components\RenderPage;
 
 final class InlayServiceProvider extends ServiceProvider
@@ -17,7 +17,7 @@ final class InlayServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/inlay.php', 'inlay');
 
-        $this->app->singleton(SectionRegistry::class, fn () => SectionRegistry::fromConfig());
+        $this->app->singleton(BlockRegistry::class, fn () => BlockRegistry::fromConfig());
         $this->app->singleton(InlayManager::class);
     }
 

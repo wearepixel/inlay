@@ -14,7 +14,7 @@ use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
 
 /**
- * Builds a component's resolved Settings definition from constructor-property
+ * Builds a block's resolved Settings definition from constructor-property
  * attributes, the optional fluent settings() method, and the constructor
  * itself - the exclusive source of truth for a top-level setting's
  * nullability and default value. See docs/v1-implementation-specification.md
@@ -23,16 +23,16 @@ use WeArePixel\Inlay\Schema\Settings;
  * A constructor parameter is never an editor setting unless explicitly
  * exposed by an attribute or a settings() entry - anything else (an injected
  * service, say) is left entirely alone and resolved by the container as
- * usual when the component is rendered.
+ * usual when the block is rendered.
  */
-final class ComponentDefinitionResolver
+final class BlockDefinitionResolver
 {
     /**
-     * @param  class-string  $componentClass
+     * @param  class-string  $blockClass
      */
-    public function resolve(string $componentClass): Settings
+    public function resolve(string $blockClass): Settings
     {
-        $reflection = new ReflectionClass($componentClass);
+        $reflection = new ReflectionClass($blockClass);
         $parameters = $reflection->getConstructor()?->getParameters() ?? [];
 
         $paramsByName = [];
@@ -40,10 +40,10 @@ final class ComponentDefinitionResolver
             $paramsByName[$parameter->getName()] = $parameter;
         }
 
-        $merged = $this->mergeAttributesAndFluentSettings($componentClass, $parameters);
+        $merged = $this->mergeAttributesAndFluentSettings($blockClass, $parameters);
 
         foreach ($merged->fields() as $setting) {
-            $this->applyConstructorMetadata($componentClass, $setting, $paramsByName);
+            $this->applyConstructorMetadata($blockClass, $setting, $paramsByName);
         }
 
         return $merged;
@@ -52,7 +52,7 @@ final class ComponentDefinitionResolver
     /**
      * @param  array<int, \ReflectionParameter>  $parameters
      */
-    private function mergeAttributesAndFluentSettings(string $componentClass, array $parameters): Settings
+    private function mergeAttributesAndFluentSettings(string $blockClass, array $parameters): Settings
     {
         /** @var array<string, Setting> $attributeSettings */
         $attributeSettings = [];
@@ -65,8 +65,8 @@ final class ComponentDefinitionResolver
             }
         }
 
-        $fluentSettings = method_exists($componentClass, 'settings')
-            ? $componentClass::settings()
+        $fluentSettings = method_exists($blockClass, 'settings')
+            ? $blockClass::settings()
             : Settings::make();
 
         $merged = Settings::make();
@@ -92,11 +92,11 @@ final class ComponentDefinitionResolver
     /**
      * @param  array<string, \ReflectionParameter>  $paramsByName
      */
-    private function applyConstructorMetadata(string $componentClass, Setting $setting, array $paramsByName): void
+    private function applyConstructorMetadata(string $blockClass, Setting $setting, array $paramsByName): void
     {
         if (! isset($paramsByName[$setting->name])) {
             throw new InvalidArgumentException(
-                "Component [{$componentClass}] declares a setting [{$setting->name}] with no matching constructor parameter."
+                "Block [{$blockClass}] declares a setting [{$setting->name}] with no matching constructor parameter."
             );
         }
 
@@ -112,7 +112,7 @@ final class ComponentDefinitionResolver
 
             if ($setting->declaredEnumClass !== null && $setting->declaredEnumClass !== $setting->enumClass) {
                 throw new InvalidArgumentException(
-                    "Component [{$componentClass}] setting [{$setting->name}] declares options for [{$setting->declaredEnumClass}], but the constructor expects [{$setting->enumClass}]."
+                    "Block [{$blockClass}] setting [{$setting->name}] declares options for [{$setting->declaredEnumClass}], but the constructor expects [{$setting->enumClass}]."
                 );
             }
 
@@ -123,7 +123,7 @@ final class ComponentDefinitionResolver
 
         if (! $setting->hasConstructorDefault && ! $setting->nullable) {
             throw new InvalidArgumentException(
-                "Component [{$componentClass}] setting [{$setting->name}] has no constructor default and is not nullable. ".
+                "Block [{$blockClass}] setting [{$setting->name}] has no constructor default and is not nullable. ".
                 'A top-level setting must always be constructible with zero overrides - give it a default or make it nullable. '.
                 'A schema-level default is not permitted to substitute for one here.'
             );

@@ -29,7 +29,7 @@ use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
  * Feature-level test already proves precisely.
  */
 beforeEach(function () {
-    config(['inlay.sections' => ['hero' => BrowserHeroSection::class]]);
+    config(['inlay.blocks' => ['hero' => BrowserHeroSection::class]]);
 });
 
 it('redirects an unauthenticated visitor away from the initial admin request', function () {
@@ -63,7 +63,7 @@ it('allows an authenticated visitor to load the admin and complete a real Livewi
 /**
  * A real bug (found manually, against a genuine standalone Laravel app, not
  * this suite) sent a logged-in editor back to the login screen the moment
- * they performed their first Livewire action (adding a component,
+ * they performed their first Livewire action (adding a block,
  * publishing, etc) - the initial page load worked fine, every action after
  * it did not. Root cause: Livewire's persistent middleware re-runs the
  * *original* route's middleware against a *cloned* request on every action -

@@ -3,24 +3,24 @@
 declare(strict_types=1);
 
 use WeArePixel\Inlay\Schema\FieldType;
-use WeArePixel\Inlay\SingleFile\ComponentLoader;
-use WeArePixel\Inlay\Support\ComponentSourceType;
+use WeArePixel\Inlay\SingleFile\BlockLoader;
+use WeArePixel\Inlay\Support\BlockSourceType;
 use WeArePixel\Inlay\Tests\Fixtures\SingleFile\SingleFileImageSize;
 
 beforeEach(function () {
-    $this->loader = new ComponentLoader;
+    $this->loader = new BlockLoader;
     $this->fixturesPath = __DIR__.'/../../Fixtures/single-file';
 });
 
-it('compiles a single-file component into a ComponentDefinition', function () {
+it('compiles a single-file block into a BlockDefinition', function () {
     $definition = $this->loader->load("{$this->fixturesPath}/hero.blade.php");
 
     expect($definition->handle)->toBe('single-file-hero')
         ->and($definition->name)->toBe('Hero')
         ->and($definition->category)->toBe('Headers')
-        ->and($definition->description)->toBe('A single-file hero component.')
+        ->and($definition->description)->toBe('A single-file hero block.')
         ->and($definition->icon)->toBe('layout-header')
-        ->and($definition->sourceType)->toBe(ComponentSourceType::SingleFile)
+        ->and($definition->sourceType)->toBe(BlockSourceType::SingleFile)
         ->and($definition->sourceIdentifier)->toBe("{$this->fixturesPath}/hero.blade.php");
 });
 
@@ -35,7 +35,7 @@ it('uses the Settings declaration as the sole source of defaults, since there is
     ]);
 });
 
-it('derives enum options and marks the field enum-backed exactly like a class-based component', function () {
+it('derives enum options and marks the field enum-backed exactly like a class-based block', function () {
     $definition = $this->loader->load("{$this->fixturesPath}/hero.blade.php");
 
     $imageSize = $definition->settings->field('imageSize');
@@ -56,15 +56,15 @@ it('carries a conditional field\'s visibleWhen() through untouched', function ()
 
 it('throws for a missing source file', function () {
     $this->loader->load("{$this->fixturesPath}/does-not-exist.blade.php");
-})->throws(InvalidArgumentException::class, 'No single-file component found at');
+})->throws(InvalidArgumentException::class, 'No single-file block found at');
 
-it('throws for a file that never declares a component', function () {
+it('throws for a file that never declares a block', function () {
     $this->loader->load("{$this->fixturesPath}/malformed.blade.php");
-})->throws(InvalidArgumentException::class, 'does not declare a single-file component');
+})->throws(InvalidArgumentException::class, 'does not declare a single-file block');
 
 it('throws for a setting with no declared default', function () {
     $this->loader->load("{$this->fixturesPath}/no-default.blade.php");
-})->throws(InvalidArgumentException::class, 'Single-file component [single-file-no-default] setting [heading] has no default()');
+})->throws(InvalidArgumentException::class, 'Single-file block [single-file-no-default] setting [heading] has no default()');
 
 it('keeps an explicitly-set name but defaults category/description/icon when metadata is otherwise minimal', function () {
     $definition = $this->loader->load("{$this->fixturesPath}/nested-livewire.blade.php");

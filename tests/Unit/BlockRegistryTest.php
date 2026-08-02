@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
-it('resolves a registered slug to its section class', function () {
-    $registry = new SectionRegistry(['test-hero' => TestHeroSection::class]);
+it('resolves a registered slug to its block class', function () {
+    $registry = new BlockRegistry(['test-hero' => TestHeroSection::class]);
 
     expect($registry->resolve('test-hero'))->toBe(TestHeroSection::class)
         ->and($registry->slugs())->toBe(['test-hero']);
 });
 
 it('throws for an unregistered slug', function () {
-    $registry = new SectionRegistry([]);
+    $registry = new BlockRegistry([]);
 
     $registry->resolve('missing');
-})->throws(InvalidArgumentException::class, 'No section registered for slug [missing].');
+})->throws(InvalidArgumentException::class, 'No block registered for slug [missing].');
 
-it('resolves component picker metadata from a #[ComponentMeta] attribute', function () {
-    $registry = new SectionRegistry(['test-hero' => TestHeroSection::class]);
+it('resolves block picker metadata from a #[BlockMeta] attribute', function () {
+    $registry = new BlockRegistry(['test-hero' => TestHeroSection::class]);
 
     $metadata = $registry->metadata('test-hero');
 
@@ -31,8 +31,8 @@ it('resolves component picker metadata from a #[ComponentMeta] attribute', funct
         ->and($metadata->icon)->toBe('🖼');
 });
 
-it('defaults component picker metadata to a slug-derived label and an Uncategorised category with no #[ComponentMeta]', function () {
-    $registry = new SectionRegistry(['test-faq' => TestFaqSection::class]);
+it('defaults block picker metadata to a slug-derived label and an Uncategorised category with no #[BlockMeta]', function () {
+    $registry = new BlockRegistry(['test-faq' => TestFaqSection::class]);
 
     $metadata = $registry->metadata('test-faq');
 
@@ -42,8 +42,8 @@ it('defaults component picker metadata to a slug-derived label and an Uncategori
         ->and($metadata->icon)->toBeNull();
 });
 
-it('lists metadata for every registered component', function () {
-    $registry = new SectionRegistry([
+it('lists metadata for every registered block', function () {
+    $registry = new BlockRegistry([
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
     ]);

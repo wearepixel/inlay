@@ -7,7 +7,7 @@ namespace WeArePixel\Inlay\Support;
 use WeArePixel\Inlay\Schema\Settings;
 
 /**
- * The single internal representation every registered component compiles
+ * The single internal representation every registered block compiles
  * into, regardless of whether it was authored as a class + Blade view or as
  * a single Blade file - the registry, the picker, settings resolution,
  * validation, persistence, preview, rendering, publishing, and revisions
@@ -16,7 +16,7 @@ use WeArePixel\Inlay\Schema\Settings;
  * because a PHP class and a bare Blade file are rendered through genuinely
  * different mechanisms.
  */
-final readonly class ComponentDefinition
+final readonly class BlockDefinition
 {
     public function __construct(
         public string $handle,
@@ -25,9 +25,9 @@ final readonly class ComponentDefinition
         public string $category,
         public ?string $icon,
         public ?string $thumbnail,
-        public ComponentSourceType $sourceType,
+        public BlockSourceType $sourceType,
         /**
-         * A class-string for a class-based component, or an absolute Blade
+         * A class-string for a class-based block, or an absolute Blade
          * file path for a single-file one - only ever consumed by
          * SectionRenderer's rendering step.
          */
@@ -35,12 +35,12 @@ final readonly class ComponentDefinition
         public Settings $settings,
         /**
          * Reserved for future settings-version migration (not yet
-         * implemented - see docs/components.md). Always 1 today for both
+         * implemented - see docs/blocks.md). Always 1 today for both
          * authoring styles.
          */
         public int $settingsVersion = 1,
         /**
-         * @var array<int, string> extra terms the component picker's search matches against
+         * @var array<int, string> extra terms the block picker's search matches against
          */
         public array $keywords = [],
     ) {}
@@ -63,9 +63,9 @@ final readonly class ComponentDefinition
         return $defaults;
     }
 
-    public function toMetadata(): ComponentMetadata
+    public function toMetadata(): BlockMetadata
     {
-        return new ComponentMetadata(
+        return new BlockMetadata(
             slug: $this->handle,
             label: $this->name,
             category: $this->category,

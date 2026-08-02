@@ -6,8 +6,8 @@
 document.addEventListener("alpine:init", () => {
   /**
    * The contextual sidebar's whole client-side state: which pane is
-   * showing (the component tree, a selected component's settings, or
-   * version history), plus the component tree's drag-to-reorder and
+   * showing (the block tree, a selected block's settings, or
+   * version history), plus the block tree's drag-to-reorder and
    * keyboard navigation. All one Alpine component (rather than tree state
    * and pane-switching state living in separate x-data scopes) so
    * pane-switching methods can reach the tree's own $refs and focus
@@ -16,7 +16,7 @@ document.addEventListener("alpine:init", () => {
    * Switching panes is deliberately client-only where nothing server-side
    * needs to change - going back to the tree, or the tree/settings split
    * itself, doesn't touch selectedSectionId, so it never round-trips.
-   * Server-driven changes to *which* component is selected (adding,
+   * Server-driven changes to *which* block is selected (adding,
    * duplicating, an external session's delete, restoring a revision) still
    * have to come from the server - see the section-selected,
    * selection-cleared, and history-toggled events this listens for,
@@ -32,7 +32,7 @@ document.addEventListener("alpine:init", () => {
 
       /**
        * Called both optimistically (a tree row's own click handler, the
-       * instant a component with an already-known id is clicked - no need to
+       * instant a block with an already-known id is clicked - no need to
        * wait on the network round trip just to flip which pane is visible)
        * and via the section-selected event (addSection/duplicateSection,
        * whose new id doesn't exist until the server creates it).
@@ -49,7 +49,7 @@ document.addEventListener("alpine:init", () => {
 
       /**
        * Distinct from backToTree(): this responds to the server telling us
-       * the previously-selected component is simply gone (deleted, or a
+       * the previously-selected block is simply gone (deleted, or a
        * revision restore replaced every section), so there is no id left to
        * remember or focus - selecting it in the tree afterwards is
        * meaningless once it no longer exists.
@@ -69,7 +69,7 @@ document.addEventListener("alpine:init", () => {
 
       /**
        * The picker has its own window-level Escape handler that closes it
-       * (see inlayComponentPicker) - this defers to that first, so Escape
+       * (see inlayBlockPicker) - this defers to that first, so Escape
        * closes the picker before it ever navigates the sidebar out of
        * settings, exactly as it would if they were unrelated.
        */
@@ -87,14 +87,14 @@ document.addEventListener("alpine:init", () => {
 
       announcement() {
         if (this.view === "settings") {
-          return "Editing component settings";
+          return "Editing block settings";
         }
 
         if (this.view === "history") {
           return "Showing version history";
         }
 
-        return "Showing components";
+        return "Showing blocks";
       },
 
       dragStart(id) {
@@ -174,27 +174,25 @@ document.addEventListener("alpine:init", () => {
   );
 
   /**
-   * The component picker: instant client-side search (matching name,
+   * The block picker: instant client-side search (matching name,
    * description, category, and keywords - see data-search on each card),
    * keyboard navigation across the currently-visible cards, and a small
    * "recently added" list persisted in localStorage per browser.
    */
-  Alpine.data("inlayComponentPicker", (componentsLookup = {}) => ({
+  Alpine.data("inlayBlockPicker", (blocksLookup = {}) => ({
     query: "",
     highlighted: null,
     recent: [],
-    componentsLookup,
+    blocksLookup,
 
     init() {
-      this.recent = this.loadRecent().filter(
-        (slug) => this.componentsLookup[slug],
-      );
+      this.recent = this.loadRecent().filter((slug) => this.blocksLookup[slug]);
     },
 
-    recentComponents() {
+    recentBlocks() {
       return this.recent.map((slug) => ({
         slug,
-        ...this.componentsLookup[slug],
+        ...this.blocksLookup[slug],
       }));
     },
 
@@ -222,7 +220,7 @@ document.addEventListener("alpine:init", () => {
 
     visibleCards() {
       return Array.from(
-        this.$el.querySelectorAll('[data-test^="picker-card-"]'),
+        this.$el.querySelectorAll('[data-test^="picker-block-"]'),
       ).filter((el) => el.offsetParent !== null);
     },
 
@@ -254,13 +252,13 @@ document.addEventListener("alpine:init", () => {
       );
 
       this.recent = recent;
-      localStorage.setItem("inlay-recent-components", JSON.stringify(recent));
+      localStorage.setItem("inlay-recent-blocks", JSON.stringify(recent));
     },
 
     loadRecent() {
       try {
         const stored = JSON.parse(
-          localStorage.getItem("inlay-recent-components") || "[]",
+          localStorage.getItem("inlay-recent-blocks") || "[]",
         );
 
         return Array.isArray(stored) ? stored : [];
@@ -272,7 +270,7 @@ document.addEventListener("alpine:init", () => {
 
   /**
    * A named settings-inspector group's collapsed/expanded state, remembered
-   * per group name across the whole admin (not per page or per component
+   * per group name across the whole admin (not per page or per block
    * instance - a developer's own naming convention, e.g. always calling
    * the advanced group "Advanced", is what makes that a sensible scope).
    */

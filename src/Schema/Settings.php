@@ -104,7 +104,7 @@ final class Settings
 
     /**
      * Groups every field declared inside $callback under a named tab. Tab
-     * navigation only renders in the inspector when a component declares
+     * navigation only renders in the inspector when a block declares
      * more than one - a single tab() call renders exactly like an ungrouped
      * or section()-only definition. tab() and section() compose: a
      * section() called inside a tab()'s callback produces a collapsible
@@ -194,7 +194,7 @@ final class Settings
      * repeater/group item schema, which has no top-level constructor
      * parameter to be authoritative instead. See
      * docs/v1-implementation-specification.md §9 for the exact boundary -
-     * ComponentDefinitionResolver rejects this being used anywhere else.
+     * BlockDefinitionResolver rejects this being used anywhere else.
      */
     public function default(mixed $default): self
     {
@@ -231,7 +231,7 @@ final class Settings
     /**
      * Appends an already-built Setting (from an attribute, or from another
      * Settings instance being merged) rather than building a new one from a
-     * field-type call. Used by ComponentDefinitionResolver when merging
+     * field-type call. Used by BlockDefinitionResolver when merging
      * attribute-declared and settings()-declared fields.
      */
     public function adopt(Setting $field): self
@@ -264,7 +264,7 @@ final class Settings
     }
 
     /**
-     * Names a short text field whose value should identify this component's
+     * Names a short text field whose value should identify this block's
      * instance in the tree and settings header (e.g. "Hero - 'Welcome'")
      * instead of the deterministic heading/title/name/label heuristic
      * SectionInstanceLabel otherwise falls back to. Only meaningful for a

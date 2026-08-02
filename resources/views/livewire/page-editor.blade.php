@@ -47,14 +47,14 @@
 
         <div class="inlay-editor__sidebar" :class="mobilePanel === 'preview' ? 'inlay-mobile-hide' : ''">
 
-            {{-- Component tree (default sidebar state) --}}
+            {{-- Block tree (default sidebar state) --}}
             <div x-show="view === 'tree'" x-cloak>
                 <div class="inlay-editor__heading">
-                    <span class="inlay-eyebrow">Components</span>
+                    <span class="inlay-eyebrow">Blocks</span>
                     <button type="button" wire:click="openPicker" data-test="open-picker" class="inlay-button inlay-button--small inlay-button--primary">+ Add</button>
                 </div>
 
-                <ul class="inlay-tree" x-ref="list" role="listbox" aria-label="Page components">
+                <ul class="inlay-tree" x-ref="list" role="listbox" aria-label="Page blocks">
                     @forelse ($sections as $section)
                         <li
                             data-section-id="{{ $section->id }}"
@@ -89,7 +89,7 @@
                                 <button
                                     type="button"
                                     wire:click.stop="deleteSection({{ $section->id }})"
-                                    wire:confirm="Remove this component from the page?"
+                                    wire:confirm="Remove this block from the page?"
                                     data-test="delete-{{ $section->id }}"
                                     class="inlay-tree__icon-button inlay-tree__icon-button--danger"
                                     title="Delete"
@@ -99,18 +99,18 @@
                         </li>
                     @empty
                         <li class="inlay-empty-state inlay-empty-state--tree">
-                            <p class="inlay-empty-state__title">No components yet</p>
-                            <p>This page has no Components yet. Add a Component to begin composing the page.</p>
+                            <p class="inlay-empty-state__title">No blocks yet</p>
+                            <p>This page has no blocks yet. Add a block to begin composing the page.</p>
                         </li>
                     @endforelse
                 </ul>
             </div>
 
-            {{-- Settings inspector (shown while a component is selected) --}}
+            {{-- Settings inspector (shown while a block is selected) --}}
             <div x-show="view === 'settings'" x-cloak>
                 <div class="inlay-editor__heading">
-                    <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-to-components">
-                        <span aria-hidden="true">&larr;</span> Components
+                    <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-to-blocks">
+                        <span aria-hidden="true">&larr;</span> Blocks
                     </button>
                 </div>
 
@@ -180,7 +180,7 @@
                         @endforeach
                     </div>
                 @else
-                    <p class="inlay-inspector__empty">Select a component from the list to edit its settings.</p>
+                    <p class="inlay-inspector__empty">Select a block from the list to edit its settings.</p>
                 @endif
             </div>
 
@@ -189,7 +189,7 @@
                 <div x-show="view === 'history'" x-cloak>
                     <div class="inlay-editor__heading">
                         <button type="button" class="inlay-back-link" wire:click="toggleHistory" data-test="close-history">
-                            <span aria-hidden="true">&larr;</span> Components
+                            <span aria-hidden="true">&larr;</span> Blocks
                         </button>
                     </div>
                     <p class="inlay-eyebrow">Version history</p>
@@ -230,7 +230,7 @@
     @if ($showingPicker)
         <div
             class="inlay-picker__overlay"
-            x-data="inlayComponentPicker(@js($componentLookup))"
+            x-data="inlayBlockPicker(@js($blockLookup))"
             x-on:keydown.escape.window="$wire.closePicker()"
             x-on:keydown.down.window.prevent="highlightNext(1)"
             x-on:keydown.up.window.prevent="highlightNext(-1)"
@@ -241,7 +241,7 @@
                 class="inlay-picker__panel"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Add a component"
+                aria-label="Add a block"
                 x-transition:enter="inlay-picker__panel-enter"
                 x-transition:enter-start="inlay-picker__panel-enter-start"
                 x-transition:enter-end="inlay-picker__panel-enter-end"
@@ -254,10 +254,10 @@
                         type="text"
                         x-model="query"
                         x-init="$nextTick(() => $el.focus())"
-                        placeholder="Search components…"
+                        placeholder="Search blocks…"
                         class="inlay-picker__search"
                         data-test="picker-search"
-                        aria-label="Search components"
+                        aria-label="Search blocks"
                     >
                 </div>
                 <div class="inlay-picker__hint">
@@ -266,50 +266,50 @@
                     <span><kbd>Esc</kbd> close</span>
                 </div>
                 <div class="inlay-picker__body">
-                    <template x-if="recentComponents().length > 0 && query === ''">
+                    <template x-if="recentBlocks().length > 0 && query === ''">
                         <div>
                             <p class="inlay-eyebrow inlay-picker__recent-title">Recent</p>
                             <div class="inlay-picker__grid">
-                                <template x-for="component in recentComponents()" :key="component.slug">
+                                <template x-for="block in recentBlocks()" :key="block.slug">
                                     <button
                                         type="button"
                                         class="inlay-picker__card"
-                                        x-on:click="recordRecent(component.slug); $wire.addSection(component.slug)"
+                                        x-on:click="recordRecent(block.slug); $wire.addSection(block.slug)"
                                     >
-                                        <span class="inlay-picker__card-icon" x-text="component.icon || component.label.charAt(0)"></span>
-                                        <span class="inlay-picker__card-title" x-text="component.label"></span>
+                                        <span class="inlay-picker__card-icon" x-text="block.icon || block.label.charAt(0)"></span>
+                                        <span class="inlay-picker__card-title" x-text="block.label"></span>
                                     </button>
                                 </template>
                             </div>
                         </div>
                     </template>
 
-                    @forelse ($availableComponents as $category => $components)
+                    @forelse ($availableBlocks as $category => $blocks)
                         <div x-show="categoryHasMatches($el)">
                             <p class="inlay-eyebrow inlay-picker__category">{{ $category }}</p>
                             <div class="inlay-picker__grid">
-                                @foreach ($components as $component)
+                                @foreach ($blocks as $block)
                                     <button
                                         type="button"
-                                        wire:click="addSection(@js($component->slug))"
-                                        x-on:click="recordRecent(@js($component->slug))"
-                                        data-search="{{ \Illuminate\Support\Str::lower(implode(' ', $component->searchTerms())) }}"
+                                        wire:click="addSection(@js($block->slug))"
+                                        x-on:click="recordRecent(@js($block->slug))"
+                                        data-search="{{ \Illuminate\Support\Str::lower(implode(' ', $block->searchTerms())) }}"
                                         x-show="matches($el.dataset.search)"
-                                        data-test="picker-card-{{ $component->slug }}"
+                                        data-test="picker-block-{{ $block->slug }}"
                                         class="inlay-picker__card"
                                         :class="highlighted === $el ? 'is-highlighted' : ''"
                                     >
                                         <span class="inlay-picker__card-icon">
-                                            @if ($component->thumbnail)
-                                                <img src="{{ $component->thumbnail }}" alt="">
+                                            @if ($block->thumbnail)
+                                                <img src="{{ $block->thumbnail }}" alt="">
                                             @else
-                                                {{ $component->icon ?? \Illuminate\Support\Str::substr($component->label, 0, 1) }}
+                                                {{ $block->icon ?? \Illuminate\Support\Str::substr($block->label, 0, 1) }}
                                             @endif
                                         </span>
                                         <span>
-                                            <span class="inlay-picker__card-title" style="display: block;">{{ $component->label }}</span>
-                                            @if ($component->description)
-                                                <span class="inlay-picker__card-description">{{ $component->description }}</span>
+                                            <span class="inlay-picker__card-title" style="display: block;">{{ $block->label }}</span>
+                                            @if ($block->description)
+                                                <span class="inlay-picker__card-description">{{ $block->description }}</span>
                                             @endif
                                         </span>
                                     </button>
@@ -318,12 +318,12 @@
                         </div>
                     @empty
                         <p class="inlay-empty-state" style="padding: 24px 20px; text-align: center;">
-                            No components have been registered yet. Add one to <code>config('inlay.sections')</code> or via <code>Inlay::singleFileComponent()</code>.
+                            No blocks have been registered yet. Add one to <code>config('inlay.blocks')</code> or via <code>Inlay::singleFileBlock()</code>.
                         </p>
                     @endforelse
 
-                    @if ($availableComponents->isNotEmpty())
-                        <p class="inlay-picker__no-results" x-show="!hasAnyMatches()">No components match &ldquo;<span x-text="query"></span>&rdquo;.</p>
+                    @if ($availableBlocks->isNotEmpty())
+                        <p class="inlay-picker__no-results" x-show="!hasAnyMatches()">No blocks match &ldquo;<span x-text="query"></span>&rdquo;.</p>
                     @endif
                 </div>
             </div>

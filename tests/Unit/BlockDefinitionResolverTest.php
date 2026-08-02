@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 use WeArePixel\Inlay\Attributes\Text;
 use WeArePixel\Inlay\Attributes\Toggle;
-use WeArePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Contracts\InlayBlock;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Settings;
-use WeArePixel\Inlay\Support\ComponentDefinitionResolver;
+use WeArePixel\Inlay\Support\BlockDefinitionResolver;
 
-it('infers PHP type, nullability, and default from the constructor for a fluent-only component', function () {
-    $definition = (new ComponentDefinitionResolver)->resolve(ResolverFluentOnlyComponent::class);
+it('infers PHP type, nullability, and default from the constructor for a fluent-only block', function () {
+    $definition = (new BlockDefinitionResolver)->resolve(ResolverFluentOnlyBlock::class);
 
     $heading = $definition->field('heading');
 
@@ -19,8 +19,8 @@ it('infers PHP type, nullability, and default from the constructor for a fluent-
         ->and($heading->default)->toBe('Welcome');
 });
 
-it('resolves settings for an attribute-only component with no settings() method at all', function () {
-    $definition = (new ComponentDefinitionResolver)->resolve(ResolverAttributeOnlyComponent::class);
+it('resolves settings for an attribute-only block with no settings() method at all', function () {
+    $definition = (new BlockDefinitionResolver)->resolve(ResolverAttributeOnlyBlock::class);
 
     expect($definition->fields())->toHaveCount(2);
     expect($definition->field('heading')->type)->toBe(FieldType::Text);
@@ -28,7 +28,7 @@ it('resolves settings for an attribute-only component with no settings() method 
 });
 
 it('merges attribute and fluent declarations by name, with the fluent declaration winning for shared metadata', function () {
-    $definition = (new ComponentDefinitionResolver)->resolve(ResolverMergedComponent::class);
+    $definition = (new BlockDefinitionResolver)->resolve(ResolverMergedBlock::class);
 
     // "heading" is declared by both - the fluent label wins.
     expect($definition->field('heading')->label)->toBe('Fluent label wins');
@@ -37,25 +37,25 @@ it('merges attribute and fluent declarations by name, with the fluent declaratio
 });
 
 it('never exposes an unexposed constructor parameter as a setting', function () {
-    $definition = (new ComponentDefinitionResolver)->resolve(ResolverWithServiceComponent::class);
+    $definition = (new BlockDefinitionResolver)->resolve(ResolverWithServiceBlock::class);
 
     expect($definition->field('repository'))->toBeNull();
     expect($definition->fields())->toHaveCount(1);
 });
 
 it('rejects a declared setting with no matching constructor parameter', function () {
-    (new ComponentDefinitionResolver)->resolve(ResolverMismatchedNameComponent::class);
+    (new BlockDefinitionResolver)->resolve(ResolverMismatchedNameBlock::class);
 })->throws(InvalidArgumentException::class, 'no matching constructor parameter');
 
 it('rejects a required, non-nullable top-level setting with no constructor default', function () {
-    (new ComponentDefinitionResolver)->resolve(ResolverNoDefaultComponent::class);
+    (new BlockDefinitionResolver)->resolve(ResolverNoDefaultBlock::class);
 })->throws(InvalidArgumentException::class, 'has no constructor default and is not nullable');
 
 it('rejects a declared enum that does not match the constructor parameter type', function () {
-    (new ComponentDefinitionResolver)->resolve(ResolverEnumMismatchComponent::class);
+    (new BlockDefinitionResolver)->resolve(ResolverEnumMismatchBlock::class);
 })->throws(InvalidArgumentException::class, 'the constructor expects');
 
-final class ResolverFluentOnlyComponent implements InlayComponent
+final class ResolverFluentOnlyBlock implements InlayBlock
 {
     public function __construct(public string $heading = 'Welcome') {}
 
@@ -65,7 +65,7 @@ final class ResolverFluentOnlyComponent implements InlayComponent
     }
 }
 
-final class ResolverAttributeOnlyComponent implements InlayComponent
+final class ResolverAttributeOnlyBlock implements InlayBlock
 {
     public function __construct(
         #[Text(label: 'Heading')]
@@ -75,7 +75,7 @@ final class ResolverAttributeOnlyComponent implements InlayComponent
     ) {}
 }
 
-final class ResolverMergedComponent implements InlayComponent
+final class ResolverMergedBlock implements InlayBlock
 {
     public function __construct(
         #[Text(label: 'Attribute label')]
@@ -95,7 +95,7 @@ final class ResolverServiceStub
     //
 }
 
-final class ResolverWithServiceComponent implements InlayComponent
+final class ResolverWithServiceBlock implements InlayBlock
 {
     public function __construct(
         private ResolverServiceStub $repository,
@@ -104,7 +104,7 @@ final class ResolverWithServiceComponent implements InlayComponent
     ) {}
 }
 
-final class ResolverMismatchedNameComponent implements InlayComponent
+final class ResolverMismatchedNameBlock implements InlayBlock
 {
     public function __construct(public string $heading = 'Welcome') {}
 
@@ -114,7 +114,7 @@ final class ResolverMismatchedNameComponent implements InlayComponent
     }
 }
 
-final class ResolverNoDefaultComponent implements InlayComponent
+final class ResolverNoDefaultBlock implements InlayBlock
 {
     public function __construct(public string $heading) {}
 
@@ -135,7 +135,7 @@ enum ResolverOtherEnum: string
     case One = 'one';
 }
 
-final class ResolverEnumMismatchComponent implements InlayComponent
+final class ResolverEnumMismatchBlock implements InlayBlock
 {
     public function __construct(public ResolverImageSize $imageSize = ResolverImageSize::Large) {}
 

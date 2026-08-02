@@ -9,13 +9,13 @@ use WeArePixel\Inlay\Enums\PageStatus;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Models\PageRevision;
 use WeArePixel\Inlay\Models\PageSection;
-use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 
 final class PublishPage
 {
     public function __construct(
-        private readonly SectionRegistry $registry,
+        private readonly BlockRegistry $registry,
         private readonly SectionRenderer $renderer,
     ) {}
 
@@ -29,7 +29,7 @@ final class PublishPage
                     // A published snapshot stores fully-resolved effective
                     // settings for every field, not the section's (possibly
                     // sparse) stored overrides - so a later change to the
-                    // component's own constructor default never silently
+                    // block's own constructor default never silently
                     // changes how this historical revision renders.
                     // docs/v1-implementation-specification.md §13.
                     'id' => $section->id,

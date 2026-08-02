@@ -8,7 +8,7 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.sections' => [
+    config(['inlay.blocks' => [
         'test-hero' => TestHeroSection::class,
     ]]);
 });
@@ -19,7 +19,7 @@ it('renders the section list with drag data attributes, the add-section picker, 
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->assertSee('data-section-id="'.$section->id.'"', escape: false)
-        // The tree shows the component's registered display name and an
+        // The tree shows the block's registered display name and an
         // instance detail guessed from its "heading" setting, not the raw
         // handle - see SectionInstanceLabel.
         ->assertSee('Hero')
