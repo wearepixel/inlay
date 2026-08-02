@@ -97,6 +97,7 @@ This list matters more than any feature list. Every future decision gets checked
 - **It will never let an editor create new business functionality.** Composition is not development. Arranging and configuring existing, developer-approved components is the ceiling.
 - **It will never copy business data into page storage merely to display it.** A selected collection, a filtered product set, a customer's booking availability — the underlying domain data stays owned by the host application's own models, resolved live, never duplicated into the builder's own tables.
 - **It will never force a specific frontend stack, build tool, or design system on the host application.** The moment it starts dictating how a consuming app builds its frontend, it has stopped being a composition layer and started being a framework.
+- **It will never let its own administration interface's styling reach the components it renders.** The admin may look however it needs to look to be a good tool; every component it renders must look exactly as the application that built it intended — Tailwind, Bootstrap, plain CSS, or anything else, indistinguishable from how it renders outside the builder entirely.
 - **It will never force the host application to reorganise itself around it.** It installs into an application that already exists, on the application's own terms. It never asks a team to remodel their domain, their routing, or their frontend to fit its conventions.
 - **It will never become a general-purpose content-type modeling platform.** It solves _safe composition of developer-built frontend_. It is not trying to become Craft or Contentful.
 - **It will never build a plugin or theme marketplace as a business model.**
@@ -105,6 +106,8 @@ This list matters more than any feature list. Every future decision gets checked
 ---
 
 ## Core philosophy
+
+> **The governing boundary underneath every principle below: the package owns composition, the application owns presentation.** Component registration, categories, schemas and settings, validation, placement rules, ordering, persistence, drafts, previews, publishing, revisions, permissions, and the administration experience belong to the package. Component markup, frontend CSS, responsive behaviour, accessibility, JavaScript behaviour, frontend assets, business logic, domain models, application data, and the mapping from a structured setting to what it actually looks like belong to the application, always. The package must be fully agnostic about the consuming application's frontend implementation and styling system — Tailwind, Bootstrap, plain CSS, Sass, a custom design system, or anything else renders identically well, because the package never assumes or depends on any of them.
 
 1. **The component is the unit of truth.** A real class a developer wrote, tested, and can `git blame` — never a rendered blob.
 2. **Developers define the components, behaviour, and boundaries. Editors compose the experience.** This is the central promise, and every other principle here is a consequence of it.
