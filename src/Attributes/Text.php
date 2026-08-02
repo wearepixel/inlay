@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+namespace WearePixel\Inlay\Attributes;
+
+use Attribute;
+use WearePixel\Inlay\Schema\FieldType;
+use WearePixel\Inlay\Schema\Setting;
+
+#[Attribute(Attribute::TARGET_PARAMETER)]
+final class Text implements FieldAttribute
+{
+    public function __construct(
+        public ?string $label = null,
+        public ?string $help = null,
+        public bool $required = false,
+        public ?int $maxLength = null,
+        public ?array $visibleWhen = null,
+    ) {}
+
+    public function toSetting(string $name): Setting
+    {
+        return new Setting(
+            name: $name,
+            type: FieldType::Text,
+            label: $this->label,
+            required: $this->required,
+            help: $this->help,
+            maxLength: $this->maxLength,
+            visibleWhen: $this->visibleWhen,
+        );
+    }
+}

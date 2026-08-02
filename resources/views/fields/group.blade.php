@@ -2,7 +2,7 @@
     <p class="text-sm font-medium text-gray-700">{{ $field->label }}</p>
 
     @foreach ($field->itemSchema->fields() as $subField)
-        @include('blade-page-builder::fields.' . $subField->type->value, [
+        @include('inlay::fields.' . $subField->type->value, [
             'field' => $subField,
             'modelPath' => "editingProps.{$field->name}.{$subField->name}",
         ])

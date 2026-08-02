@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Models;
+namespace WearePixel\Inlay\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use WearePixel\BladePageBuilder\Enums\PageStatus;
+use WearePixel\Inlay\Enums\PageStatus;
 
 final class Page extends Model
 {

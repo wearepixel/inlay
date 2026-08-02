@@ -2,25 +2,23 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Tests\Fixtures;
+namespace WearePixel\Inlay\Tests\Fixtures;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WearePixel\BladePageBuilder\Contracts\Sectionable;
-use WearePixel\BladePageBuilder\Schema\Schema;
+use WearePixel\Inlay\Contracts\InlayComponent;
+use WearePixel\Inlay\Schema\Settings;
+use WearePixel\Inlay\Support\LinkValue;
 
-final class TestCtaSection extends Component implements Sectionable
+final class TestCtaSection extends Component implements InlayComponent
 {
-    /**
-     * @param  array{label: string, url: string, new_tab: bool}  $cta
-     */
     public function __construct(
-        public array $cta = ['label' => '', 'url' => '', 'new_tab' => false],
+        public ?LinkValue $cta = null,
     ) {}
 
-    public static function schema(): Schema
+    public static function settings(): Settings
     {
-        return Schema::make()->link('cta', label: 'Call to action');
+        return Settings::make()->link('cta')->label('Call to action');
     }
 
     public function render(): View

@@ -5,7 +5,7 @@
     <input type="url" placeholder="URL" wire:model.live.debounce.400ms="{{ $modelPath }}.url"
         class="w-full rounded-md border-gray-300 shadow-sm">
     <label class="flex items-center gap-2 text-sm text-gray-600">
-        <input type="checkbox" wire:model.live="{{ $modelPath }}.new_tab">
+        <input type="checkbox" wire:model.live="{{ $modelPath }}.openInNewTab">
         Open in new tab
     </label>
 </div>

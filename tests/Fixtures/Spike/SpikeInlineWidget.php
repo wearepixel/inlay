@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Tests\Fixtures\Spike;
+namespace WearePixel\Inlay\Tests\Fixtures\Spike;
 
 use Illuminate\Contracts\View\View;
 use Livewire\Component;

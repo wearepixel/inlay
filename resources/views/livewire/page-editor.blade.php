@@ -26,7 +26,7 @@
                         class="flex items-center gap-2 rounded-md border border-gray-200 p-3 {{ $selectedSectionId === $section->id ? 'ring-2 ring-blue-500' : '' }}"
                     >
                         <span class="drag-handle cursor-move text-gray-400">::</span>
-                        <span>{{ $section->section_type }}</span>
+                        <span>{{ $section->handle }}</span>
                     </li>
                 @endforeach
             </ul>
@@ -68,7 +68,7 @@
     <div class="col-span-1">
         @if ($selectedSchema)
             @foreach ($selectedSchema->fields() as $field)
-                @include('blade-page-builder::fields.' . $field->type->value, [
+                @include('inlay::fields.' . $field->type->value, [
                     'field' => $field,
                     'modelPath' => "editingProps.{$field->name}",
                 ])

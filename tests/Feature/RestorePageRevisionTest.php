@@ -2,24 +2,31 @@
 
 declare(strict_types=1);
 
-use WearePixel\BladePageBuilder\Actions\PublishPage;
-use WearePixel\BladePageBuilder\Actions\RestorePageRevision;
-use WearePixel\BladePageBuilder\Models\Page;
+use WearePixel\Inlay\Actions\PublishPage;
+use WearePixel\Inlay\Actions\RestorePageRevision;
+use WearePixel\Inlay\Models\Page;
+use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
+
+beforeEach(function () {
+    config(['inlay.sections' => [
+        'test-hero' => TestHeroSection::class,
+    ]]);
+});
 
 it('overwrites live sections from a revision snapshot and creates a new revision', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
-    $page->sections()->create(['section_type' => 'test-hero', 'order' => 0, 'props' => ['heading' => 'Original']]);
+    $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => ['heading' => 'Original']]);
 
-    $original = (new PublishPage)->execute($page);
+    $original = app(PublishPage::class)->execute($page);
 
-    $page->sections()->first()->update(['props' => ['heading' => 'Edited']]);
-    (new PublishPage)->execute($page);
+    $page->sections()->first()->update(['settings' => ['heading' => 'Edited']]);
+    app(PublishPage::class)->execute($page);
 
     expect($page->revisions()->count())->toBe(2);
 
-    $restored = (new RestorePageRevision(new PublishPage))->execute($original, createdBy: 3);
+    $restored = app(RestorePageRevision::class)->execute($original, createdBy: 3);
 
-    expect($page->sections()->first()->props)->toBe(['heading' => 'Original'])
+    expect($page->sections()->first()->settings)->toBe(['heading' => 'Original', 'layout' => 'image-right', 'photo' => null])
         ->and($page->revisions()->count())->toBe(3)
         ->and($restored->label)->toBe("Restored from revision #{$original->id}")
         ->and($restored->created_by)->toBe(3);

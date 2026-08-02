@@ -2,22 +2,25 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Livewire;
+namespace WearePixel\Inlay\Livewire;
 
+use BackedEnum;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
-use WearePixel\BladePageBuilder\Actions\PublishPage;
-use WearePixel\BladePageBuilder\Actions\RestorePageRevision;
-use WearePixel\BladePageBuilder\Models\Page;
-use WearePixel\BladePageBuilder\Models\PageSection;
-use WearePixel\BladePageBuilder\Schema\FieldType;
-use WearePixel\BladePageBuilder\Schema\Schema;
-use WearePixel\BladePageBuilder\Support\SectionRegistry;
-use WearePixel\BladePageBuilder\Support\SectionRenderer;
+use WearePixel\Inlay\Actions\PublishPage;
+use WearePixel\Inlay\Actions\RestorePageRevision;
+use WearePixel\Inlay\Models\Page;
+use WearePixel\Inlay\Models\PageSection;
+use WearePixel\Inlay\Schema\FieldType;
+use WearePixel\Inlay\Schema\Setting;
+use WearePixel\Inlay\Schema\Settings;
+use WearePixel\Inlay\Support\ComponentDefinitionResolver;
+use WearePixel\Inlay\Support\SectionRegistry;
+use WearePixel\Inlay\Support\SectionRenderer;
 
 final class PageEditor extends Component
 {
@@ -58,19 +61,18 @@ final class PageEditor extends Component
     {
         $componentClass = app(SectionRegistry::class)->resolve($slug);
 
-        $props = [];
-        foreach ($componentClass::schema()->fields() as $field) {
-            $props[$field->name] = in_array($field->type, [FieldType::Repeater, FieldType::Group], true) ? [] : '';
-        }
-
         $section = $this->page->sections()->create([
-            'section_type' => $slug,
+            'handle' => $slug,
             'order' => (int) ($this->page->sections()->max('order') + 1),
-            'props' => $props,
+            // Deliberately sparse: a freshly-added component stores no
+            // overrides at all. Its fields resolve entirely from the
+            // component's own constructor defaults until an editor changes
+            // one - docs/v1-implementation-specification.md §12.
+            'settings' => [],
         ]);
 
         $this->selectedSectionId = $section->id;
-        $this->editingProps = $props;
+        $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($componentClass, []);
     }
 
     public function selectSection(int $sectionId): void
@@ -79,29 +81,37 @@ final class PageEditor extends Component
             ->where('page_id', $this->page->id)
             ->firstOrFail();
 
-        $schema = app(SectionRegistry::class)->resolve($section->section_type)::schema();
+        $componentClass = app(SectionRegistry::class)->resolve($section->handle);
 
         $this->selectedSectionId = $sectionId;
-        $this->editingProps = $this->filterPropsAgainstSchema($section->props ?? [], $schema);
+        $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($componentClass, $section->settings ?? []);
     }
 
     public function addRepeaterItem(string $fieldName): void
     {
         $this->editingProps[$fieldName] ??= [];
         $this->editingProps[$fieldName][] = [];
-        $this->persistEditingProps();
+        $this->persistSetting($fieldName);
     }
 
     public function removeRepeaterItem(string $fieldName, int $index): void
     {
         unset($this->editingProps[$fieldName][$index]);
         $this->editingProps[$fieldName] = array_values($this->editingProps[$fieldName] ?? []);
-        $this->persistEditingProps();
+        $this->persistSetting($fieldName);
     }
 
-    public function updatedEditingProps(): void
+    /**
+     * Livewire reports exactly which nested path changed via $key (e.g.
+     * "heading" or "cta.label") - used here to persist only the top-level
+     * setting that was actually touched, not the whole editingProps array.
+     * Persisting everything on every keystroke would write every field as an
+     * explicit override the moment any single field changed, defeating
+     * sparse storage entirely.
+     */
+    public function updatedEditingProps(mixed $value, string $key): void
     {
-        $this->persistEditingProps();
+        $this->persistSetting(explode('.', $key)[0]);
     }
 
     public function updatedImageUploads(mixed $value, string $key): void
@@ -114,10 +124,10 @@ final class PageEditor extends Component
             "imageUploads.{$key}" => ['image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
         ]);
 
-        $path = $value->store('page-builder', config('blade-page-builder.disk', 'public'));
+        $path = $value->store('inlay', config('inlay.disk', 'public'));
 
         $this->editingProps[$key] = $path;
-        $this->persistEditingProps();
+        $this->persistSetting($key);
     }
 
     public function publish(): void
@@ -144,16 +154,16 @@ final class PageEditor extends Component
 
     public function render(): View
     {
-        return view('blade-page-builder::livewire.page-editor', [
+        return view('inlay::livewire.page-editor', [
             'sections' => $this->page->sections()->orderBy('order')->get(),
             'availableSections' => app(SectionRegistry::class)->slugs(),
-            'selectedSchema' => $this->resolveSelectedSchema(),
+            'selectedSchema' => $this->resolveSelectedSettings(),
             'previewHtml' => $this->renderPreview(),
             'revisions' => $this->page->revisions()->get(),
         ]);
     }
 
-    private function resolveSelectedSchema(): ?Schema
+    private function resolveSelectedSettings(): ?Settings
     {
         if (! $this->selectedSectionId) {
             return null;
@@ -167,22 +177,34 @@ final class PageEditor extends Component
             return null;
         }
 
-        return app(SectionRegistry::class)->resolve($section->section_type)::schema();
+        $componentClass = app(SectionRegistry::class)->resolve($section->handle);
+
+        return app(ComponentDefinitionResolver::class)->resolve($componentClass);
     }
 
     private function renderPreview(): HtmlString
     {
         $sections = $this->page->sections()->orderBy('order')->get()
             ->map(fn (PageSection $section) => [
-                'section_type' => $section->section_type,
-                'props' => $section->props,
+                'handle' => $section->handle,
+                'settings' => $section->settings,
             ])
             ->all();
 
         return new HtmlString(app(SectionRenderer::class)->render($sections));
     }
 
-    private function persistEditingProps(): void
+    /**
+     * Persists exactly one top-level setting as an explicit override, merged
+     * into whatever was already stored for this section - never the whole
+     * editingProps array. This is the security boundary as much as it is the
+     * sparse-storage mechanism: a setting with no matching declaration in the
+     * component's resolved definition is silently ignored here, so an
+     * editor can never persist a key a developer didn't expose, and
+     * coercion always runs unconditionally, regardless of that field's
+     * current visibleWhen() state.
+     */
+    private function persistSetting(string $fieldName): void
     {
         if (! $this->selectedSectionId) {
             return;
@@ -196,62 +218,79 @@ final class PageEditor extends Component
             return;
         }
 
-        $schema = app(SectionRegistry::class)->resolve($section->section_type)::schema();
+        $componentClass = app(SectionRegistry::class)->resolve($section->handle);
+        $definition = app(ComponentDefinitionResolver::class)->resolve($componentClass);
+        $setting = $definition->field($fieldName);
 
-        $this->editingProps = $this->filterPropsAgainstSchema($this->editingProps, $schema);
+        if (! $setting) {
+            return;
+        }
 
-        $section->update(['props' => $this->editingProps]);
+        $coerced = $this->coerceValue($setting, $this->editingProps[$fieldName] ?? null);
+        $this->editingProps[$fieldName] = $coerced;
+
+        $stored = $section->settings ?? [];
+        $stored[$fieldName] = $coerced;
+
+        $section->update(['settings' => $stored]);
     }
 
     /**
-     * Livewire public properties are settable by the client for any nested key,
-     * not just the ones rendered by the schema-driven form. Drop anything that
-     * isn't a declared field, and coerce each declared field's value to the
-     * shape its FieldType expects, before it reaches storage or the section
-     * renderer — a declared scalar field (e.g. a Text field) can still be set
-     * to an array via the same wire:model mechanism, which would otherwise
-     * reach the section component constructor and throw a fatal TypeError.
-     *
-     * @param  array<string, mixed>  $props
+     * Livewire public properties are settable by the client for any nested
+     * key, not just the ones rendered by the schema-driven form. Coerce every
+     * declared field's value to the shape its FieldType expects before it
+     * reaches storage - a declared scalar field can still be set to an array
+     * via the same wire:model mechanism, which would otherwise reach the
+     * component constructor and throw a fatal TypeError.
+     */
+    private function coerceValue(Setting $setting, mixed $value): mixed
+    {
+        $itemSchema = $setting->itemSchema;
+
+        return match (true) {
+            $setting->type === FieldType::Repeater && $itemSchema instanceof Settings => is_array($value)
+                ? array_values(array_map(
+                    fn (mixed $item): array => $this->coerceNested($itemSchema, is_array($item) ? $item : []),
+                    $value,
+                ))
+                : [],
+            $setting->type === FieldType::Group && $itemSchema instanceof Settings => $this->coerceNested($itemSchema, is_array($value) ? $value : []),
+            $setting->type === FieldType::Link => $this->coerceLinkValue($value),
+            $setting->type === FieldType::Toggle => is_scalar($value) ? (bool) $value : false,
+            $setting->type === FieldType::Number => $this->coerceNumber($value, $setting),
+            $setting->type === FieldType::Select && $setting->enumClass !== null => $this->coerceEnumValue($setting, $value),
+            default => $this->coerceScalarValue($value),
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
      * @return array<string, mixed>
      */
-    private function filterPropsAgainstSchema(array $props, Schema $schema): array
+    private function coerceNested(Settings $schema, array $values): array
     {
-        $filtered = [];
+        $result = [];
 
-        foreach ($schema->fields() as $field) {
-            if (! array_key_exists($field->name, $props)) {
+        foreach ($schema->fields() as $nested) {
+            if (! array_key_exists($nested->name, $values)) {
                 continue;
             }
 
-            $value = $props[$field->name];
-            $itemSchema = $field->itemSchema;
-
-            $filtered[$field->name] = match (true) {
-                $field->type === FieldType::Repeater && $itemSchema instanceof Schema => is_array($value)
-                    ? array_values(array_map(
-                        fn (mixed $item): array => $this->filterPropsAgainstSchema(is_array($item) ? $item : [], $itemSchema),
-                        $value,
-                    ))
-                    : [],
-                $field->type === FieldType::Group && $itemSchema instanceof Schema => $this->filterPropsAgainstSchema(is_array($value) ? $value : [], $itemSchema),
-                $field->type === FieldType::Link => $this->filterLinkValue($value),
-                default => $this->filterScalarValue($value),
-            };
+            $result[$nested->name] = $this->coerceValue($nested, $values[$nested->name]);
         }
 
-        return $filtered;
+        return $result;
     }
 
     /**
-     * The Link field's Blade partial binds `label`, `url`, and `new_tab` as
-     * separate sub-paths (resources/views/fields/link.blade.php), so its
-     * value is a structured array rather than a plain scalar. Validate its
-     * own sub-keys instead of coercing the whole value to a string.
+     * The Link field's Blade partial binds `label`, `url`, and `openInNewTab`
+     * as separate sub-paths, so its value is a structured array rather than
+     * a plain scalar. Validate its own sub-keys instead of coercing the
+     * whole value to a string.
      *
-     * @return array{label: string, url: string, new_tab: bool}
+     * @return array{label: string, url: string, openInNewTab: bool}
      */
-    private function filterLinkValue(mixed $value): array
+    private function coerceLinkValue(mixed $value): array
     {
         $value = is_array($value) ? $value : [];
 
@@ -260,7 +299,7 @@ final class PageEditor extends Component
         return [
             'label' => is_string($value['label'] ?? null) ? $value['label'] : '',
             'url' => $this->isAllowedUrlScheme($url) ? $url : '',
-            'new_tab' => is_scalar($value['new_tab'] ?? null) ? (bool) $value['new_tab'] : false,
+            'openInNewTab' => is_scalar($value['openInNewTab'] ?? null) ? (bool) $value['openInNewTab'] : false,
         ];
     }
 
@@ -281,13 +320,45 @@ final class PageEditor extends Component
     }
 
     /**
-     * Text, Textarea, Richtext, Image, and Select fields all bind to a single
-     * scalar model path and are consumed as plain `string` section component
-     * constructor parameters. Reject non-scalar values (arrays, objects) that
-     * a client could otherwise inject via wire:model rather than passing them
-     * through unchecked.
+     * A stored value that no longer matches a real case (an enum case was
+     * removed) falls back to the constructor default here too, so the
+     * editor's own form state never holds a value the renderer would reject.
      */
-    private function filterScalarValue(mixed $value): string
+    private function coerceEnumValue(Setting $setting, mixed $value): string
+    {
+        $enumClass = $setting->enumClass;
+
+        $candidate = $value instanceof BackedEnum ? $value->value : $value;
+
+        if (is_string($candidate) && $enumClass::tryFrom($candidate) !== null) {
+            return $candidate;
+        }
+
+        $default = $setting->default;
+
+        return match (true) {
+            $default instanceof BackedEnum => $default->value,
+            is_string($default) => $default,
+            default => '',
+        };
+    }
+
+    private function coerceNumber(mixed $value, Setting $setting): int|float
+    {
+        if (is_numeric($value)) {
+            return $value + 0;
+        }
+
+        return is_numeric($setting->default) ? $setting->default + 0 : 0;
+    }
+
+    /**
+     * Text, Textarea, Richtext, Image, and non-enum Select fields all bind to
+     * a single scalar model path. Reject non-scalar values (arrays, objects)
+     * that a client could otherwise inject via wire:model rather than
+     * passing them through unchecked.
+     */
+    private function coerceScalarValue(mixed $value): string
     {
         if (is_string($value)) {
             return $value;

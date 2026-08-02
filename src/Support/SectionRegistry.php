@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Support;
+namespace WearePixel\Inlay\Support;
 
 use InvalidArgumentException;
-use WearePixel\BladePageBuilder\Contracts\Sectionable;
+use WearePixel\Inlay\Contracts\InlayComponent;
 
 final class SectionRegistry
 {
     /**
-     * @param  array<string, class-string<Sectionable>>  $sections
+     * @param  array<string, class-string<InlayComponent>>  $sections
      */
     public function __construct(private readonly array $sections) {}
 
     public static function fromConfig(): self
     {
-        return new self(config('blade-page-builder.sections', []));
+        return new self(config('inlay.sections', []));
     }
 
     /**
-     * @return class-string<Sectionable>
+     * @return class-string<InlayComponent>
      */
     public function resolve(string $slug): string
     {

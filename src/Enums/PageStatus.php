@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Enums;
+namespace WearePixel\Inlay\Enums;
 
 enum PageStatus: string
 {

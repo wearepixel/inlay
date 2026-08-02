@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Tests;
+namespace WearePixel\Inlay\Tests;
 
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
-use WearePixel\BladePageBuilder\BladePageBuilderServiceProvider;
+use WearePixel\Inlay\InlayServiceProvider;
 
 abstract class TestCase extends Orchestra
 {
@@ -17,7 +17,7 @@ abstract class TestCase extends Orchestra
     {
         return [
             LivewireServiceProvider::class,
-            BladePageBuilderServiceProvider::class,
+            InlayServiceProvider::class,
         ];
     }
 

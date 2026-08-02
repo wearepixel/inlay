@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Models;
+namespace WearePixel\Inlay\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class PageSection extends Model
 {
-    protected $fillable = ['page_id', 'section_type', 'order', 'props'];
+    protected $fillable = ['page_id', 'handle', 'order', 'settings'];
 
     protected $casts = [
         'order' => 'integer',
-        'props' => 'array',
+        'settings' => 'array',
     ];
 
     public function page(): BelongsTo

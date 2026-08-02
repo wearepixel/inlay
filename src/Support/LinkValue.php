@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Support;
+namespace WearePixel\Inlay\Support;
 
 final readonly class LinkValue
 {

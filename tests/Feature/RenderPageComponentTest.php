@@ -3,24 +3,24 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
-use WearePixel\BladePageBuilder\Actions\PublishPage;
-use WearePixel\BladePageBuilder\Models\Page;
-use WearePixel\BladePageBuilder\Tests\Fixtures\TestHeroSection;
+use WearePixel\Inlay\Actions\PublishPage;
+use WearePixel\Inlay\Models\Page;
+use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['blade-page-builder.sections' => [
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
     ]]);
 });
 
 it('renders the latest published revision, ignoring unpublished draft edits', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
-    $page->sections()->create(['section_type' => 'test-hero', 'order' => 0, 'props' => ['heading' => 'Published heading']]);
-    (new PublishPage)->execute($page);
+    $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => ['heading' => 'Published heading']]);
+    app(PublishPage::class)->execute($page);
 
-    $page->sections()->first()->update(['props' => ['heading' => 'Unpublished draft edit']]);
+    $page->sections()->first()->update(['settings' => ['heading' => 'Unpublished draft edit']]);
 
-    $html = Blade::render('<x-page-builder::render :page="$page" />', ['page' => $page]);
+    $html = Blade::render('<x-inlay::render :page="$page" />', ['page' => $page]);
 
     expect($html)
         ->toContain('Published heading')
@@ -30,7 +30,7 @@ it('renders the latest published revision, ignoring unpublished draft edits', fu
 it('renders nothing for a page that has never been published', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);
 
-    $html = Blade::render('<x-page-builder::render :page="$page" />', ['page' => $page]);
+    $html = Blade::render('<x-inlay::render :page="$page" />', ['page' => $page]);
 
     expect(trim($html))->toBe('');
 });

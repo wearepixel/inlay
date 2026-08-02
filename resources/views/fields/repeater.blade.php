@@ -4,7 +4,7 @@
     @foreach (($editingProps[$field->name] ?? []) as $index => $item)
         <div class="space-y-2 rounded-md border border-gray-100 p-2" wire:key="repeater-{{ $field->name }}-{{ $index }}">
             @foreach ($field->itemSchema->fields() as $subField)
-                @include('blade-page-builder::fields.' . $subField->type->value, [
+                @include('inlay::fields.' . $subField->type->value, [
                     'field' => $subField,
                     'modelPath' => "editingProps.{$field->name}.{$index}.{$subField->name}",
                 ])

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\View\Components;
+namespace WearePixel\Inlay\View\Components;
 
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Component;
-use WearePixel\BladePageBuilder\Models\Page;
-use WearePixel\BladePageBuilder\Support\SectionRenderer;
+use WearePixel\Inlay\Models\Page;
+use WearePixel\Inlay\Support\SectionRenderer;
 
 final class RenderPage extends Component
 {

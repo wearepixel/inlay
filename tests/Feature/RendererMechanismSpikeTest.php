@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 use Livewire\Livewire;
-use WearePixel\BladePageBuilder\Support\LinkValue;
-use WearePixel\BladePageBuilder\Tests\Fixtures\Spike\SpikeComponent;
-use WearePixel\BladePageBuilder\Tests\Fixtures\Spike\SpikeImageSize;
-use WearePixel\BladePageBuilder\Tests\Fixtures\Spike\SpikeInlineWidget;
-use WearePixel\BladePageBuilder\Tests\Fixtures\Spike\SpikeThrowingComponent;
+use WearePixel\Inlay\Support\LinkValue;
+use WearePixel\Inlay\Tests\Fixtures\Spike\SpikeComponent;
+use WearePixel\Inlay\Tests\Fixtures\Spike\SpikeImageSize;
+use WearePixel\Inlay\Tests\Fixtures\Spike\SpikeInlineWidget;
+use WearePixel\Inlay\Tests\Fixtures\Spike\SpikeThrowingComponent;
 
 /**
  * A focused spike proving the exact renderer mechanism the v1 specification commits
@@ -41,9 +41,28 @@ function spikeRenderComponent(string $class, array $settings): string
         ->map(fn (string $key) => ":{$key}=\"\$settings['{$key}']\"")
         ->implode(' ');
 
+    // Deliberately not <x-dynamic-component :component="...">, found by
+    // running the FULL suite, not just this file in isolation:
+    // Illuminate\View\DynamicComponent memoises its ComponentTagCompiler and
+    // every class it has ever resolved into `protected static` properties
+    // that live for the whole PHP process. Once any test renders one dynamic
+    // component, that memoised compiler's alias snapshot is frozen forever -
+    // an alias registered afterward (a different component, a fresh
+    // Testbench application boot, a long-running worker meeting a new
+    // component type) silently fails to resolve. The alias is interpolated
+    // directly as a literal tag name instead - Blade compiles <x-{alias}>
+    // as an ordinary component tag against the live compiler at compile
+    // time, with no such caching.
+    //
+    // Blade::render() also caches its compiled output by template TEXT, not
+    // by data - two different aliases can produce identical template text
+    // (same binding variable names), so deleteCachedView forces a fresh
+    // compile every time rather than risking a stale file from a different
+    // alias's resolution.
     return Blade::render(
-        "<x-dynamic-component :component=\"\$component\" {$bindings} />",
-        ['component' => $alias, 'settings' => $settings],
+        "<x-{$alias} {$bindings} />",
+        ['settings' => $settings],
+        deleteCachedView: true,
     );
 }
 
@@ -95,7 +114,7 @@ it('resolves an unexposed constructor dependency via the container, never via su
     expect($html)->toContain('data-spike-repo="resolved-from-container"');
 });
 
-it('mounts and hydrates a nested Livewire component with no page-builder involvement', function () {
+it('mounts and hydrates a nested Livewire component with no inlay involvement', function () {
     $html = spikeRenderComponent(SpikeComponent::class, ['heading' => 'Nested Livewire']);
 
     expect($html)

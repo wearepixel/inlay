@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Tests\Fixtures\Spike;
+namespace WearePixel\Inlay\Tests\Fixtures\Spike;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WearePixel\BladePageBuilder\Support\LinkValue;
+use WearePixel\Inlay\Support\LinkValue;
 
 final class SpikeComponent extends Component
 {

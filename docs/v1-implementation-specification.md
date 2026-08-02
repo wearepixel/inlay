@@ -19,7 +19,7 @@ V1 is the smallest release that proves the complete product for one developer, o
 6. They optionally define Page Definition constraints.
 7. Editors add, configure, reorder, preview, and publish those components.
 
-**The registered outer unit is always a normal Blade component.** That Blade component remains completely owned by the consuming application and may internally use anything the application already supports — nested Blade components, Livewire components, Alpine, AJAX, ordinary JavaScript, a Vue or React island, forms, domain services, Eloquent models, ecommerce functionality, custom frontend assets — with no special page-builder rendering adapter of any kind:
+**The registered outer unit is always a normal Blade component.** That Blade component remains completely owned by the consuming application and may internally use anything the application already supports — nested Blade components, Livewire components, Alpine, AJAX, ordinary JavaScript, a Vue or React island, forms, domain services, Eloquent models, ecommerce functionality, custom frontend assets — with no special rendering adapter of any kind:
 
 ```blade
 <section>
@@ -113,13 +113,13 @@ Unchanged, the frozen end-to-end journey a v1 release must support:
 ## 4. V1 developer journey
 
 ```bash
-composer require wearepixel/blade-page-builder
-php artisan page-builder:install
+composer require wearepixel/inlay
+php artisan inlay:install
 php artisan migrate
 ```
 
 ```php
-final class Hero extends \Illuminate\View\Component implements PageBuilderComponent
+final class Hero extends \Illuminate\View\Component implements InlayComponent
 {
     public function __construct(
         public string $heading = 'Welcome',
@@ -167,13 +167,13 @@ final class Hero extends \Illuminate\View\Component implements PageBuilderCompon
 
 ```php
 // AppServiceProvider::boot()
-PageBuilder::category('Headers')
+Inlay::category('Headers')
     ->icon('layout-header')
     ->components([Hero::class]);
 
-PageBuilder::pageDefinition(CollectionPage::class); // only if constraints are needed
+Inlay::pageDefinition(CollectionPage::class); // only if constraints are needed
 
-PageBuilder::routes(); // in routes/web.php, after the host's own routes
+Inlay::routes(); // in routes/web.php, after the host's own routes
 ```
 
 Open `/admin/pages`, create a page, compose from the categorized picker, publish. That's the entire developer-facing surface for v1: one facade, three registration verbs (`component`/`components`/`category`), one Page Definition verb, one routing verb, no renderer choice to make anywhere.
@@ -190,14 +190,16 @@ The first draft of this specification treated a directly-registered Livewire com
 
 ### The v1 rendering path — one renderer, empirically verified
 
-**`<x-dynamic-component>` does not accept a fully-qualified class name directly** — confirmed by running it against this package's pinned Laravel/Livewire versions (Laravel 12.63, Livewire 4.3.3, PHP 8.4) before writing any production code: passing a class string throws `Unable to locate a class or view for component [...]`. Per this document's own instruction for exactly this outcome, the renderer resolves each component to a **registered Blade component alias** and renders through that alias instead — never falling back to manual `new $componentClass(...)` construction.
+**`<x-dynamic-component>` does not accept a fully-qualified class name directly** — confirmed by running it against this package's pinned Laravel/Livewire versions before writing any production code: passing a class string throws `Unable to locate a class or view for component [...]`. Per this document's own instruction for exactly this outcome, the renderer resolves each component to a **registered Blade component alias** instead — never falling back to manual `new $componentClass(...)` construction.
+
+**A second, more consequential finding, from running the spike as part of the full suite rather than in isolation: `<x-dynamic-component>` itself is not safe to use for this, even with an alias.** `Illuminate\View\DynamicComponent` memoises its `ComponentTagCompiler` instance and every class it has ever resolved into `protected static` properties that live for the entire PHP process. The first time _anything_ renders a dynamic component, that compiler snapshot — and the alias table it was built from — is frozen for the rest of the process; an alias registered afterward (a different component class, a fresh application boot, a long-running worker meeting a component type it hasn't rendered before) silently fails to resolve. This is not a testing artifact to work around — it would affect a real Octane worker the same way it affected this package's own test suite. The fix is to avoid `<x-dynamic-component>` entirely: since the alias is already a known PHP string at the point of rendering, it's interpolated directly as a **literal tag name**, which Blade compiles as an ordinary, non-dynamic component tag against the live compiler instance at compile time — no static caching, no process-lifetime staleness.
 
 ```php
 final class BladeComponentRenderer
 {
     public function render(string $componentClass, array $settings): string
     {
-        $alias = 'page-builder-'.md5($componentClass);
+        $alias = 'inlay-'.md5($componentClass);
 
         Blade::component($alias, $componentClass); // idempotent; cheap to call on every render
 
@@ -205,17 +207,23 @@ final class BladeComponentRenderer
             ->map(fn (string $key) => ":{$key}=\"\$settings['{$key}']\"")
             ->implode(' ');
 
+        // Blade::render() also caches its compiled output by template TEXT,
+        // not by data - two different aliases can produce identical
+        // template text (same binding variable names), so deleteCachedView
+        // forces a fresh compile every render rather than risking a stale
+        // file from a different alias's resolution.
         return Blade::render(
-            "<x-dynamic-component :component=\"\$component\" {$bindings} />",
-            ['component' => $alias, 'settings' => $settings],
+            "<x-{$alias} {$bindings} />",
+            ['settings' => $settings],
+            deleteCachedView: true,
         );
     }
 }
 ```
 
-This is a real, compiled Blade template — rendered through Laravel's genuine view/compiler pipeline, not a manual reflection-based invocation. This replaces today's `SectionRenderer`, which constructs each component with bare `new $componentClass(...$props)` and then manually calls `render()->with($data)->render()`, bypassing that pipeline entirely. The fix is not "add a second renderer for Livewire." It is "stop bypassing the view engine for the one renderer that exists," which also happens to be exactly what makes nested Livewire work correctly with zero further effort: because the outer component's own `.blade.php` view is now rendered through Blade's real compiler (as part of `<x-dynamic-component>` resolving and rendering it), any `<livewire:...>` tag or other Blade directive inside that view compiles and renders exactly as it would in any other Laravel view. **This is not a theoretical claim** — `tests/Feature/RendererMechanismSpikeTest.php` proves it directly: a component's own view containing `<livewire:spike-inline-widget />` renders and produces real `wire:snapshot` hydration markup, using this exact alias-based mechanism, with zero package-level Livewire awareness.
+This is a real, compiled Blade template — rendered through Laravel's genuine view/compiler pipeline, not a manual reflection-based invocation. This replaces today's `SectionRenderer`, which constructs each component with bare `new $componentClass(...$props)` and then manually calls `render()->with($data)->render()`, bypassing that pipeline entirely. The fix is not "add a second renderer for Livewire." It is "stop bypassing the view engine for the one renderer that exists," which also happens to be exactly what makes nested Livewire work correctly with zero further effort: because the outer component's own `.blade.php` view is now rendered through Blade's real compiler (as part of the alias tag resolving and rendering it), any `<livewire:...>` tag or other Blade directive inside that view compiles and renders exactly as it would in any other Laravel view. **This is not a theoretical claim** — `tests/Feature/RendererMechanismSpikeTest.php` proves it directly: a component's own view containing `<livewire:spike-inline-widget />` renders and produces real `wire:snapshot` hydration markup, using this exact mechanism, with zero package-level Livewire awareness.
 
-The spike also confirms two supporting details this mechanism depends on: an enum or `LinkValue` setting is passed to the renderer **already hydrated** (the scalar-to-case and array-to-object conversion is the settings-resolution step's job, §10–§11, not something Blade does automatically), and an **unexposed constructor dependency resolves through Laravel's own container** — `<x-dynamic-component>`'s resolution ultimately calls the container's `make()` with the supplied bindings as named parameters, so a type-hinted, non-exposed parameter (an injected repository or service) is autowired exactly as it would be for any other Blade component, with no special handling needed for it in the renderer at all.
+The spike also confirms two supporting details this mechanism depends on: an enum or `LinkValue` setting is passed to the renderer **already hydrated** (the scalar-to-case and array-to-object conversion is the settings-resolution step's job, §10–§11, not something Blade does automatically), and an **unexposed constructor dependency resolves through Laravel's own container** — resolving a component tag ultimately calls the container's `make()` with the supplied bindings as named parameters, so a type-hinted, non-exposed parameter (an injected repository or service) is autowired exactly as it would be for any other Blade component, with no special handling needed for it in the renderer at all.
 
 ```blade
 {{-- resources/views/components/hero.blade.php — entirely host-owned --}}
@@ -225,7 +233,7 @@ The spike also confirms two supporting details this mechanism depends on: an enu
 </section>
 ```
 
-**This requires no special page-builder rendering adapter.** It is not a page-builder concern at all.
+**This requires no special rendering adapter.** It is not a package concern at all.
 
 ### What this removes, decisively
 
@@ -248,14 +256,14 @@ The packaged administration interface continues to use Livewire internally, as i
 ## 6. Component registration API
 
 ```php
-PageBuilder::component(HeaderClassic::class);
+Inlay::component(HeaderClassic::class);
 
-PageBuilder::components([
+Inlay::components([
     HeaderClassic::class,
     HeaderCentered::class,
 ]);
 
-PageBuilder::category('Headers')
+Inlay::category('Headers')
     ->icon('layout-header')
     ->description('Headers and page introductions')
     ->components([
@@ -265,25 +273,25 @@ PageBuilder::category('Headers')
     ]);
 ```
 
-One registration verb for the one renderable concept (`component`/`components`), one for grouping (`category`), one separate verb for Page Definitions (`PageBuilder::pageDefinition()`, §13). No renderer parameter anywhere — there is exactly one renderer (§5).
+One registration verb for the one renderable concept (`component`/`components`), one for grouping (`category`), one separate verb for Page Definitions (`Inlay::pageDefinition()`, §13). No renderer parameter anywhere — there is exactly one renderer (§5).
 
 ---
 
 ## 7. The public Component contract
 
 ```php
-interface PageBuilderComponent
+interface InlayComponent
 {
 }
 ```
 
-**`PageBuilderComponent` is a marker interface — it declares no methods.** An earlier draft of this document required `public static function settings(): Settings` on the interface itself, which is incompatible with also permitting attribute-only components that declare no `settings()` method at all — PHP cannot make an interface method simultaneously required and optional. `settings()` remains fully supported and is preferred for complex schemas, but it is one of two ways a component may declare its editor-facing metadata, not a contractual requirement:
+**`InlayComponent` is a marker interface — it declares no methods.** An earlier draft of this document required `public static function settings(): Settings` on the interface itself, which is incompatible with also permitting attribute-only components that declare no `settings()` method at all — PHP cannot make an interface method simultaneously required and optional. `settings()` remains fully supported and is preferred for complex schemas, but it is one of two ways a component may declare its editor-facing metadata, not a contractual requirement:
 
 ```php
 public static function settings(): Settings; // optional — present on the class if used
 ```
 
-The registry builds a component's resolved settings definition from up to three sources: constructor-property attributes (§9), the optional fluent `settings()` method, and registration-time metadata (a category, icon, or description supplied to `PageBuilder::component()`). Where both attributes and `settings()` declare the same setting, the fluent declaration overrides the attribute's metadata for that setting. Constructor PHP type, nullability, and default value are authoritative regardless of which style declared the field. **No trait is required merely to make an attribute-only component valid** — the marker interface plus attributes on the constructor is sufficient on its own.
+The registry builds a component's resolved settings definition from up to three sources: constructor-property attributes (§9), the optional fluent `settings()` method, and registration-time metadata (a category, icon, or description supplied to `Inlay::component()`). Where both attributes and `settings()` declare the same setting, the fluent declaration overrides the attribute's metadata for that setting. Constructor PHP type, nullability, and default value are authoritative regardless of which style declared the field. **No trait is required merely to make an attribute-only component valid** — the marker interface plus attributes on the constructor is sufficient on its own.
 
 ### A constructor parameter is not a setting unless explicitly exposed
 
@@ -299,14 +307,14 @@ public function __construct(
 ) {}
 ```
 
-`ProductRepository $products` is never a setting — nothing declares it as one. A constructor parameter becomes a page-builder setting **only** when explicitly declared, either by a supported attribute or by an entry in `settings()`. This is what a constructor parameter provides once (and only once) it's exposed this way: PHP type, nullability, enum or value-object type, and runtime default. Everything not exposed is left entirely alone — the renderer never touches, inspects, or attempts to supply a value for a parameter no attribute or `settings()` entry named. This is what makes it structurally true, not merely policy, that **editors can only change what a developer explicitly exposed** (§2's ownership boundary made concrete at the constructor level).
+`ProductRepository $products` is never a setting — nothing declares it as one. A constructor parameter becomes an editor-facing setting **only** when explicitly declared, either by a supported attribute or by an entry in `settings()`. This is what a constructor parameter provides once (and only once) it's exposed this way: PHP type, nullability, enum or value-object type, and runtime default. Everything not exposed is left entirely alone — the renderer never touches, inspects, or attempts to supply a value for a parameter no attribute or `settings()` entry named. This is what makes it structurally true, not merely policy, that **editors can only change what a developer explicitly exposed** (§2's ownership boundary made concrete at the constructor level).
 
-Unexposed, container-resolvable dependencies like `$products` above are satisfied the ordinary way Laravel already resolves Blade components: rendering an outer component through `<x-dynamic-component>` (§5) goes through the service container, which auto-resolves a type-hinted, non-explicitly-supplied constructor parameter exactly as it would for any other Blade component in the application — the renderer supplies data only for the settings it knows about (the exposed ones, plus any matching runtime context), and the container fills in everything else. No special-casing is needed here; it is Laravel's existing behaviour, not new package logic. This is verified directly by the renderer spike (§5, `tests/Feature/RendererMechanismSpikeTest.php`).
+Unexposed, container-resolvable dependencies like `$products` above are satisfied the ordinary way Laravel already resolves Blade components: rendering an outer component through its registered alias tag (§5) goes through the service container, which auto-resolves a type-hinted, non-explicitly-supplied constructor parameter exactly as it would for any other Blade component in the application — the renderer supplies data only for the settings it knows about (the exposed ones, plus any matching runtime context), and the container fills in everything else. No special-casing is needed here; it is Laravel's existing behaviour, not new package logic. This is verified directly by the renderer spike (§5, `tests/Feature/RendererMechanismSpikeTest.php`).
 
 **Registration must reject an attribute or `settings()` declaration with no corresponding constructor parameter** — the same validation direction as before, now stated alongside its converse: exposure is opt-in per parameter, and a declared setting with no parameter to attach to is a registration-time error, not a runtime one.
 
 ```php
-final class Hero extends Component implements PageBuilderComponent
+final class Hero extends Component implements InlayComponent
 {
     public function __construct(
         public string $heading = 'Welcome',
@@ -412,7 +420,7 @@ The following fail immediately, with a clear developer-facing exception, at the 
 An optional, elegant authoring style for simple components, alongside — not instead of — the fluent `Settings::make()` API, which remains fully supported and is preferred for complex schemas.
 
 ```php
-final class Hero extends Component implements PageBuilderComponent
+final class Hero extends Component implements InlayComponent
 {
     public function __construct(
         #[Text(label: 'Heading', help: 'Keep this under 80 characters', maxLength: 80)]
@@ -703,12 +711,12 @@ Retains the iframe-based preview using the host application's real frontend envi
 ### One explicit contract, not an ambiguous "layout or view"
 
 ```php
-PageBuilder::previewView(
+Inlay::previewView(
     CollectionPage::class,
-    'page-builder-previews.collection',
+    'inlay-previews.collection',
 );
 
-PageBuilder::previewView('page-builder-previews.default'); // global default for ordinary standalone pages
+Inlay::previewView('inlay-previews.default'); // global default for ordinary standalone pages
 ```
 
 The named Blade view receives exactly three documented values: `$page`, `$composition`, and `$context`. `$composition` is an **`Htmlable` value object**, never a raw untyped string — preferred deliberately, per this document's own instruction to choose escaping behaviour intentionally rather than default to raw strings. The host places it inside whatever layout and assets it normally uses:
@@ -731,7 +739,7 @@ The named Blade view receives exactly three documented values: `$page`, `$compos
 - **Context-dependent pages**:
 
 ```php
-PageBuilder::previewContext(CollectionPage::class, function (Page $page) {
+Inlay::previewContext(CollectionPage::class, function (Page $page) {
     return [
         'collection' => Collection::findOrFail($page->context_reference),
     ];
@@ -742,7 +750,7 @@ Called only by the preview/admin path, never by public rendering, and **never pe
 
 ### If the host configures nothing
 
-The admin falls back to a bare, explicitly-labeled unstyled wrapper ("unstyled fallback — configure `PageBuilder::previewView()` to preview using your real design") rather than silently pretending an unstyled fallback is the real thing.
+The admin falls back to a bare, explicitly-labeled unstyled wrapper ("unstyled fallback — configure `Inlay::previewView()` to preview using your real design") rather than silently pretending an unstyled fallback is the real thing.
 
 ---
 
@@ -768,8 +776,8 @@ Not in v1: `navigations`/`navigation_items`, media-backed `site_settings` column
 Everything needed for the full sixteen-step journey (§3), in one release, using the one Blade renderer (§5):
 
 - `FieldType` gains `Toggle`/`Number`; `mapsToClass()` removed.
-- `PageBuilderComponent`/`settings()`/`Settings`/`Setting` renames.
-- `PageBuilder::component()`/`components()`/`category()`/`pageDefinition()`.
+- `InlayComponent`/`settings()`/`Settings`/`Setting` renames.
+- `Inlay::component()`/`components()`/`category()`/`pageDefinition()`.
 - Constructor-reflection type/default/nullability inference, with registration-time mismatch validation.
 - Optional PHP attribute authoring, merged with fluent declarations per §9's precedence rules.
 - Backed-enum options handling; `LinkValue`/`ImageValue` value objects.
@@ -797,8 +805,8 @@ The complete Blade-component composition workflow is stable. Blade components ma
 
 ## 21. Reflection and caching strategy
 
-- **Development**: constructor and attribute reflection runs at registration time (when `PageBuilder::component()` is called), which is cheap enough at development scale to re-run freely, favouring DX over micro-optimizing a cost nobody will notice.
-- **Production**: reflection results are written once into a compiled component manifest (`php artisan page-builder:cache`, hooked into `php artisan optimize`), consulted on every subsequent request without further reflection. `APP_ENV=production` with no manifest present fails loudly rather than silently falling back to a live scan.
+- **Development**: constructor and attribute reflection runs at registration time (when `Inlay::component()` is called), which is cheap enough at development scale to re-run freely, favouring DX over micro-optimizing a cost nobody will notice.
+- **Production**: reflection results are written once into a compiled component manifest (`php artisan inlay:cache`, hooked into `php artisan optimize`), consulted on every subsequent request without further reflection. `APP_ENV=production` with no manifest present fails loudly rather than silently falling back to a live scan.
 - **What the manifest contains**: component identity (handle, display metadata, category, icon), the resolved `FieldType` for every setting, each setting's derived PHP type, nullability, default value (already serialized to its stored representation), enum or value-object class where applicable, and the component's `settingsVersion()`.
 - **What the manifest never contains**: an executable closure. Any schema behaviour that can't be safely serialized (a closure-based custom validation rule, for instance) is resolved by referencing the owning class and re-invoking it live, not by attempting to cache the closure itself.
 - **Guiding constraint**: the manifest exists to remove per-request reflection cost, not to become a second, more complex system than the feature it optimizes — if a piece of metadata is cheap enough to resolve live in production without a measurable cost, it does not need to be cached merely for architectural symmetry.
@@ -876,7 +884,7 @@ The complete Blade-component composition workflow is stable. Blade components ma
 
 ## 26. Required final recommendations
 
-**Is `PageBuilderComponent` the final public contract name?**
+**Is `InlayComponent` the final public contract name?**
 Yes.
 
 **Is `settings()` the final public declaration method?**
@@ -916,7 +924,7 @@ Yes, decisively (§14).
 No (§16) — a closed, built-in set is sufficient for everything v1 needs; third-party extensibility is real future work, deferred.
 
 **What is the final preview-view API?**
-`PageBuilder::previewView(PageDefinitionClass::class, 'view.name')` for a context-bound page, and a bare `PageBuilder::previewView('view.name')` global default for ordinary pages — one explicit contract, receiving `$page`, `$composition` (`Htmlable`), and `$context`.
+`Inlay::previewView(PageDefinitionClass::class, 'view.name')` for a context-bound page, and a bare `Inlay::previewView('view.name')` global default for ordinary pages — one explicit contract, receiving `$page`, `$composition` (`Htmlable`), and `$context`.
 
 **What is the smallest implementation phase that now produces visible product progress?**
 The `FieldType`/naming corrections, the authoring model and registry (constructor inference, attributes, enums, value objects, sparse overrides), and the corrected single Blade renderer, followed immediately by admin routes, page index/creation/settings with the Page Definition picker, and public/embedded rendering — everything in 0.1 through the point where a page composed of components (including one using nested Livewire) can be created, published, and viewed live. This is smaller than either prior draft's "first slice," because there is no longer a second renderer or adapter to build before that milestone is reached.

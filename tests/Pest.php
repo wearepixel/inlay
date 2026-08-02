@@ -2,6 +2,6 @@
 
 declare(strict_types=1);
 
-use WearePixel\BladePageBuilder\Tests\TestCase;
+use WearePixel\Inlay\Tests\TestCase;
 
 uses(TestCase::class)->in('Feature', 'Unit');

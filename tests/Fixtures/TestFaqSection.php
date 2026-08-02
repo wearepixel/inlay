@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\BladePageBuilder\Tests\Fixtures;
+namespace WearePixel\Inlay\Tests\Fixtures;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WearePixel\BladePageBuilder\Contracts\Sectionable;
-use WearePixel\BladePageBuilder\Schema\Schema;
+use WearePixel\Inlay\Contracts\InlayComponent;
+use WearePixel\Inlay\Schema\Settings;
 
-final class TestFaqSection extends Component implements Sectionable
+final class TestFaqSection extends Component implements InlayComponent
 {
     public function __construct(
         public array $items = [],
     ) {}
 
-    public static function schema(): Schema
+    public static function settings(): Settings
     {
-        $itemSchema = Schema::make()
-            ->text('question', label: 'Question')
-            ->textarea('answer', label: 'Answer');
+        $itemSchema = Settings::make()
+            ->text('question')->label('Question')
+            ->textarea('answer')->label('Answer');
 
-        return Schema::make()->repeater('items', label: 'FAQ items', itemSchema: $itemSchema);
+        return Settings::make()->repeater('items', $itemSchema)->label('FAQ items');
     }
 
     public function render(): View
