@@ -39,8 +39,24 @@ final class InlayManager
         // concrete class strings first: Livewire compares by exact
         // class-string match against the route's own already-resolved
         // middleware, not by alias name.
+        //
+        // The "web" group itself must NOT be included here. Livewire's own
+        // update endpoint already runs the real "web" group exactly once, on
+        // the actual incoming request - that's what decrypts the session
+        // cookie and starts the session correctly. Persistent middleware
+        // re-runs its resolved classes a second time against a *cloned*
+        // request built from the original page's route. Re-running
+        // EncryptCookies on that clone tries to decrypt a cookie value the
+        // first pass already decrypted, fails, and silently nulls it out -
+        // StartSession then opens a brand new anonymous session and
+        // Authenticate correctly (from its own perspective) redirects to
+        // login, logging out an otherwise perfectly valid session on the
+        // very next admin action. Only middleware beyond the base "web"
+        // group (auth, authorization, etc.) needs to persist.
+        $persistent = array_values(array_diff($middleware, ['web']));
+
         Livewire::addPersistentMiddleware(
-            Route::resolveMiddleware($middleware)
+            Route::resolveMiddleware($persistent)
         );
 
         Route::group([

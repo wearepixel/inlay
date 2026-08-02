@@ -59,3 +59,62 @@ it('allows an authenticated visitor to load the admin and complete a real Livewi
 
     expect($page->fresh()->status)->toBe(PageStatus::Published);
 });
+
+/**
+ * A real bug (found manually, against a genuine standalone Laravel app, not
+ * this suite) sent a logged-in editor back to the login screen the moment
+ * they performed their first Livewire action (adding a component,
+ * publishing, etc) - the initial page load worked fine, every action after
+ * it did not. Root cause: Livewire's persistent middleware re-runs the
+ * *original* route's middleware against a *cloned* request on every action -
+ * so when config('inlay.middleware') resolved the "web" group into that
+ * persistent set, EncryptCookies ran a second time against a cookie its
+ * first pass had already decrypted, failed, and silently dropped it,
+ * leaving the clone with no session at all. See InlayManager::routes() for
+ * the fix (only middleware beyond "web" persists).
+ *
+ * This test performs a genuine login through TestCase's own '/test-login'
+ * form (unlike the test above, which uses actingAs() and so never
+ * round-trips a real, encrypted cookie) specifically to exercise that
+ * decrypt-twice path. It is exactly the right shape to catch this bug, but
+ * in practice does not: instrumenting Livewire's PersistentMiddleware
+ * directly confirmed the session cookie genuinely is corrupted and nulled
+ * on the clone here too, yet Auth::check() still reports authenticated
+ * afterwards, because this plugin's in-process AMPHP server keeps one
+ * booted Application - and with it the auth guard's already-resolved user -
+ * alive across what a real server would treat as separate requests. So this
+ * assertion passes identically whether InlayManager::routes() is fixed or
+ * not; it is kept as real coverage of the login-then-act happy path, not as
+ * a regression guard for this specific bug. The fix itself was verified
+ * against a real `php artisan serve` process in a standalone sandbox app,
+ * where each request really is independent.
+ */
+it('keeps a real, cookie-based session logged in across a Livewire action', function () {
+    $user = User::forceCreate([
+        'name' => 'Editor',
+        'email' => 'editor@example.test',
+        'password' => bcrypt('password'),
+    ]);
+
+    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
+
+    visit('/test-login')
+        ->fill('@email', $user->email)
+        ->fill('@password', 'password')
+        ->click('@login-submit')
+        ->wait(1)
+        ->assertSee('Pages');
+
+    // A fresh visit() call, not chained off the login page - the same
+    // pattern the rest of this suite uses for sequential navigation. The
+    // browser context (and its cookies) persists across separate visit()
+    // calls within one test.
+    visit("/inlay-secure/pages/{$page->id}/edit")
+        ->click('@publish')
+        ->wait(1)
+        ->assertSee('Published')
+        ->assertPathIs("/inlay-secure/pages/{$page->id}/edit");
+
+    expect($page->fresh()->status)->toBe(PageStatus::Published);
+});

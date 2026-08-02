@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WearePixel\Inlay\Tests;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\Concerns\WithLaravelMigrations;
@@ -47,6 +49,33 @@ abstract class TestCase extends Orchestra
         // needs to redirect an unauthenticated request to - used only by the
         // browser test that configures config('inlay.middleware') with 'auth'.
         Route::get('/login', fn () => 'login')->name('login');
+
+        // A genuine, cookie-based login flow (distinct from the '/login'
+        // redirect stub above) - used only by the browser test proving a
+        // real session survives a Livewire action, as opposed to the
+        // in-process actingAs() shortcut used elsewhere in this file. Needs
+        // the real 'web' group so the session cookie set here is actually
+        // encrypted the same way a real browser session would be - the bug
+        // this exists to catch only reproduces against a genuinely
+        // encrypted cookie, not actingAs()'s shared in-memory guard state.
+        Route::middleware('web')->group(function () {
+            Route::get('/test-login', fn () => '<form method="POST" action="/test-login">'
+                .'<input type="hidden" name="_token" value="'.csrf_token().'">'
+                .'<input type="email" name="email" data-test="email">'
+                .'<input type="password" name="password" data-test="password">'
+                .'<button type="submit" data-test="login-submit">Log in</button>'
+                .'</form>');
+
+            Route::post('/test-login', function (Request $request) {
+                if (! Auth::attempt($request->only('email', 'password'))) {
+                    abort(401);
+                }
+
+                $request->session()->regenerate();
+
+                return redirect('/inlay-secure/pages');
+            });
+        });
 
         // Stands in for a host application's own public page route,
         // embedding the package's render component exactly as the README
