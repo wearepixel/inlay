@@ -1,0 +1,172 @@
+# Installation guide
+
+This walks a new Laravel developer from a fresh `composer require` through publishing their first page, using a `Hero` component as the running example. It assumes an existing Laravel 11, 12, or 13 application.
+
+## 1. Install the package
+
+```bash
+composer require wearepixel/inlay
+```
+
+## 2. Run the installer
+
+```bash
+php artisan inlay:install
+```
+
+This publishes `config/inlay.php` and runs `php artisan migrate`, creating the `pages`, `page_sections`, and `page_revisions` tables. If you'd rather do these individually:
+
+```bash
+php artisan vendor:publish --tag=inlay-config
+php artisan migrate
+```
+
+## 3. Register the admin routes
+
+Add one line to your own `routes/web.php`, after your application's own routes:
+
+```php
+use WearePixel\Inlay\Facades\Inlay;
+
+Inlay::routes();
+```
+
+This registers the packaged admin under `/inlay` by default (`config('inlay.route_prefix')`). Visit `/inlay/pages` and you should see an empty page index - there's nothing to compose yet, because no component is registered.
+
+## 4. Set your admin middleware
+
+Open `config/inlay.php`:
+
+```php
+'middleware' => ['web'],
+```
+
+**Stop here before going further if your application has real content or real users.** `['web']` alone means anyone who can reach your application can create, edit, and delete pages - there is no authentication or authorization built into the package itself, by design (the package is deliberately auth-agnostic; your application owns that decision). At minimum:
+
+```php
+'middleware' => ['web', 'auth'],
+```
+
+If your application uses Laravel's default `auth` guard and has a `login` named route, this is enough to require a logged-in user. If not every authenticated user should be able to manage pages, layer in your own authorization:
+
+```php
+'middleware' => ['web', 'auth', 'can:manage-pages'],
+```
+
+where `manage-pages` is a `Gate::define()` or policy ability your application defines - Inlay has no opinion on how you express it, it just needs a middleware name Laravel already understands.
+
+You do not need to do anything else to make this middleware apply to every admin action, not just the first page load - `Inlay::routes()` already handles registering it as [Livewire persistent middleware](https://livewire.laravel.com/docs/security#middleware-persistence-with-hierarchical-routing) for you. See the README's "[Why Livewire middleware persistence matters](../README.md#why-livewire-middleware-persistence-matters)" if you want the mechanical detail.
+
+## 5. Write your first Component
+
+A Component is a normal Blade class component that implements `InlayComponent` - a marker interface with no required methods:
+
+```php
+// app/Inlay/Components/Hero.php
+namespace App\Inlay\Components;
+
+use Illuminate\View\Component;
+use Illuminate\View\View;
+use WearePixel\Inlay\Attributes\ComponentMeta;
+use WearePixel\Inlay\Attributes\Text;
+use WearePixel\Inlay\Contracts\InlayComponent;
+
+#[ComponentMeta(label: 'Hero', category: 'Headers', description: 'A page heading with introductory copy.')]
+final class Hero extends Component implements InlayComponent
+{
+    public function __construct(
+        #[Text(label: 'Heading', maxLength: 80)]
+        public string $heading = 'Welcome',
+
+        #[Text(label: 'Subheading')]
+        public string $subheading = '',
+    ) {}
+
+    public function render(): View
+    {
+        return view('components.hero');
+    }
+}
+```
+
+```blade
+{{-- resources/views/components/hero.blade.php --}}
+<section class="hero">
+    <h1>{{ $heading }}</h1>
+    @if ($subheading)
+        <p>{{ $subheading }}</p>
+    @endif
+</section>
+```
+
+Register it by handle in `config/inlay.php`:
+
+```php
+'sections' => [
+    'hero' => \App\Inlay\Components\Hero::class,
+],
+```
+
+Reload `/inlay/pages` and confirm the config picked it up:
+
+```bash
+php artisan config:clear   # only needed if config is cached in this environment
+```
+
+## 6. Configure the preview
+
+The editor's preview pane is a real iframe pointed at your own frontend. Tell Inlay which of your views renders a composition:
+
+```php
+// app/Providers/AppServiceProvider.php
+use WearePixel\Inlay\Facades\Inlay;
+
+public function boot(): void
+{
+    Inlay::previewView('inlay-previews.default');
+}
+```
+
+```blade
+{{-- resources/views/inlay-previews/default.blade.php --}}
+<x-app-layout>
+    {{ $composition }}
+</x-app-layout>
+```
+
+If you skip this step, the preview pane still works - it falls back to a plain, clearly-labeled unstyled wrapper so you always know it isn't your real design yet.
+
+## 7. Create and publish your first page
+
+1. Visit `/inlay/pages` and click **New page**. Give it a title (a slug is generated automatically).
+2. In the editor, click **+ Add**, choose **Hero** from the picker, and edit its heading in the inspector.
+3. Watch the preview pane update.
+4. Click **Publish**.
+
+## 8. Render it on your actual site
+
+Inlay doesn't register a public route for you - wire the page into your own routing however you already do:
+
+```php
+// routes/web.php
+use WearePixel\Inlay\Models\Page;
+
+Route::get('/{page:slug}', function (Page $page) {
+    return view('pages.show', ['page' => $page]);
+});
+```
+
+```blade
+{{-- resources/views/pages/show.blade.php --}}
+<x-app-layout>
+    <x-inlay::render :page="$page" />
+</x-app-layout>
+```
+
+Visit the page's slug on your site and you should see the published `Hero` component, styled by your own application's CSS - not Inlay's.
+
+## Next steps
+
+- [docs/components.md](components.md) - the full component-authoring reference (fluent settings, enums, `LinkValue`, nested Livewire).
+- [docs/editor.md](editor.md) - the editor-facing workflow in plain language.
+- [README.md](../README.md#current-limitations) - what this release deliberately doesn't include yet.

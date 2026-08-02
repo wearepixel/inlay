@@ -16,6 +16,7 @@ final class Select implements FieldAttribute
      *                                               parameter's type is not a backed
      *                                               enum - an enum's options are
      *                                               derived automatically at registration.
+     * @param  array{0: string, 1: mixed}|null  $visibleWhen
      */
     public function __construct(
         public ?string $label = null,

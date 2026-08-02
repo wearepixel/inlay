@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WearePixel\Inlay\Support;
 
+use BackedEnum;
 use InvalidArgumentException;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -106,7 +107,7 @@ final class ComponentDefinitionResolver
         $setting->hasConstructorDefault = $parameter->isDefaultValueAvailable();
         $setting->default = $setting->hasConstructorDefault ? $parameter->getDefaultValue() : null;
 
-        if ($type instanceof ReflectionNamedType && ! $type->isBuiltin() && enum_exists($type->getName())) {
+        if ($type instanceof ReflectionNamedType && ! $type->isBuiltin() && is_a($type->getName(), BackedEnum::class, true)) {
             $setting->enumClass = $type->getName();
 
             if ($setting->declaredEnumClass !== null && $setting->declaredEnumClass !== $setting->enumClass) {

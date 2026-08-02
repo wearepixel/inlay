@@ -19,6 +19,14 @@ final class Setting
     public bool $hasConstructorDefault = false;
 
     /**
+     * @var class-string<\BackedEnum>|null Populated by
+     *                                     ComponentDefinitionResolver when the
+     *                                     constructor parameter is
+     *                                     enum-typed - never set directly.
+     */
+    public ?string $enumClass = null;
+
+    /**
      * @param  array<string, string>  $options  Resolved label map - populated
      *                                          immediately by Settings::options()
      *                                          whether given as a literal array
@@ -52,6 +60,8 @@ final class Setting
      * Purely a UI-rendering concern - never the security boundary. Validation
      * and coercion (ComponentDefinitionResolver) run against every declared
      * setting unconditionally, regardless of what this returns.
+     *
+     * @param  array<string, mixed>  $effectiveSettings
      */
     public function isVisible(array $effectiveSettings): bool
     {

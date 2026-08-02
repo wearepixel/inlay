@@ -1,0 +1,8 @@
+{
+  "name": "inlay-dev-tooling",
+  "private": true,
+  "description": "Playwright browser binary for the Pest browser testing plugin used by this package's test suite only - not published, not a runtime dependency of Inlay itself.",
+  "dependencies": {
+    "playwright": "^1.62.1"
+  }
+}

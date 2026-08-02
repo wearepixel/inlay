@@ -7,6 +7,7 @@ namespace WearePixel\Inlay;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
+use WearePixel\Inlay\Console\InstallCommand;
 use WearePixel\Inlay\Support\SectionRegistry;
 use WearePixel\Inlay\View\Components\RenderPage;
 
@@ -32,5 +33,9 @@ final class InlayServiceProvider extends ServiceProvider
         Blade::component('inlay::render', RenderPage::class);
 
         Livewire::addNamespace('inlay', classNamespace: 'WearePixel\\Inlay\\Livewire');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([InstallCommand::class]);
+        }
     }
 }

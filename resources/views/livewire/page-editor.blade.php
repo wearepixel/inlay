@@ -7,8 +7,8 @@
         <div class="inlay-topbar__actions" x-data="{ published: false }" x-on:page-published.window="published = true; setTimeout(() => published = false, 2000)">
             <span class="inlay-badge inlay-badge--{{ $page->status->value }}">{{ $page->status->value }}</span>
             <span x-show="published" x-cloak style="color: var(--inlay-published); font-size: 12.5px; font-weight: 600;">Published</span>
-            <button type="button" wire:click="toggleHistory" class="inlay-button inlay-button--ghost">History</button>
-            <button type="button" wire:click="publish" class="inlay-button inlay-button--primary">Publish</button>
+            <button type="button" wire:click="toggleHistory" data-test="toggle-history" class="inlay-button inlay-button--ghost">History</button>
+            <button type="button" wire:click="publish" data-test="publish" class="inlay-button inlay-button--primary">Publish</button>
         </div>
     </div>
 
@@ -16,13 +16,14 @@
         <div class="inlay-editor__column">
             <div class="inlay-editor__heading">
                 <span class="inlay-eyebrow">Components</span>
-                <button type="button" wire:click="openPicker" class="inlay-button inlay-button--small inlay-button--primary">+ Add</button>
+                <button type="button" wire:click="openPicker" data-test="open-picker" class="inlay-button inlay-button--small inlay-button--primary">+ Add</button>
             </div>
 
             <ul class="inlay-tree" x-data="inlaySortableTree" x-ref="list">
                 @forelse ($sections as $section)
                     <li
                         data-section-id="{{ $section->id }}"
+                        data-test="tree-item-{{ $section->id }}"
                         wire:key="section-{{ $section->id }}"
                         wire:click="selectSection({{ $section->id }})"
                         draggable="true"
@@ -31,14 +32,15 @@
                         x-on:drop="drop({{ $section->id }})"
                         class="inlay-tree__item {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}"
                     >
-                        <span class="inlay-tree__handle">::</span>
+                        <span class="inlay-tree__handle" data-test="drag-handle-{{ $section->id }}">::</span>
                         <span class="inlay-tree__label">{{ $section->handle }}</span>
                         <span class="inlay-tree__actions">
-                            <button type="button" wire:click.stop="duplicateSection({{ $section->id }})" class="inlay-tree__icon-button" title="Duplicate">&#10697;</button>
+                            <button type="button" wire:click.stop="duplicateSection({{ $section->id }})" data-test="duplicate-{{ $section->id }}" class="inlay-tree__icon-button" title="Duplicate">&#10697;</button>
                             <button
                                 type="button"
                                 wire:click.stop="deleteSection({{ $section->id }})"
                                 wire:confirm="Remove this component from the page?"
+                                data-test="delete-{{ $section->id }}"
                                 class="inlay-tree__icon-button inlay-tree__icon-button--danger"
                                 title="Delete"
                             >&times;</button>
@@ -55,7 +57,7 @@
                     @forelse ($revisions as $revision)
                         <li class="inlay-history__item">
                             <span>{{ $revision->label ?? $revision->created_at->diffForHumans() }}</span>
-                            <button type="button" wire:click="restore({{ $revision->id }})" class="inlay-button inlay-button--small">Restore</button>
+                            <button type="button" wire:click="restore({{ $revision->id }})" data-test="restore-{{ $revision->id }}" class="inlay-button inlay-button--small">Restore</button>
                         </li>
                     @empty
                         <li class="inlay-empty-state">No published revisions yet.</li>
@@ -87,7 +89,7 @@
                 <div class="inlay-preview__toolbar">
                     <span>Preview</span>
                 </div>
-                <iframe wire:key="preview-{{ $previewVersion }}" src="{{ $previewUrl }}" class="inlay-preview__frame"></iframe>
+                <iframe wire:key="preview-{{ $previewVersion }}" src="{{ $previewUrl }}" class="inlay-preview__frame" data-test="preview-frame"></iframe>
             </div>
         </div>
     </div>
@@ -102,6 +104,7 @@
                         x-init="$nextTick(() => $el.focus())"
                         placeholder="Search components…"
                         class="inlay-picker__search"
+                        data-test="picker-search"
                     >
                 </div>
                 <div class="inlay-picker__body">
@@ -114,6 +117,7 @@
                                     wire:click="addSection(@js($component->slug))"
                                     data-search="{{ \Illuminate\Support\Str::lower($component->label.' '.$component->description) }}"
                                     x-show="query === '' || $el.dataset.search.includes(query.toLowerCase())"
+                                    data-test="picker-card-{{ $component->slug }}"
                                     class="inlay-picker__card"
                                 >
                                     <span class="inlay-picker__card-icon">

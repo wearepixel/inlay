@@ -11,6 +11,7 @@
                 placeholder="Search pages…"
                 class="inlay-input"
                 style="width: 220px;"
+                data-test="page-search"
             >
             <a href="{{ route('inlay.pages.create') }}" class="inlay-button inlay-button--primary">New page</a>
         </div>
@@ -55,7 +56,7 @@
             </table>
 
             <div style="margin-top: 20px;">
-                {{ $pages->links() }}
+                {{ $pages->links('inlay::pagination') }}
             </div>
         @endif
     </div>

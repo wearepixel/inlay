@@ -36,6 +36,9 @@ final class PageIndex extends Component
         ]);
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Page>
+     */
     private function pages(): LengthAwarePaginator
     {
         return Page::query()

@@ -35,3 +35,17 @@ it('deletes a page', function () {
 
     expect(Page::find($page->id))->toBeNull();
 });
+
+it('paginates with its own inlay-owned view, never Laravel\'s default Tailwind pagination markup', function () {
+    for ($i = 1; $i <= 25; $i++) {
+        Page::create(['title' => "Page {$i}", 'slug' => "page-{$i}"]);
+    }
+
+    $html = Livewire::test(PageIndex::class)->html();
+
+    expect($html)
+        ->toContain('inlay-pagination')
+        ->not->toContain('inline-flex items-center px-4 py-2') // Laravel's bundled Tailwind pagination view
+        ->not->toContain('bg-blue-500')
+        ->not->toContain('btn-primary'); // a Bootstrap-flavoured pagination view would use this instead
+});

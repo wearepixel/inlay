@@ -588,3 +588,60 @@
   border-radius: var(--inlay-radius);
   font-size: 12.5px;
 }
+
+/* Pagination */
+
+.inlay-pagination__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.inlay-pagination__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--inlay-border-strong);
+  border-radius: var(--inlay-radius);
+  color: var(--inlay-text);
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.inlay-pagination__link:hover {
+  border-color: var(--inlay-text-muted);
+}
+
+.inlay-pagination__link:focus-visible {
+  outline: 2px solid var(--inlay-focus);
+  outline-offset: 1px;
+}
+
+.inlay-pagination__link--current {
+  background: var(--inlay-accent);
+  border-color: var(--inlay-accent);
+  color: var(--inlay-accent-contrast);
+}
+
+.inlay-pagination__link--disabled {
+  color: var(--inlay-text-faint);
+  border-color: var(--inlay-border);
+  cursor: default;
+}
+
+.inlay-pagination__dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  color: var(--inlay-text-faint);
+  font-size: 12.5px;
+}

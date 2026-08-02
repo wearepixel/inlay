@@ -1,6 +1,6 @@
 <div class="inlay-field">
     <label class="inlay-checkbox-row">
-        <input type="checkbox" wire:model.live="{{ $modelPath }}">
+        <input type="checkbox" wire:model.live="{{ $modelPath }}" data-test="setting-{{ $field->name }}">
         {{ $field->label }}
     </label>
     @if ($field->help)

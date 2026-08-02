@@ -30,7 +30,12 @@ final class SectionRenderer
     ) {}
 
     /**
-     * @param  iterable<array{handle: string, settings: array<string, mixed>}>  $sections
+     * A public entry point a host application can call directly with its
+     * own hand-built iterable, so a missing key is a real possibility here,
+     * not just an internal-consistency guarantee - handle/settings are
+     * defensively treated as optional rather than assumed present.
+     *
+     * @param  iterable<array{handle?: string, settings?: array<string, mixed>}>  $sections
      */
     public function render(iterable $sections): string
     {
@@ -38,7 +43,7 @@ final class SectionRenderer
 
         foreach ($sections as $section) {
             try {
-                $componentClass = $this->registry->resolve($section['handle']);
+                $componentClass = $this->registry->resolve($section['handle'] ?? '');
                 $settings = $this->resolveEffectiveSettings($componentClass, $section['settings'] ?? []);
 
                 $html .= $this->renderComponent($componentClass, $settings);

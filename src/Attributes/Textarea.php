@@ -11,6 +11,9 @@ use WearePixel\Inlay\Schema\Setting;
 #[Attribute(Attribute::TARGET_PARAMETER)]
 final class Textarea implements FieldAttribute
 {
+    /**
+     * @param  array{0: string, 1: mixed}|null  $visibleWhen
+     */
     public function __construct(
         public ?string $label = null,
         public ?string $help = null,

@@ -100,7 +100,8 @@ final class Settings
     }
 
     /**
-     * @param  array{0: string, 1: mixed}|string  $field  either [fieldName, value] or a bare fieldName (implying `true`)
+     * @param  string  $field  the other setting's name this one's visibility depends on
+     * @param  mixed  $value  the value $field must equal for this setting to be visible
      */
     public function visibleWhen(string $field, mixed $value = true): self
     {
