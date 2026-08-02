@@ -117,6 +117,49 @@ public static function settings(): Settings
 }
 ```
 
+## Organizing the inspector: sections, tabs, and badges
+
+`section()` groups fields under a named, collapsible heading in the settings inspector - a presentation concern only, not a data shape (that's what `group()`, above, is for - the two are unrelated despite the similar name, which is exactly why this one is called `section()`):
+
+```php
+public static function settings(): Settings
+{
+    return Settings::make()
+        ->section('Content', function (Settings $settings) {
+            $settings->text('heading')->label('Heading')->required();
+            $settings->textarea('subheading')->label('Subheading');
+        })
+        ->section('Appearance', function (Settings $settings) {
+            $settings->select('alignment')->label('Alignment')->options(['left' => 'Left', 'center' => 'Centered']);
+        });
+}
+```
+
+`tab()` works the same way but produces actual tab navigation in the inspector - **only when a component declares more than one**. A component with a single `tab()` call (or none at all) renders flat, with no tab bar:
+
+```php
+public static function settings(): Settings
+{
+    return Settings::make()
+        ->tab('Content', function (Settings $settings) {
+            $settings->text('heading')->label('Heading');
+        })
+        ->tab('SEO', function (Settings $settings) {
+            $settings->text('metaTitle')->label('Meta title');
+        });
+}
+```
+
+`tab()` and `section()` compose - a `section()` call inside a `tab()`'s callback produces a collapsible group within that tab. Collapse state is remembered per group name (`localStorage`), not per page or component instance.
+
+`badge()` attaches a short, presentational callout next to a field's label (e.g. "New", "Beta"):
+
+```php
+$settings->link('cta')->label('Button')->badge('New');
+```
+
+A required field (`->required()`) that's currently empty shows a calm inline hint in the inspector, not an alarming one - being unfilled while a page is mid-composition is a normal state, not an error.
+
 ## Mixing attributes and fluent definitions
 
 A single component can declare some settings via attributes and others via `settings()`. When both declare a field with the **same name**, the fluent declaration wins - the merge adopts every fluent field first, then adopts any attribute-declared field whose name wasn't already claimed. In practice this means: use attributes for the ordinary case, and drop into `settings()` only for the field that needs a repeater, a hand-tuned option list, or anything else attributes can't express - the two fields never actually collide unless you specifically override one.
@@ -134,6 +177,7 @@ use WearePixel\Inlay\Attributes\ComponentMeta;
     description: 'A large banner with a heading and image.',
     icon: 'layout-header',
     thumbnail: null,
+    keywords: ['banner', 'header', 'landing'],
 )]
 final class Hero extends Component implements InlayComponent
 {
@@ -141,7 +185,7 @@ final class Hero extends Component implements InlayComponent
 }
 ```
 
-Every field is optional. With no `#[ComponentMeta]` at all, the picker falls back to a label derived from the component's registered handle (`Str::headline()`) and groups it under "Uncategorised".
+Every field is optional. With no `#[ComponentMeta]` at all, the picker falls back to a label derived from the component's registered handle (`Str::headline()`) and groups it under "Uncategorised". `keywords` are matched by the picker's search alongside the label, description, and category - useful for a name an editor might search for that doesn't appear in the label itself (e.g. "banner" for a component called "Hero").
 
 ## Constructor defaults
 
@@ -184,6 +228,26 @@ enum ImageSize: string implements \WearePixel\Inlay\Support\SettingOptions
         return match ($this) {
             self::Small => 'Small (400px)',
             self::Large => 'Large (1200px)',
+        };
+    }
+}
+```
+
+Implement `WearePixel\Inlay\Support\DescribesSettingOptions` as well (they're independent interfaces - adding one is never a breaking change for a case that already implements the other) to show a short explanatory description under the field once that option is selected:
+
+```php
+enum ImageSize: string implements \WearePixel\Inlay\Support\SettingOptions, \WearePixel\Inlay\Support\DescribesSettingOptions
+{
+    case Small = 'small';
+    case Large = 'large';
+
+    public function label(): string { /* ... */ }
+
+    public function optionDescription(): ?string
+    {
+        return match ($this) {
+            self::Small => null,
+            self::Large => 'Full-width, best for a strong first impression.',
         };
     }
 }

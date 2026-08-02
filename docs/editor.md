@@ -32,7 +32,7 @@ Only fields the component's developer actually exposed can ever be edited or sav
 
 ## Drag-and-drop
 
-Grab the handle (the `::` icon) on the left of any component row and drag it up or down to reorder the page. The reorder saves immediately; there's no separate confirmation step.
+Grab the handle (the `::` icon) on the left of any component row and drag it up or down to reorder the page. The reorder saves immediately; there's no separate confirmation step. If you'd rather not drag: click a row to focus it, then use the keyboard shortcuts below.
 
 ## Duplicate
 
@@ -40,19 +40,34 @@ Hover a component row to reveal its action icons, and click the duplicate icon t
 
 ## Delete
 
-Hover a component row and click the delete icon. You'll be asked to confirm, since this can't be undone from the editor - deleting removes it from the page's current draft immediately.
+Hover a component row and click the delete icon (or press the **Delete** key while it's focused). You'll be asked to confirm, since this can't be undone from the editor - deleting removes it from the page's current draft immediately.
+
+## Organized settings
+
+A component with a lot of settings can group them under named, collapsible headings, and - once there's more than one - into tabs across the top of the inspector (Content, Appearance, SEO, and so on). Both are entirely up to the developer who built the component; a simple component with a handful of settings shows them flat, with no extra structure to click through. A field can also carry a small badge (e.g. "New") next to its label, and a required field that's still empty shows a calm reminder rather than an alarming error - you're still composing the page, not submitting a form.
+
+## Conditional settings
+
+Some settings only make sense in combination with another - a "background colour" field that only matters when "background type" is set to "Colour", say. These appear and disappear instantly as you change the field they depend on, with a brief animation rather than a jump, and without reloading anything.
 
 ## Preview
 
 The preview pane on the right reloads automatically whenever anything about the page changes - adding, editing, reordering, duplicating, or deleting a component. It always shows the page's current **draft** state, rendered through your application's own configured preview view (or a plain, clearly-labeled placeholder if none has been configured yet), so what you see is what a real visit to your site would render once published.
 
+Use **Desktop / Tablet / Mobile** above the preview to check how the page looks at different widths - this resizes the preview frame itself, not a simulated device, and your choice is remembered the next time you open the editor. The refresh icon reloads the preview immediately if you ever want to force a fresh render.
+
 ## Draft state
 
-Every change you make in the editor writes to the page's draft immediately. Nothing you do here is visible to visitors of your live site until you explicitly publish - you can experiment, undo by hand, and leave a page half-edited without any risk to what's currently live.
+Every change you make in the editor writes to the page's draft immediately. Nothing you do here is visible to visitors of your live site until you explicitly publish - you can experiment, undo by hand, and leave a page half-edited without any risk to what's currently live. While a change is being saved, a brief "Saving…" indicator appears next to the page's status; the editor never leaves you guessing about whether an edit landed.
 
 ## Publishing
 
-Click **Publish** in the top bar. This takes a complete snapshot of the page's current draft - every component, in order, with every setting fully resolved - and makes it the page's new live, public version. A confirmation briefly appears next to the button. Publishing again later creates a new snapshot; it never overwrites or loses a previous one.
+Click **Publish** in the top bar. This takes a complete snapshot of the page's current draft - every component, in order, with every setting fully resolved - and makes it the page's new live, public version. The button shows "Publishing…" while the request is in flight, then a confirmation briefly appears. Publishing again later creates a new snapshot; it never overwrites or loses a previous one.
+
+## Keyboard shortcuts
+
+- **Component tree**: Up/Down moves focus between components; Enter selects the focused one; Alt+Up/Alt+Down reorders it (the same reorder a drag would perform); Delete removes it (with the same confirmation as clicking the delete icon).
+- **Component picker**: opens with the search box already focused; Up/Down highlights a result; Enter adds the highlighted one; Escape closes the picker.
 
 ## Revision restore
 
