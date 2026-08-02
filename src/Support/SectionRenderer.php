@@ -7,26 +7,27 @@ namespace WearePixel\Inlay\Support;
 use BackedEnum;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\View;
 use Throwable;
 use WearePixel\Inlay\Schema\FieldType;
 use WearePixel\Inlay\Schema\Setting;
 
 /**
- * Renders each registered component through a real, compiled Blade view -
- * <x-dynamic-component> resolved via a registered component alias, per the
- * mechanism proven in tests/Feature/RendererMechanismSpikeTest.php and
- * documented in docs/v1-implementation-specification.md §5.
- *
- * This is not manual `new $componentClass(...)` construction: rendering
- * through Blade's real component-tag compiler is what lets a component's own
- * view freely nest a genuine, hydrating Livewire component with zero
- * awareness on the package's part.
+ * Renders each registered component through Laravel's real view engine -
+ * a class-based component through a genuine, compiled Blade component tag
+ * (<x-dynamic-component> resolved via a registered alias, per the mechanism
+ * proven in tests/Feature/RendererMechanismSpikeTest.php and documented in
+ * docs/v1-implementation-specification.md §5); a single-file component
+ * through View::file() against its own Blade file directly. Both paths are
+ * real Blade compilation, never manual `new $componentClass(...)`
+ * construction - which is what lets either kind's own view freely nest a
+ * genuine, hydrating Livewire component with zero awareness on the
+ * package's part.
  */
 final class SectionRenderer
 {
     public function __construct(
         private readonly SectionRegistry $registry,
-        private readonly ComponentDefinitionResolver $resolver = new ComponentDefinitionResolver,
     ) {}
 
     /**
@@ -43,10 +44,10 @@ final class SectionRenderer
 
         foreach ($sections as $section) {
             try {
-                $componentClass = $this->registry->resolve($section['handle'] ?? '');
-                $settings = $this->resolveEffectiveSettings($componentClass, $section['settings'] ?? []);
+                $definition = $this->registry->definition($section['handle'] ?? '');
+                $settings = $this->resolveEffectiveSettings($definition, $section['settings'] ?? []);
 
-                $html .= $this->renderComponent($componentClass, $settings);
+                $html .= $this->renderComponent($definition, $settings);
             } catch (Throwable $exception) {
                 // A malformed or unresolvable component must not take down
                 // every other component on the page.
@@ -67,13 +68,12 @@ final class SectionRenderer
      * snapshot (every key present, so the stored value always wins) -
      * docs/v1-implementation-specification.md §12-§13.
      *
-     * @param  class-string  $componentClass
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    public function resolveEffectiveSettings(string $componentClass, array $stored): array
+    public function resolveEffectiveSettings(ComponentDefinition $definition, array $stored): array
     {
-        return $this->resolveEffective($componentClass, $stored, raw: false);
+        return $this->resolveEffective($definition, $stored, raw: false);
     }
 
     /**
@@ -84,28 +84,25 @@ final class SectionRenderer
      * requests. The renderer's own construction path uses the hydrating
      * version above instead.
      *
-     * @param  class-string  $componentClass
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    public function resolveEffectiveRawSettings(string $componentClass, array $stored): array
+    public function resolveEffectiveRawSettings(ComponentDefinition $definition, array $stored): array
     {
-        return $this->resolveEffective($componentClass, $stored, raw: true);
+        return $this->resolveEffective($definition, $stored, raw: true);
     }
 
     /**
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    private function resolveEffective(string $componentClass, array $stored, bool $raw): array
+    private function resolveEffective(ComponentDefinition $definition, array $stored, bool $raw): array
     {
-        $definition = $this->resolver->resolve($componentClass);
-
         $effective = [];
 
-        foreach ($definition->fields() as $setting) {
+        foreach ($definition->settings->fields() as $setting) {
             $effective[$setting->name] = array_key_exists($setting->name, $stored)
-                ? $this->resolveValue($componentClass, $setting, $stored[$setting->name], $raw)
+                ? $this->resolveValue($definition, $setting, $stored[$setting->name], $raw)
                 : $this->normaliseDefault($setting, $raw);
         }
 
@@ -121,10 +118,10 @@ final class SectionRenderer
         return $setting->default;
     }
 
-    private function resolveValue(string $componentClass, Setting $setting, mixed $value, bool $raw): mixed
+    private function resolveValue(ComponentDefinition $definition, Setting $setting, mixed $value, bool $raw): mixed
     {
         if ($setting->type === FieldType::Select && $setting->enumClass !== null) {
-            $enum = $this->hydrateEnum($componentClass, $setting, $value);
+            $enum = $this->hydrateEnum($definition, $setting, $value);
 
             return $raw && $enum instanceof BackedEnum ? $enum->value : $enum;
         }
@@ -137,13 +134,13 @@ final class SectionRenderer
 
         if ($setting->type === FieldType::Repeater && $setting->itemSchema !== null && is_array($value)) {
             return array_map(
-                fn (mixed $item): array => $this->resolveNestedEffectiveSettings($componentClass, $setting, is_array($item) ? $item : [], $raw),
+                fn (mixed $item): array => $this->resolveNestedEffectiveSettings($definition, $setting, is_array($item) ? $item : [], $raw),
                 $value,
             );
         }
 
         if ($setting->type === FieldType::Group && $setting->itemSchema !== null) {
-            return $this->resolveNestedEffectiveSettings($componentClass, $setting, is_array($value) ? $value : [], $raw);
+            return $this->resolveNestedEffectiveSettings($definition, $setting, is_array($value) ? $value : [], $raw);
         }
 
         return $value;
@@ -153,7 +150,7 @@ final class SectionRenderer
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    private function resolveNestedEffectiveSettings(string $componentClass, Setting $setting, array $stored, bool $raw): array
+    private function resolveNestedEffectiveSettings(ComponentDefinition $definition, Setting $setting, array $stored, bool $raw): array
     {
         $itemSchema = $setting->itemSchema;
 
@@ -163,7 +160,7 @@ final class SectionRenderer
             $default = $nested->hasNestedDefault ? $nested->nestedDefault : null;
 
             $effective[$nested->name] = array_key_exists($nested->name, $stored)
-                ? $this->resolveValue($componentClass, $nested, $stored[$nested->name], $raw)
+                ? $this->resolveValue($definition, $nested, $stored[$nested->name], $raw)
                 : $default;
         }
 
@@ -176,7 +173,7 @@ final class SectionRenderer
      * falls back to the constructor default and logs a structured warning
      * for public rendering - docs/v1-implementation-specification.md §10.
      */
-    private function hydrateEnum(string $componentClass, Setting $setting, mixed $value): mixed
+    private function hydrateEnum(ComponentDefinition $definition, Setting $setting, mixed $value): mixed
     {
         if ($value instanceof BackedEnum) {
             return $value;
@@ -191,7 +188,7 @@ final class SectionRenderer
         }
 
         Log::warning('inlay: stored value no longer matches a valid enum case, using the constructor default', [
-            'component' => $componentClass,
+            'component' => $definition->handle,
             'setting' => $setting->name,
             'enum' => $setting->enumClass,
             'value' => $value,
@@ -218,7 +215,19 @@ final class SectionRenderer
     /**
      * @param  array<string, mixed>  $settings
      */
-    private function renderComponent(string $componentClass, array $settings): string
+    private function renderComponent(ComponentDefinition $definition, array $settings): string
+    {
+        return match ($definition->sourceType) {
+            ComponentSourceType::ClassBased => $this->renderClassBasedComponent($definition->sourceIdentifier, $settings),
+            ComponentSourceType::SingleFile => $this->renderSingleFileComponent($definition->sourceIdentifier, $settings),
+        };
+    }
+
+    /**
+     * @param  class-string  $componentClass
+     * @param  array<string, mixed>  $settings
+     */
+    private function renderClassBasedComponent(string $componentClass, array $settings): string
     {
         $alias = 'inlay-'.md5($componentClass);
 
@@ -263,5 +272,20 @@ final class SectionRenderer
             ['settings' => $settings],
             deleteCachedView: true,
         );
+    }
+
+    /**
+     * A single-file component has no class or alias to render through - its
+     * own Blade file is rendered directly, via Laravel's real view engine
+     * (View::file() compiles an arbitrary file path exactly like a
+     * registered view). $settings are extracted into the view's scope by
+     * the same mechanism any Blade view's data is - no manual variable
+     * assignment, no eval().
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    private function renderSingleFileComponent(string $bladeFilePath, array $settings): string
+    {
+        return View::file($bladeFilePath, $settings)->render();
     }
 }

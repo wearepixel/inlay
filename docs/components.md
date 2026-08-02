@@ -242,6 +242,87 @@ A registered component is a normal Blade class component - it may freely contain
 
 Inlay renders every component through a genuine, compiled Blade component tag (not manual `new $class(...)` construction and not `<x-dynamic-component>` - see the rendering-mechanism note in `docs/v1-implementation-specification.md` §5 if you want the empirical detail), which is exactly what lets `<livewire:contact-form />` mount and hydrate with zero special handling.
 
+## Single-file components
+
+For a simple component, defining a class and a separate view is more ceremony than the component needs. A single-file component declares everything - handle, metadata, settings - in one Blade file, compiling into the exact same internal `ComponentDefinition` a class + view component resolves to. The registry, the picker, settings resolution, validation, persistence, preview, rendering, publishing, and revisions all treat the two identically; nothing downstream branches on which one produced a given component.
+
+**This is not Livewire Volt.** It borrows the one-file ergonomic, but a single-file component is an ordinary Blade file rendered through Laravel's real view engine - it may contain nested Livewire tags exactly like a class-based component, but it is not itself a Livewire component and does not depend on the Volt package.
+
+```blade
+{{-- resources/views/inlay/components/hero.blade.php --}}
+<?php
+
+use App\Enums\ImageSize;
+use WearePixel\Inlay\Schema\Settings;
+use WearePixel\Inlay\SingleFile\Component;
+
+component(
+    Component::make('hero')
+        ->name('Hero')
+        ->category('Headers')
+        ->icon('layout-header')
+        ->settings(
+            Settings::make()
+                ->text('heading')->label('Heading')->default('Welcome')
+                ->select('imageSize')->label('Image size')->options(ImageSize::class)->default(ImageSize::Large)
+        )
+);
+?>
+<section>
+    <h1>{{ $heading }}</h1>
+    <img class="{{ $imageSize === ImageSize::Small ? 'max-w-md' : 'w-full' }}" src="...">
+</section>
+```
+
+The PHP block at the top declares the component; everything after the closing `?>` is ordinary Blade markup, rendered with every setting already available as a variable - exactly as `$data` is available in any Blade view.
+
+### No constructor means Settings is authoritative for everything
+
+A single-file component has no constructor, so there is nothing for the settings declaration to be cross-checked against - it must be authoritative on its own for field type, nullability, default, and enum/value-object type. Concretely, this means **`->default(...)` is required on every top-level setting** (unlike a class-based component, where the constructor parameter's own default is authoritative and a schema-level `.default()` is reserved for nested repeater/group fields only). Omitting it fails registration immediately:
+
+```
+Single-file component [hero] setting [heading] has no default(). A single-file component has no constructor to infer one from - every top-level setting must declare its own default via ->default(...).
+```
+
+Everything else about authoring settings - field types, `visibleWhen()`, enums, `LinkValue`, repeaters/groups - works identically to the fluent `Settings` API documented above.
+
+### Registration
+
+Register a single file explicitly, e.g. from `AppServiceProvider::boot()`:
+
+```php
+use WearePixel\Inlay\Facades\Inlay;
+
+Inlay::singleFileComponent(resource_path('views/inlay/components/hero.blade.php'));
+```
+
+Or register every `*.blade.php` file directly inside a directory at once:
+
+```php
+Inlay::singleFileComponents(resource_path('views/inlay/components'));
+```
+
+Directory discovery uses each file's **own declared handle** (from `Component::make('hero')` inside it), not its filename - the filename is purely an organisational convenience for you, not a second source of truth for the handle. A handle already claimed by a class-based component, or by another single-file component, is a registration error rather than a silent override:
+
+```
+Cannot register single-file component [hero] - a class-based component is already registered for that handle.
+```
+
+### Referencing a single-file component without a class
+
+A future Page Definition's component allow-list needs to name components, but a single-file component has no PHP class to put in a list of `::class` references. `WearePixel\Inlay\Support\ComponentHandle` is a small typed value object for exactly this case, decided now so that whenever Page Definitions ship, there's already a safe, IDE-discoverable way to reference a handle-only component rather than a raw string:
+
+```php
+// Illustrative - Page Definitions are not implemented yet.
+public function allowedComponents(): array
+{
+    return [
+        Hero::class,
+        ComponentHandle::make('promo-banner'),
+    ];
+}
+```
+
 ## Common registration errors and their messages
 
 | Situation                                                                                | Exception message                                                                                                                                                                                                                                                 |
@@ -252,5 +333,9 @@ Inlay renders every component through a genuine, compiled Blade component tag (n
 | The same setting name is declared twice in one `Settings` definition                     | `Duplicate setting [...] declared twice in the same settings definition.`                                                                                                                                                                                         |
 | A `Settings` modifier is called before any field has been defined                        | `...() must follow a field definition.`                                                                                                                                                                                                                           |
 | `->options(...)` is given a class-string that isn't an enum                              | `[...] passed to options() is not an enum.`                                                                                                                                                                                                                       |
+| A single-file component's top-level setting has no `->default()`                         | `Single-file component [...] setting [...] has no default(). A single-file component has no constructor to infer one from - every top-level setting must declare its own default via ->default(...).`                                                             |
+| A single-file component's Blade file never calls `component(...)`                        | `[...] does not declare a single-file component - it must call component(Component::make(...)) in a PHP block at the top of the file.`                                                                                                                            |
+| `Inlay::singleFileComponent()` is given a path with no file                              | `No single-file component found at [...].`                                                                                                                                                                                                                        |
+| A single-file handle collides with an already-registered component                       | `Cannot register single-file component [...] - a class-based component is already registered for that handle.` (or `... a single-file component is already registered ...`)                                                                                       |
 
-All of these are raised the moment `ComponentDefinitionResolver` resolves the component - the first time it's registered and used, not silently deferred to when an editor happens to touch that field.
+All of these are raised the moment the component is resolved - the first time it's registered and used, not silently deferred to when an editor happens to touch that field.

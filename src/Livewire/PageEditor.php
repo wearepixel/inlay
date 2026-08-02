@@ -18,7 +18,6 @@ use WearePixel\Inlay\Models\PageSection;
 use WearePixel\Inlay\Schema\FieldType;
 use WearePixel\Inlay\Schema\Setting;
 use WearePixel\Inlay\Schema\Settings;
-use WearePixel\Inlay\Support\ComponentDefinitionResolver;
 use WearePixel\Inlay\Support\SectionRegistry;
 use WearePixel\Inlay\Support\SectionRenderer;
 
@@ -91,20 +90,20 @@ final class PageEditor extends Component
 
     public function addSection(string $slug): void
     {
-        $componentClass = app(SectionRegistry::class)->resolve($slug);
+        $definition = app(SectionRegistry::class)->definition($slug);
 
         $section = $this->page->sections()->create([
             'handle' => $slug,
             'order' => (int) ($this->page->sections()->max('order') + 1),
             // Deliberately sparse: a freshly-added component stores no
             // overrides at all. Its fields resolve entirely from the
-            // component's own constructor defaults until an editor changes
-            // one - docs/v1-implementation-specification.md §12.
+            // component's own defaults until an editor changes one -
+            // docs/v1-implementation-specification.md §12.
             'settings' => [],
         ]);
 
         $this->selectedSectionId = $section->id;
-        $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($componentClass, []);
+        $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($definition, []);
         $this->showingPicker = false;
         $this->bumpPreview();
     }
@@ -121,10 +120,10 @@ final class PageEditor extends Component
             'settings' => $section->settings,
         ]);
 
-        $componentClass = app(SectionRegistry::class)->resolve($duplicate->handle);
+        $definition = app(SectionRegistry::class)->definition($duplicate->handle);
 
         $this->selectedSectionId = $duplicate->id;
-        $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($componentClass, $duplicate->settings ?? []);
+        $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($definition, $duplicate->settings ?? []);
         $this->bumpPreview();
     }
 
@@ -148,10 +147,10 @@ final class PageEditor extends Component
             ->where('page_id', $this->page->id)
             ->firstOrFail();
 
-        $componentClass = app(SectionRegistry::class)->resolve($section->handle);
+        $definition = app(SectionRegistry::class)->definition($section->handle);
 
         $this->selectedSectionId = $sectionId;
-        $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($componentClass, $section->settings ?? []);
+        $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($definition, $section->settings ?? []);
     }
 
     public function addRepeaterItem(string $fieldName): void
@@ -256,9 +255,7 @@ final class PageEditor extends Component
             return null;
         }
 
-        $componentClass = app(SectionRegistry::class)->resolve($section->handle);
-
-        return app(ComponentDefinitionResolver::class)->resolve($componentClass);
+        return app(SectionRegistry::class)->definition($section->handle)->settings;
     }
 
     /**
@@ -285,9 +282,8 @@ final class PageEditor extends Component
             return;
         }
 
-        $componentClass = app(SectionRegistry::class)->resolve($section->handle);
-        $definition = app(ComponentDefinitionResolver::class)->resolve($componentClass);
-        $setting = $definition->field($fieldName);
+        $definition = app(SectionRegistry::class)->definition($section->handle);
+        $setting = $definition->settings->field($fieldName);
 
         if (! $setting) {
             return;

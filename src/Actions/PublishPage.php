@@ -36,7 +36,7 @@ final class PublishPage
                     'handle' => $section->handle,
                     'order' => $section->order,
                     'settings' => $this->renderer->resolveEffectiveRawSettings(
-                        $this->registry->resolve($section->handle),
+                        $this->registry->definition($section->handle),
                         $section->settings ?? [],
                     ),
                 ])

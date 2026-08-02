@@ -15,7 +15,7 @@ A Laravel-native visual composition layer for existing applications. A developer
 - **Not a theming system.** There is no Inlay design language leaking into your public pages - only the admin has its own (self-hosted, Tailwind-free) design.
 - **Not a drag-and-drop layout engine.** A page is a flat, ordered list of components rendered inside whatever layout your own route or controller already provides. There are no nested components, slots, or regions in this release.
 - **Not a rich-text platform, a media library, or a navigation builder.** These are explicitly out of scope for the current release - see [Current limitations](#current-limitations).
-- **Not Livewire Volt**, even where the ergonomics rhyme (see [single-file components](docs/components.md) for the authoring style Inlay uses instead).
+- **Not Livewire Volt**, even where the ergonomics rhyme (see [single-file components](docs/components.md#single-file-components) for the authoring style Inlay uses instead).
 
 ## Installation
 
@@ -154,6 +154,35 @@ final class Hero extends Component implements InlayComponent
 ```
 
 A component with no `#[ComponentMeta]` still registers and renders normally - the picker falls back to a label derived from its handle and an "Uncategorised" group.
+
+### Single-file components
+
+For a simple component, a class + view is more ceremony than it needs - declare it in one Blade file instead:
+
+```blade
+{{-- resources/views/inlay/components/hero.blade.php --}}
+<?php
+
+use WearePixel\Inlay\Schema\Settings;
+use WearePixel\Inlay\SingleFile\Component;
+
+component(
+    Component::make('hero')
+        ->name('Hero')
+        ->category('Headers')
+        ->settings(Settings::make()->text('heading')->label('Heading')->default('Welcome'))
+);
+?>
+<section><h1>{{ $heading }}</h1></section>
+```
+
+```php
+Inlay::singleFileComponent(resource_path('views/inlay/components/hero.blade.php'));
+// or register every file in a directory at once:
+Inlay::singleFileComponents(resource_path('views/inlay/components'));
+```
+
+It compiles into the exact same internal representation a class + view component does - the registry, picker, settings resolution, rendering, publishing, and revisions treat the two identically. This is not Livewire Volt: it's an ordinary Blade file that may itself contain nested Livewire tags, not a Livewire component. See [docs/components.md#single-file-components](docs/components.md#single-file-components) for the full authoring reference, including why every setting needs an explicit `->default(...)` here (there's no constructor for it to come from instead).
 
 ## Authoring settings
 

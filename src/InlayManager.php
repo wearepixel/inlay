@@ -6,6 +6,8 @@ namespace WearePixel\Inlay;
 
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
+use WearePixel\Inlay\SingleFile\ComponentLoader;
+use WearePixel\Inlay\Support\SectionRegistry;
 
 /**
  * The single developer-facing entry point for wiring Inlay into a host
@@ -63,5 +65,35 @@ final class InlayManager
     public function resolvePreviewView(): ?string
     {
         return $this->previewView;
+    }
+
+    /**
+     * Registers a single Blade file as an Inlay component - a second,
+     * class-free authoring style compiling into the exact same
+     * ComponentDefinition a class + view component resolves to. See
+     * docs/components.md for the authoring syntax.
+     *
+     * @param  string  $path  absolute path to the component's Blade file
+     */
+    public function singleFileComponent(string $path): void
+    {
+        app(SectionRegistry::class)->registerSingleFile(
+            app(ComponentLoader::class)->load($path)
+        );
+    }
+
+    /**
+     * Registers every *.blade.php file directly inside a directory as a
+     * single-file component, each using its own declared handle (from
+     * component(Component::make($handle)...) inside the file) rather than
+     * its filename - the filename is just a developer-organisation
+     * convenience, and deriving the handle from it as well would leave two
+     * possible sources of truth for the same thing.
+     */
+    public function singleFileComponents(string $directory): void
+    {
+        foreach (glob(rtrim($directory, '/').'/*.blade.php') ?: [] as $path) {
+            $this->singleFileComponent($path);
+        }
     }
 }
