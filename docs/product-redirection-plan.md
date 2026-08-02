@@ -2,40 +2,40 @@
 
 Date: 2026-08-02
 Status: Decision-ready — no implementation started
-Supersedes nothing: `docs/superpowers/specs/2026-07-10-blade-page-builder-design.md` remains the historical record of why the current foundation exists and is not being deleted or rewritten. This document has already been revised once, to reconcile it against the corrected product vision in `docs/product-vision.md` — see the **Reconciliation appendix** near the end for exactly what changed and why.
+Supersedes nothing: `docs/superpowers/specs/2026-07-10-blade-page-builder-design.md` remains the historical record of why the current foundation exists and is not being deleted or rewritten. This document has been revised twice to reconcile it against `docs/product-vision.md` and `docs/v1-implementation-specification.md` — see the **Reconciliation appendix** near the end for the full history of what changed, when, and why.
 
 ## Why this document exists
 
-The current repository is a working, tested, schema-driven page-building **engine**. It is not yet the **product**: an open-source, Laravel-native visual composition layer that a developer installs into an existing custom application — not a CMS the application is rebuilt on top of — so that non-developers can safely compose and configure developer-built frontend experiences, both public and application-aware, without the developer building an admin shell, routing, or publishing controls themselves.
+The current repository is a working, tested, schema-driven page-building **engine**. It is not yet the **product**: an open-source, Laravel-native visual composition layer that a developer installs into an existing custom application — not a CMS the application is rebuilt on top of — so that non-developers can safely compose and configure developer-built Blade components, both public and application-aware, without the developer building an admin shell, routing, or publishing controls themselves.
 
-This document inspects the actual code that exists today, classifies what should survive unchanged, evolve, or be replaced, and lays out a concrete, staged path to the product described in `docs/product-vision.md`. It does not begin implementation. Every recommendation is grounded in specific files and classes in this repository, not generic CMS wisdom.
+This document inspects the actual code that exists today, classifies what should survive unchanged, evolve, or be replaced, and lays out a concrete, staged path to the product described in `docs/product-vision.md` and frozen precisely in `docs/v1-implementation-specification.md`. It does not begin implementation. Every recommendation is grounded in specific files and classes in this repository, not generic CMS wisdom.
 
 ---
 
 ## 1. Current foundation
 
-| Part                                                                                                | File(s)                                          | Classification                                    | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| --------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Page`, `PageSection`, `PageRevision` models                                                        | `src/Models/*.php`                               | **Evolve**                                        | The shape (final classes, `array` casts on JSON columns, an enum cast for status) is correct and proven by 32 passing tests. They need new columns (site scope, hierarchy, an optional public path, a Page Definition handle) and new relationships, not a rewrite.                                                                                                                                                                                                                              |
-| `pages`, `page_sections`, `page_revisions` tables                                                   | `database/migrations/2025_01_01_*.php`           | **Evolve**                                        | The three-table split (live draft / append-only publish log) is the right shape for the fuller product too — see §4. They gain columns and siblings (sites, settings, navigation, media), they are not replaced.                                                                                                                                                                                                                                                                                 |
-| `PageStatus` enum                                                                                   | `src/Enums/PageStatus.php`                       | **Retain**                                        | `Draft`/`Published` is sufficient for the target product's v1. No change proposed.                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `Schema` / `Field` fluent builder                                                                   | `src/Schema/Schema.php`, `src/Schema/Field.php`  | **Evolve**                                        | The builder pattern (`Schema::make()->text()->select()->toggle()`) and the readonly `Field` DTO are exactly the right developer experience and should not change shape in the aggregate. Two things do change: what `Field::$type` points at (see the next row), and `mapsToClass()` specifically, which is **removed** rather than retained — see `docs/v1-implementation-specification.md`'s decision on conditional presentation, and the frontend-neutrality correction to §3 and §11 below. |
-| `FieldType` enum                                                                                    | `src/Schema/FieldType.php`                       | **Replace**                                       | A closed, backed enum with 8 hardcoded cases is precisely what §18 (Extensibility) says must not remain: a host application cannot register a 9th field type without patching this package. It becomes a registry of `FieldTypeDefinition` implementations — see §18.                                                                                                                                                                                                                            |
-| `Sectionable` contract                                                                              | `src/Contracts/Sectionable.php`                  | **Evolve, rename**                                | Renamed to `Composable` (§8/§9) to match the corrected vocabulary — "everything rendered is a Component" — but the one required method (`static function schema(): Schema`) and its behavior are unchanged. The previously proposed separate `Moduleable extends Sectionable` is dropped entirely: application-aware behavior is not a registration-time distinction at all (§8).                                                                                                                |
-| `SectionRegistry`                                                                                   | `src/Support/SectionRegistry.php`                | **Evolve**                                        | `resolve()`/`slugs()` and the config-array-backed singleton pattern are correct and already regression-tested (`tests/Unit/SectionRegistryTest.php`). It becomes the internals of a single component registry reachable through a `PageBuilder` facade, but its public method names and behavior (throw `InvalidArgumentException` on an unknown handle) are preserved, not deleted.                                                                                                             |
-| `SectionRenderer`                                                                                   | `src/Support/SectionRenderer.php`                | **Evolve**                                        | The resolve → instantiate → `render()->with($data)->render()` → catch-and-log-per-component logic is correct and is the single best piece of defensive design in the codebase. It is extracted behind a `RendererDriver` interface (§11) as `BladeRendererDriver`, verbatim, so this exact behavior is preserved rather than reimplemented.                                                                                                                                                      |
-| `PublishPage`, `RestorePageRevision` actions                                                        | `src/Actions/*.php`                              | **Retain**                                        | Transactional, single-purpose, non-destructive restore (`RestorePageRevision` always calls `PublishPage` again rather than rewinding history). This is correct and stays. Only additions are event dispatch (§19) around the existing `execute()` calls.                                                                                                                                                                                                                                         |
-| Draft/publish/revision model                                                                        | (behavior, not one file)                         | **Retain**                                        | `page_sections` as the one live draft tree, `page_revisions` as an append-only whole-tree snapshot log, is the right foundation for the fuller product and is not being redesigned.                                                                                                                                                                                                                                                                                                              |
-| `PageEditor` Livewire component                                                                     | `src/Livewire/PageEditor.php`                    | **Replace (as a monolith), retain (as behavior)** | At ~300 lines it already owns component CRUD, drag-order persistence, prop filtering/validation, image upload, publish, and restore — six responsibilities in one class. §7 decomposes it into an orchestrator plus five focused child components. Every operation it currently performs is preserved; only its shape as a single component changes.                                                                                                                                             |
-| `filterPropsAgainstSchema()` / `filterLinkValue()` / `filterScalarValue()` / `isAllowedUrlScheme()` | `src/Livewire/PageEditor.php`                    | **Retain, relocate**                              | This is the package's real security boundary (regression-tested in `tests/Feature/PropTamperingRegressionTest.php`) and must not be diluted while `FieldType` becomes a registry. Its logic moves onto `FieldTypeDefinition::validate()` per type (§18) so each field type owns its own coercion rule, but the net behavior — undeclared keys dropped, values coerced to type, Link URLs allowlisted — is preserved exactly.                                                                     |
-| Field partials (`resources/views/fields/*.blade.php`)                                               | 8 files                                          | **Evolve**                                        | The one-partial-per-type, resolved-by-convention pattern is correct and becomes the seed of the field-type registry's `view()` contract (§18) — a custom field type registers its own partial the same way.                                                                                                                                                                                                                                                                                      |
-| `page-editor.blade.php` fixed 3-column layout                                                       | `resources/views/livewire/page-editor.blade.php` | **Replace**                                       | Superseded by the package-owned admin screens in §6/§7. The _editing operations_ it wires up (drag via SortableJS, per-field `wire:model`) are retained; the specific 3-column Blade view is not.                                                                                                                                                                                                                                                                                                |
-| CDN-loaded SortableJS                                                                               | inline `<script>` in the view above              | **Replace**                                       | See §16 — this is a supply-chain and offline-reliability liability that must not ship in the target product.                                                                                                                                                                                                                                                                                                                                                                                     |
-| `config/blade-page-builder.php`                                                                     | `config/blade-page-builder.php`                  | **Evolve**                                        | The `sections` map and `disk` key are retained as concepts and grow into the fuller config surface in §12.                                                                                                                                                                                                                                                                                                                                                                                       |
-| `BladePageBuilderServiceProvider`                                                                   | `src/BladePageBuilderServiceProvider.php`        | **Evolve**                                        | Config merge, migration loading, view loading, Blade component registration, and Livewire namespace registration are all correct and stay. It gains conditional admin route registration, asset publishing, and command registration.                                                                                                                                                                                                                                                            |
-| Test suite (32 tests, 108 assertions)                                                               | `tests/**`                                       | **Retain as the regression baseline**             | Nothing here is discarded. Some tests (`PageEditorLayoutTest`, `PageEditorMountPointTest`, `PageEditorHistoryTest`) will need to move or be adapted as the editor is decomposed and reached through a package route instead of a bare component tag (§20, Stage F), but their _assertions about behavior_ — history restore works, the mount tag renders — are what must keep passing, not their literal current form.                                                                           |
+| Part                                                                                                | File(s)                                          | Classification                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Page`, `PageSection`, `PageRevision` models                                                        | `src/Models/*.php`                               | **Evolve**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | The shape (final classes, `array` casts on JSON columns, an enum cast for status) is correct and proven by 32 passing tests. They need new columns (site scope, hierarchy, an optional public path, a Page Definition handle) and new relationships, not a rewrite.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `pages`, `page_sections`, `page_revisions` tables                                                   | `database/migrations/2025_01_01_*.php`           | **Evolve**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | The three-table split (live draft / append-only publish log) is the right shape for the fuller product too — see §4. They gain columns and siblings (sites, settings, media), they are not replaced.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `PageStatus` enum                                                                                   | `src/Enums/PageStatus.php`                       | **Retain**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `Draft`/`Published` is sufficient for the target product's v1. No change proposed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `Schema` / `Field` fluent builder                                                                   | `src/Schema/Schema.php`, `src/Schema/Field.php`  | **Evolve, rename**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | The builder _pattern_ — a fluent chain, with `mapsToClass()`-style modifiers already attaching to "the last field defined" via `$lastField` tracking — is exactly the right shape to extend, not replace. Renamed to `Settings`/`Setting` (`docs/v1-implementation-specification.md`) to match the corrected public vocabulary, and extended so each field-defining call (`->text('heading')`) returns a chain of further modifier calls (`->label()`, `->required()`, `->maxLength()`, `->visibleWhen()`) rather than one call taking an ever-growing list of named arguments — a natural extension of the `$lastField` mechanism already present, not a new mechanism. `mapsToClass()` specifically is **removed**, not retained — see §9. |
+| `FieldType` enum                                                                                    | `src/Schema/FieldType.php`                       | **Evolve** — reversed from an earlier draft of this plan, which classified this as **Replace** in favour of a third-party-extensible registry. **That is reversed.** `FieldType` stays a closed, built-in enum for v1, gaining `Toggle` and `Number` cases (`Select` absorbs "radio/segmented" as a presentation hint, not a new case). A third-party field-type registry is real, plausible future work — deferred post-1.0, not built now, because proving the composition workflow does not require it and building a good, secure public extension point here is real effort with no v1 payoff. See §18. |
+| `Sectionable` contract                                                                              | `src/Contracts/Sectionable.php`                  | **Evolve, rename**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Renamed to `PageBuilderComponent` (`docs/v1-implementation-specification.md`) — direct, searchable, and immediately understandable to a Laravel developer, in place of the more abstract `Composable` an earlier draft of this plan proposed. The required method renames from `schema(): Schema` to `settings(): Settings`, matching the class renames above.                                                                                                                                                                                                                                                                                                                                                                               |
+| `SectionRegistry`                                                                                   | `src/Support/SectionRegistry.php`                | **Evolve**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `resolve()`/`slugs()` and the config-array-backed singleton pattern are correct and already regression-tested (`tests/Unit/SectionRegistryTest.php`). It becomes the internals of a single component registry reachable through a `PageBuilder` facade, but its public method names and behavior (throw `InvalidArgumentException` on an unknown handle) are preserved, not deleted.                                                                                                                                                                                                                                                                                                                                                         |
+| `SectionRenderer`                                                                                   | `src/Support/SectionRenderer.php`                | **Evolve**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | The resolve → instantiate → `render()->with($data)->render()` → catch-and-log-per-component logic is correct in its defensive discipline but wrong in its instantiation mechanism — see §11's corrected renderer design. It becomes `BladeComponentRenderer`, rendering each component through a real, compiled Blade view rather than manual reflection-based invocation, preserving the exact catch-and-skip behavior.                                                                                                                                                                                                                                                                                                                     |
+| `PublishPage`, `RestorePageRevision` actions                                                        | `src/Actions/*.php`                              | **Evolve**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Transactional, single-purpose, non-destructive restore (`RestorePageRevision` always calls `PublishPage` again rather than rewinding history) is correct and stays. `PublishPage` gains the responsibility of resolving _fully-resolved_ effective settings into the snapshot it writes (§4, `docs/v1-implementation-specification.md`) rather than copying stored values verbatim; event dispatch (§19) is added around the existing `execute()` calls.                                                                                                                                                                                                                                                                                     |
+| Draft/publish/revision model                                                                        | (behavior, not one file)                         | **Retain, extend**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `page_sections` as the one live draft tree, `page_revisions` as an append-only whole-tree snapshot log, is the right foundation for the fuller product. What's added, not changed: drafts store sparse editor overrides rather than every field's value, and revisions store fully-resolved settings (`docs/v1-implementation-specification.md`).                                                                                                                                                                                                                                                                                                                                                                                            |
+| `PageEditor` Livewire component                                                                     | `src/Livewire/PageEditor.php`                    | **Replace (as a monolith), retain (as behavior)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | At ~300 lines it already owns component CRUD, drag-order persistence, prop filtering/validation, image upload, publish, and restore — six responsibilities in one class. §7 decomposes it into an orchestrator plus five focused child components. Every operation it currently performs is preserved; only its shape as a single component changes.                                                                                                                                                                                                                                                                                                                                                                                         |
+| `filterPropsAgainstSchema()` / `filterLinkValue()` / `filterScalarValue()` / `isAllowedUrlScheme()` | `src/Livewire/PageEditor.php`                    | **Retain, relocate**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | This is the package's real security boundary (regression-tested in `tests/Feature/PropTamperingRegressionTest.php`) and must not be diluted. Its logic moves onto per-`FieldType` coercion methods, one method per case in the (retained, closed) enum, so each type owns its own coercion rule — but the net behavior, undeclared keys dropped and values coerced to type, is preserved exactly, and now runs unconditionally regardless of a field's current `visibleWhen()` state (`docs/v1-implementation-specification.md`).                                                                                                                                                                                                            |
+| Field partials (`resources/views/fields/*.blade.php`)                                               | 8 files                                          | **Evolve**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | The one-partial-per-type, resolved-by-convention pattern is correct and is retained under the closed `FieldType` model — a `Toggle`/`Number` partial is added the same way.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `page-editor.blade.php` fixed 3-column layout                                                       | `resources/views/livewire/page-editor.blade.php` | **Replace**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Superseded by the package-owned admin screens in §6/§7. The _editing operations_ it wires up (drag via SortableJS, per-field `wire:model`) are retained; the specific 3-column Blade view is not.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| CDN-loaded SortableJS                                                                               | inline `<script>` in the view above              | **Replace**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | See §16 — this is a supply-chain and offline-reliability liability that must not ship in the target product.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `config/blade-page-builder.php`                                                                     | `config/blade-page-builder.php`                  | **Evolve**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | The `sections` map and `disk` key are retained as concepts and grow into the fuller config surface in §12.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `BladePageBuilderServiceProvider`                                                                   | `src/BladePageBuilderServiceProvider.php`        | **Evolve**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Config merge, migration loading, view loading, Blade component registration, and Livewire namespace registration are all correct and stay. It gains conditional admin route registration, asset publishing, and command registration.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Test suite (32 tests, 108 assertions)                                                               | `tests/**`                                       | **Retain as the regression baseline**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Nothing here is discarded. Some tests will need to move or be adapted as naming changes (`Sectionable`→`PageBuilderComponent`, `schema()`→`settings()`) and as the editor is decomposed, but their _assertions about behavior_ are what must keep passing, not their literal current form.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
-**Naming note, updated by the vision correction:** the product's public name is now explicitly unsettled — `docs/product-vision.md`'s naming section shortlists Fixture, Lattice, and Inlay against the current `wearepixel/blade-page-builder` / `WearePixel\BladePageBuilder` working name, without committing to any of them pending trademark, Composer-namespace, and domain checks done separately. **This plan no longer recommends renaming the Composer package or namespace as part of Milestone 0** — that decision is deferred until the product name is settled (this reverses a recommendation made in the previous draft of this plan; see the reconciliation appendix). It still recommends renaming the internal `Sectionable` contract to `Composable` now, since that is a vocabulary correction inside the codebase — matching "everything is a Component" — independent of whatever the product is eventually called publicly. The `PageBuilder` facade name used throughout this plan is a neutral placeholder for "the package's static entry point," not a commitment to that being the product's final public name.
+**Naming note, carried forward:** the product's public name is still unsettled — `docs/product-vision.md`'s naming section shortlists Fixture, Lattice, and Inlay against the current `wearepixel/blade-page-builder` working name, without committing to any of them. This plan does not recommend a Composer package/namespace rename until that's resolved separately. The `PageBuilder` facade name is a neutral placeholder for "the package's static entry point," independent of the eventual public product name.
 
 ---
 
@@ -51,11 +51,7 @@ php artisan page-builder:install
 php artisan migrate
 ```
 
-`page-builder:install` (detailed fully in §15) publishes `config/page-builder.php` and the package's compiled admin assets, asks a small number of interactive questions (admin path prefix, which middleware group to protect it with, upload disk), creates the package's own database rows that are safe to create automatically (an initial `Site`), and prints exact next-step instructions. It does not silently edit any file the host application already owns.
-
 ### Wire up routing
-
-In `routes/web.php`, after the host's own routes:
 
 ```php
 use WearePixel\PageBuilder\Facades\PageBuilder;
@@ -63,42 +59,44 @@ use WearePixel\PageBuilder\Facades\PageBuilder;
 PageBuilder::routes();
 ```
 
-This registers both the admin route group and the public catch-all (§5). A host that wants only one half calls `PageBuilder::adminRoutes()` or `PageBuilder::publicRoutes()` instead — and a host composing only application-embedded surfaces (§4, §5) may call neither, relying entirely on `PageBuilder::renderPage()` from its own existing routes.
+Registers both the admin route group and the public catch-all (§5). A host that wants only one half calls `PageBuilder::adminRoutes()` or `PageBuilder::publicRoutes()` — and a host composing only application-embedded surfaces may call neither, relying entirely on `PageBuilder::renderPage()` from its own existing routes.
 
-### Visit the admin
-
-```
-http://app.test/admin/pages
-```
-
-(prefix configurable at install time). Protected by whatever middleware was chosen during install — the package assumes nothing about the host's auth package and ships a permissive default (§17) so this works immediately even before the host has configured anything further.
-
-### Create the first page
-
-In the admin: **New Page** → title "Home" → toggle "Set as homepage" → **Create**. Lands in the page editor with an empty component list.
-
-### Generate the first custom component
-
-```bash
-php artisan make:page-component HeroSplit
-```
-
-Generates `app/PageBuilder/Components/HeroSplit.php` (a stub `Illuminate\View\Component` implementing `Composable`, with a starter `schema()`) and `resources/views/page-builder/components/hero-split.blade.php`.
-
-### Register (or let it be discovered)
-
-If it lives in the default scanned directory (`app/PageBuilder/Components`), nothing further is required — component discovery (§10) picks it up. To register something outside that convention (a vendor package's own components, a non-default namespace), in `AppServiceProvider::boot()`:
+### Register and describe the first component
 
 ```php
-use WearePixel\PageBuilder\Facades\PageBuilder;
-use App\PageBuilder\Components\HeroSplit;
+final class HeroSplit extends \Illuminate\View\Component implements PageBuilderComponent
+{
+    public function __construct(
+        public string $heading = 'Welcome',
+        public string $layout = 'image-right',
+    ) {}
 
-PageBuilder::component(HeroSplit::class);
+    public static function settings(): Settings
+    {
+        return Settings::make()
+            ->text('heading')
+                ->label('Heading')
+            ->select('layout')
+                ->label('Layout')
+                ->options(['image-left' => 'Image on left', 'image-right' => 'Image on right']);
+    }
+
+    public function render(): \Illuminate\View\View
+    {
+        return view('sections.hero-split');
+    }
+}
+```
+
+```php
+PageBuilder::category('Headers')
+    ->icon('layout-header')
+    ->components([HeroSplit::class]);
 ```
 
 ### Compose and publish
 
-Back in the admin editor: **Add component** → "Hero Split" → edit its fields with the live preview updating alongside → **Publish**.
+In the admin: **New Page** → **Add component** from the categorized picker → **HeroSplit** → edit its fields with the live preview updating alongside → **Publish**.
 
 ### View it live
 
@@ -107,29 +105,30 @@ http://app.test/            (resolved as the configured homepage)
 http://app.test/about/team  (a nested page, if hierarchy was used)
 ```
 
-Rendered by the package's public catch-all route using the exact same renderer the admin preview used — no separate production renderer to diverge from the preview (§11, carried forward unchanged from the current `RenderPage` design).
+Rendered by the package's public catch-all route using the exact same renderer the admin preview used — no separate production renderer to diverge from the preview.
 
-**The same flow applies beyond a marketing homepage.** A `CollectionPage` composed from a `CampaignHero` and a real, data-backed `ProductCollection` component follows an identical install → register → compose → publish path. The only addition, covered in §4 and §9, is a **Page Definition** — a developer-authored class constraining what a collection page is allowed, required, and forbidden to contain — chosen once, at creation, so a merchandiser composing that page can rearrange freely without being able to remove the product listing the page exists to show.
+**The same flow applies beyond a marketing homepage.** A `CollectionPage` composed from a `CampaignHero` and a real, data-backed `ProductCollection` component follows an identical install → register → compose → publish path. The only addition is a **Page Definition** — a developer-authored class constraining what a collection page is allowed, required, and forbidden to contain — chosen once, at creation.
 
 ---
 
 ## 3. Product boundaries
 
-**The governing boundary, made explicit: the package owns composition, the application owns presentation.**
+**The governing boundary: the package owns composition, the application owns presentation.**
 
 **The package owns:** Component registration, categories, schemas and settings, validation, placement rules, Page Definitions, ordering, persistence, drafts, previews, publishing, revisions, permissions, the administration experience.
 
-**The consuming application owns:** Component markup, frontend CSS, responsive behaviour, accessibility, JavaScript behaviour, frontend assets, business logic, domain models, application data, and — critically — the mapping from a structured setting (`alignment = left`) to whatever it actually produces (a Tailwind class, a Bootstrap class, a CSS custom property, a Blade branch, nothing at all). The package stores what an editor chose. It never stores or decides what that choice looks like.
+**The consuming application owns:** Component markup, frontend CSS, responsive behaviour, accessibility, JavaScript behaviour, frontend assets, business logic, domain models, application data, and — critically — the mapping from a structured setting (`alignment = left`) to whatever it actually produces (a Tailwind class, a Bootstrap class, a CSS custom property, a Blade branch, nothing at all).
 
-**This is not a CRUD-administration boundary, and that distinction needs to be explicit, not implied.** The package never gives an editor arbitrary access to the host's Eloquent models the way Filament or Nova would give a developer's internal team. It gives an editor access to exactly the components and fields a developer chose to expose, arranged inside exactly the constraints a developer defined. If a project needs an internal team to do arbitrary data administration, that remains Filament's or Nova's job entirely — this package's presence in an application doesn't change that boundary, and the two are expected to coexist rather than compete.
+**This is not a CRUD-administration boundary.** The package never gives an editor arbitrary access to the host's Eloquent models the way Filament or Nova would give a developer's internal team. It gives an editor access to exactly the components and fields a developer chose to expose, arranged inside exactly the constraints a developer defined. Filament and Nova remain entirely separate, coexisting tools for arbitrary internal data administration.
 
-Three places in the "package owns / host owns" split need pushing back on rather than accepting as given:
+**A registered component's own view is unrestricted host application code.** The package's authority stops at "resolve this component class, pass it these settings and this context, render it through Laravel's real Blade component system." What that component's own `.blade.php` view contains — nested Blade components, `<livewire:contact-form />`, Alpine, AJAX, a Vue or React island, forms posting into the host's own controllers — is entirely the host application's business, and requires no package-level awareness, adapter, or registration of any kind. This is the single most important clarification in this revision of the plan; see §11.
 
-- **"Application-specific data" is not cleanly host-only.** A component that resolves live application data (a `ProductGrid`, a `BookingAvailability` panel) is, by definition, a package-registered component that reaches into host data. The honest boundary is: the package owns the _registration and rendering contract_ every component fulfils — one interface, one rendering pipeline (§8) — while the host owns the _data-fetching code inside that component's own class_, and the package never copies that resolved data into its own storage (§4, §11). Neither side owns "application data" outright; the package owns the contract, the host owns the data and the code that fetches it.
-- **"Custom middleware and authentication decisions" is not cleanly host-only either.** The package must own _how_ configured middleware gets attached to its own route group (package plumbing — see §5), even though _which_ middleware/guard is chosen is entirely the host's call.
-- **Settings needs a narrower boundary than "the package owns settings."** The package should own a small, fixed, typed set of CMS-relevant settings (site name, homepage, default meta, logo/favicon/social image, robots behaviour, head/body scripts — see §12), not a general-purpose host application settings store.
+Two places in the "package owns / host owns" split still need pushing back on rather than accepting as given:
 
-Navigation deserves one clarification, not a correction: the package owns navigation _structure, storage, and CRUD_, but does **not** own navigation _visual rendering_ by default. It exposes a resolved tree; the host's own Blade layout decides how to draw it (§13).
+- **"Custom middleware and authentication decisions" is not cleanly host-only.** The package must own _how_ configured middleware gets attached to its own route group (package plumbing — see §5), even though _which_ middleware/guard is chosen is entirely the host's call.
+- **Settings needs a narrower boundary than "the package owns settings."** The package should own a small, fixed, typed set of CMS-relevant _site_ settings (name, homepage, default meta — see §12), not a general-purpose host application settings store. This is a different "settings" from a Component's own editable settings (§9) — a deliberate, non-colliding vocabulary overlap, since `PageBuilder::settings()` (site-wide config) and `Settings::make()` (a single component's field schema) name genuinely different things at genuinely different scopes.
+
+Navigation deserves one clarification, not a correction: the package owns navigation _structure, storage, and CRUD_, but does **not** own navigation _visual rendering_ by default (§13).
 
 ---
 
@@ -137,285 +136,213 @@ Navigation deserves one clarification, not a correction: the package owns naviga
 
 ### Sites — explicit recommendation
 
-**Introduce a `sites` table now**, even though the first usable release exposes exactly one site and no multi-site UI. Reasoning unchanged from the previous draft of this plan: `pages` currently has no tenant/site scope at all, and retrofitting one after real installations exist is a breaking migration for every adopter, while adding it now costs nothing beyond one join and one auto-created default row.
+**Introduce a `sites` table now**, even though the first usable release exposes exactly one site and no multi-site UI. Reasoning unchanged: `pages` currently has no tenant/site scope at all, and retrofitting one after real installations exist is a breaking migration for every adopter, while adding it now costs nothing beyond one join and one auto-created default row.
 
 ### Proposed tables
 
-| Table                     | Purpose                                  | Significant columns                                                                                                                                                                                                                                                                      | Relationships                                                                                                 | v1 or deferred                                                                                                                                                  |
-| ------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sites`                   | Tenant/site scope seam                   | `id`, `name`, `domain` (nullable), `is_default` (bool)                                                                                                                                                                                                                                   | `hasMany` pages, navigations, one `site_settings` row                                                         | **Required for v1** (schema only — no multi-site UI)                                                                                                            |
-| `pages` (evolve)          | Canonical composition + editorial record | adds `site_id` FK, `parent_id` FK nullable (self-referential), **`path` (nullable** — see routing note below), `definition` (nullable string handle — the registered Page Definition governing this page, §8/§9) to the existing `title`/`slug`/`status`/`meta_title`/`meta_description` | `belongsTo` site, `belongsTo` parent (self), `hasMany` children (self), existing `hasMany` sections/revisions | **Required for v1**                                                                                                                                             |
-| `page_sections` (evolve)  | Live draft component tree                | unchanged shape; no schema-level distinction between kinds of registered component — capability is a code-level property of the component class (§8), never a database one                                                                                                               | unchanged                                                                                                     | **Retained as-is**                                                                                                                                              |
-| `page_revisions` (evolve) | Append-only publish log                  | unchanged; add a DB index on `(page_id, created_at)` if not already implied by the FK                                                                                                                                                                                                    | unchanged                                                                                                     | **Retained as-is**, pagination bug fixed in application code (§7), no schema change                                                                             |
-| `site_settings`           | Typed, per-site CMS settings             | `site_id` FK (unique), `name`, `homepage_page_id` (FK, nullable), `default_meta_title`, `default_meta_description`, `logo_media_id`/`favicon_media_id`/`default_social_image_media_id` (FK to `media`, nullable), `robots_index` (bool), `head_scripts`/`body_scripts` (nullable text)   | `belongsTo` site, `belongsTo` homepage page, `belongsTo` media (×3)                                           | Minimal columns (`name`, `homepage_page_id`, default meta text) **required for v1**; the three media-backed columns deferred to Milestone 2 once `media` exists |
-| `media`                   | Minimal asset record                     | `id`, `disk`, `path`, `filename`, `mime_type`, `size`, `alt_text` (nullable), `uploaded_by` (nullable int, no FK — same pattern as today's `page_revisions.created_by`)                                                                                                                  | none beyond FKs pointing at it from settings/section props                                                    | **Required for v1** (minimal — see §14)                                                                                                                         |
-| `navigations`             | Named navigation trees                   | `id`, `site_id` FK, `handle` (e.g. `main`, `footer`, `legal`), `name`                                                                                                                                                                                                                    | `belongsTo` site, `hasMany` navigation_items                                                                  | **Deferred to Milestone 2**                                                                                                                                     |
-| `navigation_items`        | Nested nav entries                       | `id`, `navigation_id` FK, `parent_id` FK nullable (self-referential), `page_id` FK nullable (`nullOnDelete`), `url` (nullable — exactly one of `page_id`/`url` set), `label`, `target`, `order`, `visible` (bool)                                                                        | `belongsTo` navigation, `belongsTo` parent (self), `belongsTo` page (nullable)                                | **Deferred to Milestone 2**                                                                                                                                     |
+| Table                     | Purpose                                  | Significant columns                                                                                                                                                                                                                                                      | Relationships                                                                                                 | v1 or deferred                                                                                                          |
+| ------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `sites`                   | Tenant/site scope seam                   | `id`, `name`, `domain` (nullable), `is_default` (bool)                                                                                                                                                                                                                   | `hasMany` pages, one `site_settings` row                                                                      | **Required for v1** (schema only — no multi-site UI)                                                                    |
+| `pages` (evolve)          | Canonical composition + editorial record | adds `site_id` FK, `parent_id` FK nullable (self-referential), `path` (**nullable** — a page created purely to be embedded inside a host-owned route has none), `definition` (nullable string handle — the registered Page Definition, §8)                               | `belongsTo` site, `belongsTo` parent (self), `hasMany` children (self), existing `hasMany` sections/revisions | **Required for v1**                                                                                                     |
+| `page_sections` (evolve)  | Live draft component tree                | `handle` (registered component handle, renamed from `section_type`), `order`, **`settings`** (renamed from `props` — stores **sparse editor overrides only**, not every field's current value, per `docs/v1-implementation-specification.md`'s effective-settings model) | unchanged                                                                                                     | **Retained, extended**                                                                                                  |
+| `page_revisions` (evolve) | Append-only publish log                  | `snapshot` entries carry **fully-resolved** settings for every field (not sparse), plus the originating `page_sections.id` per entry and the component's `settingsVersion()` at publish time                                                                             | unchanged                                                                                                     | **Retained, extended**                                                                                                  |
+| `site_settings`           | Typed, per-site CMS settings             | `site_id` FK (unique), `name`, `homepage_page_id` (FK, nullable), `default_meta_title`, `default_meta_description`                                                                                                                                                       | `belongsTo` site, `belongsTo` homepage page                                                                   | Minimal columns **required for v1**                                                                                     |
+| `media`                   | Minimal asset record                     | `id`, `disk`, `path`, `filename`, `mime_type`, `size`, `alt_text` (nullable), `uploaded_by` (nullable int, no FK)                                                                                                                                                        | none beyond FKs pointing at it from settings                                                                  | **Required for v1** (minimal — see §14; backs the `ImageValue` value object, `docs/v1-implementation-specification.md`) |
 
-**One relaxation from the previous draft: `pages.path` (and public catch-all routing participation generally) is now optional, not assumed.** A `Page` is fundamentally a composition-plus-editorial record; having its own public, slugged URL is one thing a page can do, not a defining property of what a page is. A page created purely to be embedded inside an existing ecommerce collection route, or inside an authenticated account dashboard, can have a null `path` and simply never appears in, or is matched by, the public catch-all (§5) — it is rendered only where a host explicitly calls `PageBuilder::renderPage($page)` from a route or controller it already owns. This is the concrete mechanism that keeps the architecture from assuming every composition is a standalone public marketing page with its own slug, without introducing a new composition-root concept the first release doesn't need.
+**One relaxation retained from an earlier draft: `pages.path` (and public catch-all routing participation generally) is optional, not assumed.** A page created purely to be embedded inside a host-owned route can have a null `path` and is simply invisible to the public catch-all (§5), rendered only where a host explicitly calls `PageBuilder::renderPage($page)`.
 
-If a genuinely distinct composition root (not a page at all — a configurable region embedded inside an existing authenticated screen, say) becomes a real, demonstrated need later, the cleanest path is likely separating "the ordered component tree plus its revisions" from "the page-specific routing and SEO wrapper around it," so a future non-page surface could reuse the same composition machinery without duplicating it. That is a long-term seam worth keeping in mind, not a v1 table, and no code or schema decision here should make it harder later than it needs to be.
-
-**Terminology correction, carried through from `docs/product-vision.md`'s frontend-neutrality clarification:** `page_sections.props` is renamed `page_sections.settings`, and the stored shape becomes `{"handle": "header-classic", "settings": {...}}` rather than `{"section_type": ..., "props": {...}}`. "Settings" names exactly what it is — editor-controlled values a developer chose to expose — and reserves "props" for what it already means everywhere else in Laravel and Blade: the actual constructor/mount arguments a component receives at render time, which are the merge of stored settings and runtime context (§11), not the same thing as either alone. `page_revisions.snapshot` entries follow the same shape, and — see `docs/v1-implementation-specification.md`'s preview architecture — additionally capture the originating `page_sections.id` per entry, purely as a deterministic rendering key, not a live foreign key.
+If a genuinely distinct composition root (not a page at all) becomes a real, demonstrated need later, the cleanest path is likely separating "the ordered component tree plus its revisions" from "the page-specific routing and SEO wrapper around it." That is a long-term seam worth keeping in mind, not a v1 table.
 
 ### Explicitly assessed and rejected (for now)
 
-- **Page Definitions as database rows** — rejected. A Page Definition constrains _behaviour_ (permitted, required, locked, and default components) and is a code/policy concern, not editorial content — it renders nothing and is not a Component (see `docs/product-vision.md`'s "fundamental building block" section for why treating it as a fifth kind of Component would be a false equivalence). It is a plain PHP class (`PageDefinition`, §8/§9) referenced by `pages.definition` as a string handle. No `page_definitions` table. **Unlike the previous draft of this plan, Page Definitions are not deferred to Milestone 2/3** — see §21: the ecommerce and application-aware use cases this product now explicitly targets need placement guardrails from the first usable release, not as a later refinement.
-- **A separate `Layoutable` contract, a `pages.layout` column, and a dedicated "layout" concept generally** — rejected for v1, more fully than the previous draft proposed. Wrapping page content is a capability a Component may declare (`WrapsContent`, §8), not a fourth registered concept. But v1 doesn't need that capability exercised at all: the composed output is rendered inside whatever Blade layout the host application's route or controller already extends — exactly how the current `RenderPage` component is already meant to be dropped into a host-owned view today. No `pages.layout` column, no bundled default wrapper, nothing new. `WrapsContent` stays in the Component model for the case where an editor should choose between multiple registered page shells — a real but genuinely Milestone 2/3 need, and one that may turn out to be unnecessary if most host applications are content choosing their own single shell in code, which is the common case.
-- **Global sections / reusable patterns** — deferred, not rejected outright. Revisit in Milestone 3+ only if real usage demands it. Listed again under "what not to build yet."
+- **Page Definitions as database rows** — rejected. A Page Definition constrains _behaviour_ and is a code/policy concern, not editorial content — it renders nothing and is not a Component. It is a plain PHP class (`PageDefinition`, §8) referenced by `pages.definition` as a string handle. No `page_definitions` table.
+- **Nested composition, regions, or a "wraps content" component capability** — removed from v1 architecture entirely, not merely deferred. An earlier draft of this plan proposed `AcceptsChildren` and `WrapsContent` as declared component capabilities, anticipating nested composition and editor-selectable page shells. **Both are removed.** V1 composition is a flat, ordered list, full stop, rendered inside whatever Blade layout the host's own route or controller already extends — exactly how `RenderPage` is already meant to be used today. This was already true in practice under the earlier draft (neither capability was ever exercised in v1); this revision removes the speculative interfaces themselves rather than leaving them undocumented and unused.
+- **A third-party-extensible `FieldType` registry** — deferred, not built, for v1 (reversed from an earlier draft — see §1, §18).
 - **A generic `settings` key/value (EAV) table** — rejected in favour of the structured `site_settings` table above.
-- **Full digital-asset-manager tables** (folders, collections, tags, transformation variants) — rejected for v1. See §14.
+- **Full digital-asset-manager tables** — rejected for v1. See §14.
+- **A setting-alias mechanism** alongside versioned migration — rejected. See §9; one predictable mechanism (`migrateSettings()`) covers this case, and a second, overlapping one would violate that.
 
 ---
 
 ## 5. Routing architecture
 
-### Admin routes
-
-Registered by the package inside its own route group:
-
-- Prefix: `config('page-builder.admin.prefix', 'admin/pages')`.
-- Middleware: `config('page-builder.admin.middleware', ['web'])` — the install command (§15) nudges toward adding `auth`, but the package assumes nothing about which guard.
-- Route names: `page-builder.pages.index`, `page-builder.pages.create`, `page-builder.pages.edit`, `page-builder.settings`, `page-builder.navigation`, etc.
-
-### Public routing
-
-A single catch-all, registered **last**, so any route the host has already defined always wins:
-
-```php
-Route::get('{path?}', PublicPageController::class)
-    ->where('path', '.*')
-    ->name('page-builder.public.show');
-```
-
-Resolution is a single indexed lookup against the denormalized `pages.path` column — `Page::where('site_id', $site->id)->where('path', $path)->firstOrFail()` — not a recursive walk up `parent_id` per request. The empty path (`/`) resolves via `site_settings.homepage_page_id`. **Only pages with a non-null `path` are matched here** (§4) — a page created purely to be embedded inside a host-owned route has no `path` and is simply invisible to this lookup, by design, not by exception-handling.
-
-### The `PageBuilder::routes()` API
-
-```php
-PageBuilder::routes();          // registers both halves — the common case
-PageBuilder::adminRoutes();     // admin only
-PageBuilder::publicRoutes();    // public catch-all only
-```
-
-The service provider does **not** auto-register any routes on boot. Routes only exist if the host explicitly calls one of these. This is what makes "disabling package public routes" trivial, and what makes route-conflict risk manageable: the host controls exactly where in its own route file the catch-all is registered relative to everything else.
-
-### Custom rendering without the package's controller
-
-For a host that wants its own controller to own the response, or that wants to render a composition inside a route it already controls (an ecommerce collection page, an authenticated account screen):
-
-```php
-PageBuilder::renderPage(Page $page, bool $draft = false, array $context = []): Htmlable
-```
-
-This is the same primitive the public controller and the admin preview both call internally (§11). `$context` is how a host supplies data a component can't resolve on its own — most commonly, the real domain object the surrounding route is already scoped to. A component that declares it needs a given context key (§8/§9's `RequiresContext`) receives it merged alongside its own stored, editorial props; if a required key is missing, the same catch-and-skip discipline `SectionRenderer` already applies to a malformed component (§11) applies here too — never a fatal error for a visitor, and a clear, specific warning for an editor.
-
-This is also the concrete mechanism behind "route-backed ecommerce pages" and "sections of existing routes": a host's own `CollectionController@show(Collection $collection)` looks up its own `page_id` column — something the host adds to its own `collections` table, not something this package needs to know about — and calls `PageBuilder::renderPage($page, context: ['collection' => $collection])`. No polymorphic binding table, no new mechanism the package has to own.
-
-### Preview routes
-
-- **In-admin preview**: no separate route needed, lives inside the already-authenticated admin middleware group.
-- **Full-page/new-tab preview**: `page-builder.pages.preview` inside the admin group.
-- **Signed external preview**: a `URL::signedRoute()`-generated, time-limited link outside the admin middleware group, calling the same `renderPage($page, draft: true)` primitive.
-
-### Route conflicts, custom domains, multi-site
-
-Site resolution for a request is delegated to a single swappable `SiteResolver` interface. The only implementation shipped now trivially returns the one default site. Custom domains and true multi-site routing (explicitly **not** being built now) become "write a different `SiteResolver` implementation" later, rather than a routing rearchitecture.
+Unchanged in shape from earlier drafts. Admin routes registered inside the package's own route group (configurable prefix/middleware); a public catch-all matching only pages with a non-null `path`, registered last so host routes always win; `PageBuilder::routes()`/`adminRoutes()`/`publicRoutes()` as the registration API; `PageBuilder::renderPage(Page $page, bool $draft = false, array $context = []): Htmlable` as the primitive both the public controller and the admin preview call internally, also directly usable by a host wanting full control of its own response or embedding a composition inside a route it already owns. Preview routes: in-admin (no separate route, inside the authenticated admin group) and full-page (`page-builder.pages.preview`). Signed external preview links remain Milestone 2, not required for v1's user journey (`docs/v1-implementation-specification.md` §3). Site resolution is delegated to a single swappable `SiteResolver` interface, trivially returning the one default site for now.
 
 ---
 
 ## 6. Complete administration application
 
-| Screen                | Purpose                                                                                           | Primary actions                                                                            | Required data                                                   | v1?                                                                    |
-| --------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Dashboard             | Orientation / landing                                                                             | Create page, jump to recent                                                                | Recent pages, counts                                            | **Minimal version in v1** — an activity/attention feed is Milestone 2  |
-| Page index            | Browse and manage all pages                                                                       | Create, edit, duplicate, delete, publish/unpublish, filter by status                       | Paginated pages with status, `updated_at`, parent               | **v1 — core**                                                          |
-| Page creation         | Start a new page                                                                                  | Title (auto-slug), pick parent, **choose a Page Definition if one applies**, save as draft | Existing pages (for parent picker), registered Page Definitions | **v1 — the Page Definition picker ships in v1**, not deferred (§21)    |
-| Page editor           | Compose and edit components                                                                       | See §7 in full                                                                             | Page, components, registered components/definitions             | **v1 — core**                                                          |
-| Page settings         | Slug, meta, hierarchy, homepage toggle, **optional public path** (blank for a host-embedded page) | Edit and save                                                                              | Page record, site settings                                      | **v1**                                                                 |
-| SEO & social metadata | Search/social presentation                                                                        | Edit title/description/social image                                                        | Page record, media (for image)                                  | Text fields **v1**; social image field **Milestone 2** (needs `media`) |
-| Navigation manager    | Build/reorder nav trees                                                                           | Add item, nest, reorder, link to page or URL                                               | `navigations`/`navigation_items`                                | **Milestone 2**                                                        |
-| General settings      | Site-wide defaults                                                                                | Edit name, homepage, default meta, logo/favicon                                            | `site_settings`                                                 | Minimal fields **v1**; logo/favicon **Milestone 2**                    |
-| Revision history      | Audit and restore                                                                                 | List, restore                                                                              | Paginated `page_revisions`                                      | **v1**                                                                 |
-| Preview               | See the draft as a visitor would                                                                  | Toggle device width, open full-page, copy signed link                                      | Rendered HTML via `renderPage()`                                | Inline + full-page **v1**; signed external link **Milestone 2**        |
-| Media/asset picker    | Choose or upload an image                                                                         | Upload, search, select                                                                     | `media` table                                                   | **v1 — minimal grid, not a DAM**                                       |
-
-Design direction unchanged: the calm, structured, low-noise interaction quality of Statamic is the right reference point, without borrowing its visual identity — achievable only if the admin ships its own compiled CSS/JS (§16).
+Unchanged from earlier drafts: dashboard (minimal in v1), page index, page creation (with a Page Definition picker), page editor, page settings (including an optional public path field), SEO/social metadata (text fields in v1), general settings, revision history, preview, and a minimal media picker. Design direction: the calm, structured, low-noise interaction quality of Statamic is the right reference point, without borrowing its visual identity — achievable because the admin ships its own compiled CSS/JS (§16).
 
 ---
 
 ## 7. Page editor redesign
 
-The current `PageEditor` (`src/Livewire/PageEditor.php`) already blends six responsibilities: component CRUD, drag-order persistence, prop filtering/validation, image upload, publish, and restore. Decompose now, before adding hierarchy, Page Definition guardrails, SEO, a categorized component picker, duplicate/delete, responsive/full-page preview, an unpublished-change indicator, validation errors, and broken-component warnings — not after.
-
-**Proposed shape** — one thin orchestrator plus five focused children, communicating via Livewire's own `$this->dispatch()` rather than deep prop drilling:
-
-- **`PageEditor`** (orchestrator) — loads the `Page`, holds which component is selected, renders the children below, owns top-level actions: `publish()`, preview-mode toggle.
-- **`ComponentList`** — everything the current component's left column does today (`updateOrder`, `addSection`, `selectSection`) plus new actions: `removeComponent`, `duplicateComponent`. The "Add component" picker evolves from a flat button list into a searchable, category-grouped picker, filtered by the current page's Page Definition when one applies (§8, §9).
-- **`ComponentFieldPanel`** — renders the schema-driven form for the selected component. Persistence delegates to a `PersistComponentProps` action wrapping the existing (relocated, see §18) per-field-type validation logic. This is also where per-field validation errors become visible to the editor for the first time.
-- **`PreviewPane`** — presentational only; receives already-rendered HTML or a preview URL. Adds a responsive-width toggle and a link to the full-page preview route (§5).
-- **`RevisionHistory`** — extracted from today's `@if ($showingHistory)` block; gains real pagination.
-- **`PageSettingsPanel`** — entirely new: title, slug, status, parent, Page Definition (chosen at creation, see below), SEO fields.
-
-Supporting non-Livewire pieces: `PersistComponentProps` (action wrapping the schema-driven filter/validate logic, now sourced from `FieldTypeDefinition::validate()` per §18), `MediaUploader` (service, §14), and the existing `PublishPage`/`RestorePageRevision` actions, unchanged.
-
-**A Page Definition, when one applies, is chosen once, at page creation** — not as a casual settings toggle changeable at any time. Changing it afterward is possible but deliberately validated (an existing component no longer allowed under the new definition, or a newly required component now missing, is surfaced exactly like any other constraint violation) rather than silently applied, since a change here can otherwise quietly break the guarantee a Page Definition exists to provide.
-
-Feature-to-owner mapping:
-
-| Requirement                                                 | Lives in                                                                                                                                                                                                                |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Title, slug, status, hierarchy, Page Definition selection   | `PageSettingsPanel` (new)                                                                                                                                                                                               |
-| SEO                                                         | `PageSettingsPanel` (new, a tab)                                                                                                                                                                                        |
-| Component library / categories, filtered by Page Definition | `ComponentList`'s picker (evolved)                                                                                                                                                                                      |
-| Drag-and-drop                                               | `ComponentList` (retained behavior)                                                                                                                                                                                     |
-| Delete / duplicate components                               | `ComponentList` (new) — disabled for a component the current Page Definition locks                                                                                                                                      |
-| Required-component guardrail                                | `ComponentList` — a required component that's missing is surfaced the same way a broken-component warning is (§11)                                                                                                      |
-| Responsive preview                                          | `PreviewPane` (new)                                                                                                                                                                                                     |
-| Full-page preview                                           | `PreviewPane` + route from §5                                                                                                                                                                                           |
-| Unpublished-change indicator                                | `PageEditor` orchestrator — a cheap comparison (timestamp or hash) between `page_sections` state and the latest `page_revisions.snapshot`                                                                               |
-| Autosave                                                    | Already exists in effect — this slice makes it _visible_ with a "Saved" indicator                                                                                                                                       |
-| Explicit publishing                                         | `PageEditor` orchestrator (retained)                                                                                                                                                                                    |
-| Revisions                                                   | `RevisionHistory` (extracted)                                                                                                                                                                                           |
-| Validation errors                                           | `ComponentFieldPanel` (new)                                                                                                                                                                                             |
-| Broken-component / missing-context warnings                 | `ComponentList`/`ComponentFieldPanel` — today's silent catch-and-log (§11) needs to surface which components failed, and why (a render exception vs. a missing required context key), when called from an admin context |
+Unchanged in decomposition strategy: one thin `PageEditor` orchestrator plus `ComponentList` (categorized, searchable "Add component" picker, drag reorder, duplicate/delete, disabled controls for a Page-Definition-locked component), `ComponentFieldPanel` (schema-driven form, per-field validation errors, `visibleWhen()`/`hiddenWhen()` as pure display logic), `PreviewPane` (the iframe from §11/`docs/v1-implementation-specification.md`), `RevisionHistory` (paginated), and `PageSettingsPanel` (title, slug, hierarchy, Page Definition selection at creation, SEO). A Page Definition, when one applies, is chosen once at creation; changing it afterward is a deliberately validated action, not a casual toggle.
 
 ---
 
 ## 8. The Component model and Page Definitions
 
-**Everything rendered by the builder is one concept: a Component.** One base contract, one registration verb, one rendering pipeline. What the previous draft of this plan called Sections, Modules, and Layouts are the same thing described by different, honest, optional capabilities — not four registration systems mirroring traditional CMS terminology.
+**Everything registered and rendered by the builder is one concept: a Component.** One base contract, one registration verb, one rendering mechanism.
 
 ### The base contract
 
 ```php
-interface Composable
+interface PageBuilderComponent
 {
-    public static function schema(): Schema;
+    public static function settings(): Settings;
 }
 ```
 
-Unchanged in spirit from today's `Sectionable` — renamed to match the corrected vocabulary. This is the entire required surface. A component that implements nothing more than this behaves exactly like today's Sections do.
+Renamed from `Composable` to `PageBuilderComponent` — direct, searchable, and immediately understandable, which matters more here than an abstractly elegant name. `schema()` renames to `settings()`, returning a `Settings` object (§9, `docs/v1-implementation-specification.md`). This is the entire required surface. A component that implements nothing more than this behaves like every component in the current codebase's test fixtures does today.
 
-### Capabilities, not kinds
+### A registered component is always a Blade component
 
-A component may additionally declare capabilities that change how it's placed or rendered — never a different registration call, never a different interface hierarchy that forks the rendering pipeline. One axis is deliberately kept separate from all of the below: _how_ a component is rendered — as a genuine Blade class component or as a genuine Livewire component — is a registration-time, mechanical choice (§9, §11), not a capability declared here. A Livewire component can be `RequiresContext` or not, `AcceptsChildren` or not, exactly like a Blade one; the renderer that draws it is an orthogonal concern.
+The outer registered unit — the thing `PageBuilder::component()` accepts, the thing a Page Definition's `allowedComponents()` lists — is always a real `Illuminate\View\Component` subclass. There is no second, separately-registrable outer kind, and no renderer choice to make between them. **This is a correction from an earlier draft of this plan**, which proposed registering Livewire components directly as an alternative outer unit, with its own renderer, auto-detection between the two, and a staged Blade-then-Livewire delivery plan. That entire apparatus is removed — see §11 for why it was unnecessary, not merely simplified.
 
-- **Placed inside page content** — the default; no declaration needed. Most components: a `Hero`, a `ProductGrid`, a `PromoBanner`.
-- **Wraps page content** (`WrapsContent`) — a component that renders the rest of the composition as its own slot rather than sitting alongside it. A real behavioral difference (it needs somewhere to put "everything else"), expressed as one capability interface, not a separate `Layoutable` contract. Not exercised in v1 at all — see §4's rationale.
-- **Accepts child components** (`AcceptsChildren`) — a component that composes other components inside itself (a two-column region, a tabbed group), rendered recursively through the same renderer. A genuinely new capability worth naming honestly rather than pretending it doesn't exist; the _architecture_ should support it from Milestone 0, even if the editor doesn't offer nested drag-and-drop for it until later.
-- **Requires application context** (`RequiresContext`) — a component that needs something the surrounding request supplies beyond its own stored configuration: the collection currently being viewed, the authenticated customer, the booking being managed. This is what the previous draft informally called "a Module" — the honest distinction was never about registration, it was about whether a component needs context handed to it or resolves everything itself. Declared as `public static function requiredContext(): array` returning the context keys it expects (§5, §11).
+### What a registered component's own view may contain
 
-```php
-interface WrapsContent { /* renders $slot alongside its own markup */ }
-interface AcceptsChildren { /* renders nested Components recursively */ }
-interface RequiresContext { public static function requiredContext(): array; }
-```
+Unrestricted host application code, including nested Blade components, real Livewire components (`<livewire:contact-form :campaign="$campaign" />`), Alpine, AJAX, ordinary JavaScript, a Vue or React island, forms, domain services, Eloquent models, and any other frontend behaviour the application already supports. None of this requires the package's awareness, registration, or a rendering adapter of any kind — it is handled entirely by the host application's own existing Blade/Livewire/JavaScript setup, exactly as it would be for any other page in that application. See §11.
 
-**What is deliberately not a Component capability:** whether a component can appear only once, whether it can be removed, and whether it can be reordered are not properties of the component's own class. A `ProductGrid` doesn't inherently know it's mandatory on a collection page and freely optional on a marketing page — that's a fact about the _page_, not the component. Baking placement policy into the component itself would conflate "what this component is capable of" with "what a specific page is allowed to do with it." That distinction belongs to the Page Definition below.
+### Application-aware components
+
+A component that needs live application data (a `ProductGrid`, a `BookingAvailability` panel) is an ordinary component whose own constructor or `with()` resolves that data — from a stored setting (a selected collection ID) or from supplied runtime context (§`docs/v1-implementation-specification.md`'s runtime context model). There is no separate "Module" registration path; this was already true under earlier drafts and remains true here.
 
 ### Page Definitions
 
-A **Page Definition** is a developer-authored, non-rendering class that declares what a given kind of page is allowed, required, and forbidden to contain. It is not a Component — it renders nothing, and treating it as a fifth Component variant would be exactly the false equivalence this model is designed to avoid.
+A **Page Definition** is a developer-authored, non-rendering class declaring what a given kind of page is allowed, required, and forbidden to contain:
 
 ```php
 abstract class PageDefinition
 {
-    /** @return array<class-string<Composable>>|null null = unrestricted (all registered components allowed) */
-    public function allowedComponents(): ?array
-    {
-        return null;
-    }
-
-    /** @return array<class-string<Composable>> must exist somewhere on a page using this definition */
-    public function requiredComponents(): array
-    {
-        return [];
-    }
-
-    /** @return array<class-string<Composable>> present components that cannot be removed or reordered */
-    public function lockedComponents(): array
-    {
-        return [];
-    }
-
-    /** @return array<class-string<Composable>> the starting arrangement for a new page using this definition */
-    public function defaultComponents(): array
-    {
-        return [];
-    }
+    public function allowedComponents(): ?array { return null; }   // null = unrestricted
+    public function requiredComponents(): array { return []; }
+    public function lockedComponents(): array { return []; }       // covers both "cannot be removed" and "cannot be reordered"
+    public function defaultComponents(): array { return []; }
 }
 ```
 
-```php
-final class CollectionPage extends PageDefinition
-{
-    public function allowedComponents(): array
-    {
-        return [CampaignHero::class, ProductCollection::class, EditorialContent::class];
-    }
-
-    public function requiredComponents(): array
-    {
-        return [ProductCollection::class];
-    }
-
-    public function lockedComponents(): array
-    {
-        return [ProductCollection::class];
-    }
-}
-```
-
-An abstract base with sensible no-op defaults (rather than a bare interface every implementer must fully satisfy) keeps this consistent with the codebase's existing preference for minimal ceremony — a Page Definition that only needs to restrict `allowedComponents()` overrides one method, not four. "Locked" deliberately covers both removal and reordering as a single axis rather than two independent flags — a component that can be freely reordered but never removed is a rare enough case not to warrant its own concept yet; if that changes, it's a small, additive change to this same class, not a redesign.
-
-`regions()` and `requiredContext()` are intentionally not part of this v1 contract. Regions depend on a broader composition-root concept this plan explicitly defers (§4); required application context is already handled at the Component level (`RequiresContext`) and at the `renderPage()` call site (§5), and duplicating it on the Page Definition would be two ways to say the same thing.
+It is not a Component, renders nothing, and is referenced by `pages.definition` as a string handle. **Every array here is a literal, explicit list of concrete component classes, written by hand — never a category reference, and never a helper that resolves a category to its members on the developer's behalf.** An earlier draft of this plan proposed a `PageBuilder::category('Headers')->handles()` convenience specifically so a Page Definition could "allow a whole category," resolved once at registration time to avoid silent drift. **That convenience is removed.** Even resolved once, the API shape itself invites a future reader to assume it tracks a category's _current_ membership dynamically — a dangerous misreading for a placement guardrail. A developer who wants "all of Headers" writes out that class list by hand.
 
 ### What this replaces
 
-- **Section** — no change in behavior; becomes the default (no declared capabilities) case of Component.
-- **Module** — dropped as a registration-time concept entirely. Application-aware behavior is `RequiresContext` when it needs context supplied, or simply ordinary code inside `with()`/the constructor when it doesn't (resolving its own data from a stored ID is not a capability the registry needs to know about at all).
-- **Layout** — becomes `WrapsContent`, a declared capability rather than a fourth registered concept, and is not exercised at all in v1 (§4).
-- **Template** — becomes **Page Definition**, kept as a genuinely separate, non-rendering concept rather than folded into Component, because it answers a different question ("what may this page contain") than a Component ever answers ("what does this render as").
+- **Section** — no change in behavior; becomes the default (no capabilities) case of Component.
+- **Module** — dropped as a registration-time concept, as before: application-aware behavior is ordinary component code, not a distinct registered kind.
+- **Layout / `WrapsContent`** — removed from v1 architecture entirely (§4). The host's own existing Blade layout wraps composed output; the package has no opinion and no interface for this.
+- **`AcceptsChildren` / nested composition** — removed from v1 architecture entirely (§4). Composition is a flat ordered list.
+- **Template** — remains **Page Definition**, a genuinely separate, non-rendering concept.
+- **A directly-registrable Livewire outer component, with its own renderer** — removed entirely (§11), not deferred, not staged. It was never necessary once the outer Blade component's own view is rendered through the real Blade view engine.
 
 ---
 
-## 9. Developer API
+## 9. Developer authoring model
 
 ```php
-PageBuilder::component(Hero::class);
-PageBuilder::component(ProductGrid::class);
-PageBuilder::component(MarketingLayout::class);   // an ordinary component that happens to declare WrapsContent
-PageBuilder::pageDefinition(CollectionPage::class);
+PageBuilder::component(HeaderClassic::class);
+
+PageBuilder::components([
+    HeaderClassic::class,
+    HeaderCentered::class,
+]);
+
+PageBuilder::category('Headers')
+    ->icon('layout-header')
+    ->description('Headers and primary page introductions')
+    ->components([
+        HeaderClassic::class,
+        HeaderCentered::class,
+    ]);
 ```
 
-One registration verb for every renderable thing, plus one separate verb for the one non-renderable concept. No `section()`/`module()`/`layout()`/`template()` split — that would have reintroduced exactly the false equivalence §8 argues against.
+One registration verb for the one renderable concept, one for grouping, one separate verb for Page Definitions (`PageBuilder::pageDefinition()`). No renderer choice anywhere in this API — there is only one renderer (§11).
 
-**Where metadata lives:** static methods on the component class, following the existing, proven `schema(): Schema` convention — not PHP attributes, not a separate registration-builder DSL.
-
-The required interface stays minimal:
+### The constructor is the source of truth for type and default
 
 ```php
-interface Composable
+final class Hero extends Component implements PageBuilderComponent
 {
-    public static function schema(): Schema;
+    public function __construct(
+        public string $heading = 'Welcome',
+        public bool $showAction = false,
+        public ImageSize $imageSize = ImageSize::Large,
+        public ?LinkValue $action = null,
+    ) {}
+
+    public static function settings(): Settings
+    {
+        return Settings::make()
+            ->text('heading')
+                ->label('Heading')
+                ->required()
+                ->maxLength(100)
+            ->toggle('showAction')
+                ->label('Show action')
+            ->select('imageSize')
+                ->label('Image size')
+                ->options(ImageSize::class)
+            ->link('action')
+                ->label('Action')
+                ->visibleWhen('showAction', true);
+    }
+
+    public function render(): \Illuminate\View\View
+    {
+        return view('components.hero');
+    }
 }
 ```
 
-Richer metadata (icon, category, description, preview image) is an **optional** second interface, so existing and simple components never need to implement it:
+`Settings::make()` declares _editor-facing_ behaviour only — which field widget, label, help text, validation rules, visibility, and (for `select`) which options. It never redeclares the PHP type, nullability, or default value — those are read once, via reflection, from the constructor's promoted properties, and cached (§`docs/v1-implementation-specification.md`'s manifest/caching design) rather than re-reflected on every request. A `select`'s `options(EnumClass::class)` reads the enum's backed cases directly.
+
+Registration-time failures, not silent resolution: a `settings()` field with no matching constructor parameter, a `select`'s declared enum not matching the constructor parameter's actual type, a required non-nullable constructor parameter with no default and no explicit `settings()`-level default, and a duplicate setting name all throw a clear, developer-facing exception the moment the component is registered — never discovered later at render time.
+
+### PHP attributes as an optional authoring style
 
 ```php
-interface HasComponentMeta
+final class Hero extends Component implements PageBuilderComponent
 {
-    public static function meta(): ComponentMeta; // handle, name, description, icon, category, previewImage
+    public function __construct(
+        #[Text(label: 'Heading', maxLength: 80)]
+        public string $heading = 'Welcome',
+
+        #[Toggle(label: 'Show action')]
+        public bool $showAction = false,
+    ) {}
+
+    public function render(): \Illuminate\View\View
+    {
+        return view('components.hero');
+    }
 }
 ```
 
-`ComponentMeta` is a small readonly DTO. If a registered class doesn't implement `HasComponentMeta`, the registry derives sane defaults. This directly satisfies "keep ordinary Laravel class components usable where possible" — a one-method component from the current test suite continues to work unmodified.
+A component may use attributes only, `settings()` only, or both. When both declare the same setting, the fluent `settings()` declaration wins for that setting's metadata; the constructor's type and default are always authoritative regardless of which authoring style declared the field; a conflicting field _type_ between the two fails at registration, never resolved silently. Attributes use ordinary PHP language attributes, available on the package's existing `^8.2` baseline — this feature does not require PHP 8.4 or property hooks.
 
-Capability interfaces (`WrapsContent`, `AcceptsChildren`, `RequiresContext`) are likewise optional and additive — a component implements only the ones that describe it.
+### `mapsToClass()` — removed
 
-**Grouping and renderer selection**, specified fully in `docs/v1-implementation-specification.md`: `PageBuilder::category('Headers')->icon('layout-header')->components([...])` registers several components and assigns them to a category in one call; `PageBuilder::components([...])` registers several without a category, falling into an implicit default category so nothing registered is ever invisible in the picker; and renderer choice (Blade vs. Livewire) is auto-detected from which base class a component extends, with an explicit `->renderer('livewire')` override for the rare ambiguous case. None of this changes the one-verb, one-concept model above — a category is an editor-facing organisational label, and renderer choice is a mechanical rendering detail; neither is a new kind of registered thing, and neither is a security boundary.
+`Field::$classResolver`, `resolveClass()`, and `Schema::mapsToClass()` are deleted, not retained as optional convenience. A developer maps a setting to presentation with an ordinary method on the component class:
+
+```php
+public function alignmentClass(): string
+{
+    return match ($this->alignment) {
+        Alignment::Left => 'text-left',
+        Alignment::Centre => 'text-center',
+        Alignment::Right => 'text-right',
+    };
+}
+```
+
+This is more idiomatic Laravel, not less, and removes the one place the schema API implied the package had an opinion about CSS-class mapping — directly contradicting "the package owns composition, the application owns presentation" even as opt-in convenience.
+
+### Effective settings: sparse drafts, resolved publishes
+
+A draft `page_sections.settings` row stores only what an editor has explicitly overridden from the component's own current defaults — not a full copy of every field's value. "Effective settings" for rendering is always `current defaults merged with stored overrides`, computed by one uniform algorithm used everywhere (draft render, published render, revision preview, restore). This means a developer can add a brand-new field to an already-in-production component and every existing instance immediately, correctly behaves as if that field were set to its new default — no backfill migration required. **Publishing** takes this one step further: at publish time, the fully-resolved effective settings for every declared field are written into the new `page_revisions.snapshot` entry, not the sparse overrides — so a later change to the component's own constructor default never silently changes how an already-published historical revision renders. Full semantics — nested group/repeater merging, the null-vs-missing distinction, reset-to-default behaviour, enum and value-object serialization, restore-as-explicit-overrides — are frozen in `docs/v1-implementation-specification.md`; this is genuinely load-bearing and is not restated here to avoid two documents drifting on the same detail.
+
+### Component settings versions
+
+A component may declare `public static function settingsVersion(): int` (default `1`), recorded on every stored instance and revision snapshot. A version mismatch at hydration time triggers an in-memory-only `migrateSettings(array $settings, int $fromVersion): array` if the component provides one, or a visible developer/editor warning if it doesn't — never a silent rewrite of stored data, and never a database-wide migration framework in v1. No separate setting-alias mechanism exists alongside this — a simple rename is exactly the "structural change" `migrateSettings()` already handles, and supporting two overlapping mechanisms for the same problem was rejected as needlessly ambiguous.
 
 ---
 
@@ -426,135 +353,113 @@ php artisan make:page-component Hero
 php artisan make:page-definition CollectionPage
 ```
 
-One generator for the one renderable concept, one for the one non-renderable concept — collapsed from the previous draft's four (`make:page-section`/`make:page-module`/`make:page-layout`/`make:page-template`), for the same reason §8 collapses the registration model itself.
-
-Generated, by default, under `app/PageBuilder/{Components,Definitions}` with matching views under `resources/views/page-builder/components` (a Page Definition has no view) — both roots configurable. A component stub extends `Illuminate\View\Component implements Composable` with a starter `schema()`.
-
-**Discovery vs. explicit registration — recommendation: both, cache-backed**, unchanged from the previous draft. Discovery scans the configured directories for classes implementing `Composable` or extending `PageDefinition`, writing the result to a cached manifest (`php artisan page-builder:cache`) rather than reflecting over it on every request. In `APP_ENV=production` with no manifest present, discovery **fails loudly** rather than silently falling back to a live filesystem scan. Explicit `PageBuilder::component()`/`pageDefinition()` calls in a service provider are unioned with whatever discovery finds.
+Unchanged from earlier drafts: one generator for the one renderable concept, one for the one non-renderable concept, generated under `app/PageBuilder/{Components,Definitions}` (configurable). Discovery is cache-backed — constructor/attribute reflection happens at registration time in development and is written to a compiled manifest for production use (`php artisan page-builder:cache`, hooked into `php artisan optimize`), never re-reflected per request. In `APP_ENV=production` with no manifest present, discovery fails loudly rather than silently falling back to a live scan. The manifest stores everything needed to render and validate without further reflection: handle, display metadata, category, settings definitions (field types, derived PHP types/defaults, enum classes, value-object classes), and settings version. It never stores executable closures.
 
 ---
 
-## 11. Rendering architecture
+## 11. Rendering architecture — corrected
 
-Today, `SectionRenderer` does one thing directly: `new $componentClass(...$props)` followed by `render()->with($data)->render()`, concatenated into an HTML string. That is Blade-only by construction, not by a documented boundary.
+**Today's `SectionRenderer` instantiates every component with bare `new $componentClass(...$props)`, then calls `render()->with($data)->render()` manually — this bypasses Laravel's real, compiled view-rendering pipeline rather than using it.** An earlier draft of this plan treated this as requiring, eventually, a second renderer implementation (a `LivewireComponentRenderer`) so a directly-registered Livewire component could be supported, staged behind auto-detection and a Blade-then-Livewire delivery plan. **This entire apparatus is removed, not simplified, because the underlying premise was wrong: the outer registered unit is never a Livewire component in the first place (§8).**
 
-**Proposed seam — a driver contract, two implementations, corrected from the previous draft's assessment:**
+### The v1 rendering path — one renderer
 
 ```php
-interface RendererDriver
+final class BladeComponentRenderer
 {
-    public function render(string $componentClass, array $props, string $key): string;
-    public function supports(string $componentClass): bool;
+    public function render(string $componentClass, array $settings, string $key): string
+    {
+        return view('page-builder::render-component', [
+            'component' => $componentClass,
+            'settings' => $settings,
+        ])->render();
+    }
 }
 ```
 
-`BladeComponentRenderer` and `LivewireComponentRenderer` (renamed and no longer alone; full design in `docs/v1-implementation-specification.md`).
+where `resources/views/page-builder/render-component.blade.php` contains, in essence:
 
-**Correction to the previous draft's claim about Livewire support.** The previous draft said a Livewire driver would require "the entire public rendering pipeline to move from a concatenated string to a compiled Blade view, a genuine Milestone 4 architectural change." That was too pessimistic. The real blocker was never the pipeline's overall shape — it was that today's `SectionRenderer` instantiates every component with bare `new $class(...$props)`, which is simply the wrong way to construct a Livewire component: Livewire components are resolved through Livewire's own mount/hydrate lifecycle, not `new`. The fix is renderer-local, not pipeline-wide: `BladeComponentRenderer` keeps rendering each component through a real Blade view using `<x-dynamic-component>`; `LivewireComponentRenderer` renders each component through a real Blade view using the `@livewire($class, $props, key: $key)` directive, which (unlike the static `<livewire:name>` tag syntax) accepts a runtime class name and drives Livewire's genuine mount lifecycle. Both go through Laravel's real, compiled view engine per component, never manual reflection-based invocation — which is what makes either kind of component render correctly regardless of what else is on the page — and both preserve today's per-component catch-and-skip defensive discipline unchanged. This is why Livewire support is pulled forward from Milestone 4 into Milestone 1's pre-1.0 track (§21) rather than deferred. Inertia is unaffected by this correction and remains architecturally harder — its whole-page component-plus-props response model is a different shape of problem entirely, needing its own dedicated design spec before any code is written. Nothing is claimed as working until it demonstrably is.
+```blade
+<x-dynamic-component :component="$component" :="$settings" />
+```
 
-**How the pieces fit together**, extended for the corrected model:
+This renders each component through Laravel's genuine, compiled Blade component system — the same mechanism used for any other Blade component in any other view in the application — not through manual reflection-based construction. Today's per-component try/catch discipline is preserved exactly at the PHP call site around this `view(...)->render()` call: a broken component is caught, logged, and skipped, never fataling the rest of the page.
 
-- _Page resolution_: for a routable page, site (via `SiteResolver`) + stored `path` → single indexed lookup (§5). For a host-embedded composition, the host's own route resolves its own model and calls `renderPage()` directly (§5).
-- _Component context resolution_: `renderPage($page, context: [...])` merges the caller-supplied `$context` array into the props passed to any component in the tree that declares `RequiresContext` and lists a matching key. A component that both stores editorial props (a selected collection ID, a display style) and requires live context (the currently viewed `Collection`, to show "related to what you're looking at") receives both, merged, at construction — the stored configuration is never enough on its own to fully render such a component, and that's expected, not a gap.
-- _Nested composition_: a component declaring `AcceptsChildren` renders its own children through the same renderer, recursively — the same technique used for the top-level page, applied one level deeper. No separate mechanism.
-- _A wrapping component's slot_: applies only where `WrapsContent` is actually used (not in v1, §4) — the wrapping component's own render receives the rest of the composition's output as its slot.
-- _Component prop validation_: each `FieldTypeDefinition::validate()` (§18), replacing today's `filterPropsAgainstSchema()`'s inline per-type logic.
-- _Assets_: components' own CSS/JS remain entirely the host's build concern; the package's own admin assets are separate (§16).
-- _Preview vs. published_: identical resolution and driver, different data source (`page_sections` vs. latest `page_revisions.snapshot`) — unchanged.
-- _Failure handling_: for visitors, unchanged — catch, log, skip, never fatal the page. This now covers two distinct failure shapes, both handled the same way: a component that throws while rendering, and a component whose `requiredContext()` key was never supplied. For editors, the same renderer call, invoked with an "admin context" flag, returns which components failed and _why_ — a render exception versus missing required context are different messages, both surfaced, neither silent.
+**Because rendering now goes through Blade's real compiler, a registered component's own view may freely contain `<livewire:contact-form />`, or any other Blade or Livewire directive, with zero special handling.** Blade's compiler resolves that tag normally the moment the component's own `.blade.php` view is compiled and rendered — which happens automatically as part of `<x-dynamic-component>` rendering the outer component. No adapter, no auto-detection, no second renderer implementation is needed for this to work, because it was never a page-builder rendering concern in the first place — it is exactly how a Livewire component nests inside any Blade view in any Laravel application, page-builder or not.
+
+**No `RendererDriver` interface exists in v1.** Building an interface for a single implementation, in anticipation of a hypothetical future outer-adapter (Inertia, Vue), would be exactly the speculative architecture this correction exists to remove. The possibility of a future adapter is preserved simply because nothing here prevents extracting an interface later, when a second implementation is real work worth doing — not because a seam is built and left empty today.
+
+### Inertia, Vue, React
+
+Unaffected by this correction, and still not claimed as supported. Inertia's whole-page component-plus-props response model is a different shape of problem entirely from "render this Blade component," needing its own dedicated design spec before any code is written — nothing about the corrected renderer design above accelerates or blocks that separately-scoped future work.
+
+### How the pieces fit together
+
+- _Page resolution_: for a routable page, site + stored `path` → single indexed lookup (§5). For a host-embedded composition, the host's own route resolves its own model and calls `renderPage()` directly.
+- _Settings resolution_: `renderPage($page, context: [...])` computes effective settings (§9) for each component, merges in any matching runtime context, and passes the result as the constructor arguments `<x-dynamic-component>` receives.
+- _Preview vs. published_: identical resolution and renderer, different data source and completeness (sparse draft vs. fully-resolved snapshot) — see §9 and `docs/v1-implementation-specification.md`.
+- _Failure handling_: unchanged discipline — catch, log, skip, never fatal for visitors; visible, specific warnings for editors, now also covering a `settingsVersion()` mismatch with no migration path.
 
 ---
 
 ## 12. Settings architecture
 
-Unchanged from the previous draft. **Deployment-level** (published `config/page-builder.php`): `admin.prefix`, `admin.middleware`, `disks.uploads`, `component_paths` (discovery directories), `revisions.retention`, `assets.strategy`.
-
-**Database-level** (`site_settings`, §4): `name`, `homepage_page_id`, `default_meta_title`, `default_meta_description`, `logo_media_id`, `favicon_media_id`, `default_social_image_media_id`, `robots_index`, `head_scripts`, `body_scripts`.
-
-**Type-safe API, not string keys:**
-
-```php
-$settings = PageBuilder::settings(); // SiteSettings value object
-$settings->name;
-$settings->homepage();   // resolves the Page
-```
-
-A new setting requires a migration and a new typed property, on purpose.
+Unchanged. **Deployment-level** (published `config/page-builder.php`): `admin.prefix`, `admin.middleware`, `disks.uploads`, `component_paths`, `revisions.retention`, `assets.strategy`. **Database-level** (`site_settings`, §4): `name`, `homepage_page_id`, `default_meta_title`, `default_meta_description`, accessed via a type-safe `PageBuilder::settings(): SiteSettings` value object, never arbitrary string keys. (This is deliberately a different "settings" from a Component's own `Settings::make()` schema, §9 — site-wide configuration versus one component's editable fields, at different scopes, with no actual name collision.)
 
 ---
 
 ## 13. Navigation
 
-Unchanged from the previous draft. Two tables (§4): `navigations` and `navigation_items`.
-
-```php
-$nav = PageBuilder::navigation('main'); // ordered tree of resolved items
-```
-
-Each item's effective URL is computed at render time from its linked page's current `path`. A navigation item can only usefully point at a page that _has_ a `path` (§4) — the admin's page picker for navigation items should only offer routable pages, since a host-embedded page has nothing for a nav item to link to. If a linked page is deleted, `navigation_items.page_id` is set null and the admin flags the item as a broken link.
-
-Rendering stays host-owned by default: the package hands back the resolved tree; an optional `<x-page-builder::navigation handle="main" />` convenience component exists but is not the primary contract.
+Unchanged. `navigations`/`navigation_items` tables, deferred to Milestone 2; `PageBuilder::navigation('main')` returns a resolved tree computed at render time from each linked page's current `path`; rendering stays host-owned by default.
 
 ---
 
 ## 14. Media and assets
 
-Unchanged from the previous draft. One `media` table (§4) plus a simple grid picker modal wired into the Image field type. No folders, no collections, no tagging, no image-transformation-variant table, no external-media embedding.
+Unchanged in scope: one minimal `media` table plus a simple grid picker, no folders/collections/tagging/transformation variants. Now explicitly the backing store for the `ImageValue` value object (§`docs/v1-implementation-specification.md`), replacing today's bare path string with a typed, hydrated reference carrying alt text and metadata.
 
 ---
 
 ## 15. Installation system
 
-Unchanged from the previous draft. `php artisan page-builder:install` performs only genuinely safe, additive operations (publish config, publish compiled assets, ask a small number of interactive questions, create the initial `Site` row, optionally create a first page) and documents everything that would otherwise mean editing a file the host application already owns (routing snippet, migration reminder, no Tailwind step needed, no user/permission setup).
+Unchanged. `php artisan page-builder:install` performs only genuinely safe, additive operations and documents everything else. Its printed next-steps now also mention configuring `PageBuilder::previewView()` (renamed from an earlier draft's `previewLayout()` — see `docs/v1-implementation-specification.md`) as a required step for accurate preview.
 
 ---
 
 ## 16. Package assets
 
-Unchanged from the previous draft. Replace CDN-loaded SortableJS with a small, versioned bundle built by the package itself, published via `vendor:publish` into `public/vendor/page-builder/`, self-hosted, offline-capable, CSP-friendly. The admin's CSS is a package-owned compiled Tailwind build, not scanned from the host's `content` globs.
+Unchanged: a small, versioned, package-built compiled `app.css`/`app.js`, published via `vendor:publish`, self-hosted, CSP-friendly, no CDN, scoped so it never applies to anything rendered inside `BladeComponentRenderer`'s output.
 
 ---
 
 ## 17. Authentication and authorization
 
-Unchanged in mechanism from the previous draft — middleware config, permissive-default Gates (`page-builder.pages.edit`, `page-builder.pages.publish`, `page-builder.settings.manage`, `page-builder.navigation.manage`), a configurable `current_user_id_resolver` instead of hardcoded `auth()->id()` calls. **What changes is the stakes**: an authenticated account-dashboard composition surface is a materially more sensitive context than a public marketing page, which is exactly why the publish/edit ability split and the permissive-but-overridable Gate design matter more now than they did under the narrower marketing-page framing — not a reason to change the mechanism, a reason to take getting the default right seriously.
+Unchanged: middleware config, permissive-default Gates, a configurable current-user resolver. `visibleWhen()`/`hiddenWhen()` and category membership remain explicitly not security boundaries — restated in full in `docs/v1-implementation-specification.md`.
 
 ---
 
 ## 18. Extensibility
 
-**The single most consequential change in this plan is the Component/Page Definition model itself (§8)** — not, as the previous draft argued, the `FieldType` registry alone. Both matter, but the Component model is what makes the corrected product vision architecturally possible at all; the `FieldType` registry is what makes it extensible once it exists.
+**Corrected ranking of the single most consequential change in this plan, again.** An earlier draft ranked this first "the `FieldType` registry," then re-ranked it to "the Component/Page Definition model." This revision removes the `FieldType` registry from v1 scope entirely (§1), so it is no longer a candidate at all — **the Component/Page Definition model (§8) plus the corrected renderer (§11) plus the authoring model (§9 — constructor inference, attributes, enums, sparse overrides) is the consequential change for this release.**
 
-```php
-interface FieldTypeDefinition
-{
-    public function view(): string;                              // Blade partial or component name
-    public function validate(mixed $value, Field $field): mixed;  // coercion + whitelisting, per type
-    public function default(): mixed;
-}
+**Deliberate extension points retained:**
 
-PageBuilder::fieldType('color', ColorFieldType::class);
-```
-
-The field types v1 ships (expanded from today's 8 to include `toggle` and `number`, with `mapsToClass()` removed — full list and rationale in `docs/v1-implementation-specification.md`) ship as the package's own built-in `FieldTypeDefinition` implementations, registered by default — this is where today's `filterScalarValue()`/`filterLinkValue()`/`isAllowedUrlScheme()` logic relocates to. `Field`'s public shape is preserved.
-
-**Other deliberate extension points**, kept restrained rather than making every internal class replaceable:
-
-- **Custom page models**: resolved via the container or a configurable class in config, the same pattern Cashier/Sanctum use.
-- **Component metadata**: `HasComponentMeta` (§9).
-- **Component capabilities**: `WrapsContent`, `AcceptsChildren`, `RequiresContext` (§8, §9).
-- **Renderer drivers**: `RendererDriver` (§11).
+- **Custom page models**: resolved via the container or a configurable class in config.
+- **Component metadata**: `HasComponentMeta` for icon/category/description/preview image beyond convention-derived defaults.
 - **Page/site resolution**: `SiteResolver` (§5).
-- **Publishing hooks**: events (§19) plus the Actions remain directly container-bindable.
+- **Publishing hooks**: events (§19), plus the Actions remain directly container-bindable.
 - **Asset handling**: `MediaUploader` bound as an interface.
 
-**Explicitly not part of the extension surface for now**: a plugin system for arbitrary third-party admin pages, and a "register your own settings page" mechanism.
+**Deferred, not built, for v1:**
+
+- A third-party-extensible `FieldType` registry (§1, §4) — a real, plausible post-1.0 addition once the closed built-in set has proven itself.
+- A `RendererDriver` extension point (§11) — not built until a second implementation is real work.
+- A plugin system for arbitrary third-party admin pages, or a "register your own settings page" mechanism.
 
 ---
 
 ## 19. Events and lifecycle hooks
 
-Unchanged from the previous draft. Ship `PagePublishing` (cancellable), `PagePublished`, and `RevisionRestored`. Skip `PageCreating`/`PageSaving`/`PageSaved` as noise or better served by container-overriding an action. Defer `PageUnpublishing`/`PageUnpublished` until an explicit unpublish action exists, and `SectionAdded`/`SectionRemoved` (renamed in spirit to `ComponentAdded`/`ComponentRemoved` if ever built) until a real use case appears. The publish-gating rationale for `PagePublishing` is, if anything, stronger now that publish can affect an authenticated or ecommerce surface, not weaker.
+Unchanged. Ship `PagePublishing` (cancellable), `PagePublished`, and `RevisionRestored`. Skip `PageCreating`/`PageSaving`/`PageSaved` as noise. Defer `PageUnpublishing`/`PageUnpublished` until an explicit unpublish action exists, and `ComponentAdded`/`ComponentRemoved` until a real use case appears.
 
 ---
 
@@ -562,158 +467,129 @@ Unchanged from the previous draft. Ship `PagePublishing` (cancellable), `PagePub
 
 A staged path, each stage independently shippable and test-covered, with no period where the suite is red across a commit boundary.
 
-**Stage A — FieldType registry.** Unchanged from the previous draft. Objective: replace the closed enum with the registry from §18, zero behavior change for the 8 existing types. Files: `src/Schema/FieldType.php` → new `src/FieldTypes/{FieldTypeDefinition.php,FieldTypeRegistry.php,Types/*.php}`. Compatibility: watch the two call sites in `src/Livewire/PageEditor.php` comparing against `FieldType::Repeater`/`FieldType::Group` directly. Existing tests that must keep passing unmodified in behavior: `tests/Unit/SchemaTest.php`, `tests/Feature/FieldPartialsTest.php`, `tests/Feature/PropTamperingRegressionTest.php`. New tests: `FieldTypeRegistryTest`, a custom-field-type end-to-end regression test.
+**Stage A — `FieldType` gains cases in place.** Objective, corrected from an earlier draft's "replace the enum with a registry": add `Toggle` and `Number` cases to the existing `FieldType` enum; remove `mapsToClass()` from `Schema`/`Field`. Files: `src/Schema/FieldType.php`, `src/Schema/Schema.php`, `src/Schema/Field.php`. Compatibility: existing test fixtures using `mapsToClass()`/`resolveClass()` (`TestHeroSection`) move to a plain computed method. Existing tests that must keep passing in behavior otherwise: `tests/Unit/SchemaTest.php`, `tests/Feature/FieldPartialsTest.php`, `tests/Feature/PropTamperingRegressionTest.php`. New tests: `Toggle`/`Number` field partial and coercion tests, a `mapsToClass()`-removed characterization test.
 
-**Stage B — Sites and page hierarchy.** Objective: add `sites`, and `pages.site_id`/`parent_id`/`path`(nullable)/`definition` without breaking existing model behavior. Migrations: `create_sites_table`, `add_site_and_hierarchy_columns_to_pages`, a backfill migration attaching every existing `Page` to one default `Site`. Compatibility: `tests/TestCase.php`'s database setup needs a `Site` fixture. New tests: hierarchy creation, `path` uniqueness scoped to a site, homepage resolution, and a page created with a null `path` correctly absent from public-route resolution.
+**Stage B — Sites and page hierarchy.** Unchanged in shape. Objective: add `sites`, and `pages.site_id`/`parent_id`/`path` (nullable)/`definition` without breaking existing model behavior, plus a backfill migration attaching every existing `Page` to one default `Site`.
 
-**Stage C — Component registry facade.** Objective, revised from the previous draft's "Sections/Modules umbrella": rename `Sectionable` → `Composable`, introduce `PageBuilder::component()` and `PageBuilder::pageDefinition()` behind a `PageBuilder` facade, without removing the existing `config('blade-page-builder.sections')` array path — union both sources. Files: new `src/PageBuilder.php`; `SectionRegistry` evolves internally but keeps its exact public `resolve()`/`slugs()` shape; new `src/Contracts/PageDefinition.php` and a corresponding registry. Definition of done: both registration styles work side by side; existing registry test passes unmodified; new facade-registration and Page-Definition-registration tests pass.
+**Stage C — Authoring model and registry.** Objective, substantially expanded from an earlier draft's "Sections/Modules umbrella": rename `Sectionable` → `PageBuilderComponent`, `schema()` → `settings()`, `Schema`/`Field` → `Settings`/`Setting`; introduce `PageBuilder::component()`/`components()`/`category()`/`pageDefinition()` behind a `PageBuilder` facade; introduce the constructor-reflection layer (type/default/nullability inference, registration-time mismatch validation) and optional PHP attribute support; introduce backed-enum options handling and the `LinkValue`/`ImageValue` value objects; introduce `page_sections.props` → `settings` (sparse-override storage) and `page_revisions.snapshot`'s fully-resolved shape with captured `id` and `settingsVersion`. This is now the largest single stage in the plan, reflecting where the actual product complexity lives. Definition of done: existing registry test passes (adapted for the rename); new tests cover registration, constructor inference, attribute merging, enum/value-object hydration, and sparse-override resolution end to end.
 
-**Stage D — Renderer driver seam.** Unchanged from the previous draft. Objective: extract `SectionRenderer`'s current logic into `BladeRendererDriver` behind `RendererDriver`, zero behavior change. Compatibility: `tests/Feature/SectionRendererTest.php` and `tests/Feature/RenderPageComponentTest.php` must pass completely unmodified.
+**Stage D — Renderer correction.** Objective, corrected from an earlier draft's "extract a `RendererDriver` interface with a `BladeRendererDriver` implementation, anticipating a future `LivewireRendererDriver`": extract `SectionRenderer`'s logic into a single, concrete `BladeComponentRenderer` that renders through a real Blade view using `<x-dynamic-component>` (§11) — no interface, no second implementation, no auto-detection to remove because none was ever needed. Compatibility: `tests/Feature/SectionRendererTest.php` and `tests/Feature/RenderPageComponentTest.php` must pass completely unmodified in behavior; a new test confirms a component's own view containing `<livewire:...>` renders and hydrates correctly with zero package-level special-casing.
 
-**Stage E — Admin route/asset scaffold and `page-builder:install`.** Unchanged from the previous draft. Objective: package-owned admin route group, compiled asset publishing, install command — deliberately without yet decomposing the editor UI. Compatibility: `tests/Feature/PageEditorMountPointTest.php` should keep passing unmodified.
+**Stage E — Admin route/asset scaffold and `page-builder:install`.** Unchanged. Package-owned admin route group, compiled asset publishing, install command, mounting the still-monolithic `PageEditor` before decomposing it.
 
-**Stage F — Editor decomposition.** Unchanged in approach from the previous draft. Objective: split `PageEditor` into the components from §7, one extraction at a time, migrating the relevant existing tests alongside each single extraction.
+**Stage F — Editor decomposition.** Unchanged in approach.
 
-**Stage G — Minimal Page Definition enforcement (new).** Objective: `ComponentList`/`PageSettingsPanel` respect `allowedComponents()`/`requiredComponents()`/`lockedComponents()`/`defaultComponents()` for a page's chosen `PageDefinition` — the "Add" picker filters to what's allowed, locked components lose their delete/reorder controls, missing required components surface as a warning. This depends on Stage C (the registry existing) and roughly parallels Stage F (both touch the editor UI), and — unlike the previous draft's treatment of "Templates" — is pulled into the same near-term work as the rest of Milestone 1, not deferred to Milestone 2/3. New tests: allowed/required/locked enforcement, default-arrangement seeding on page creation.
-
-Domain additions beyond the current code's scope (navigation, richer settings, media) remain Milestone 2 work, covered at milestone grain in §21.
+**Stage G — Page Definition enforcement.** Objective, tightened from an earlier draft: `ComponentList`/`PageSettingsPanel` respect `allowedComponents()`/`requiredComponents()`/`lockedComponents()`/`defaultComponents()`, using only literal, hand-written component-class arrays — no category-resolution helper is built or offered (§8). New tests: allowed/required/locked enforcement, default-arrangement seeding, and a test confirming no API exists for "allow a category."
 
 ---
 
 ## 21. Release roadmap
 
-### Milestone 0 — Architecture correction
+The pre-1.0 track inside this roadmap is replaced by the simpler structure below, per `docs/v1-implementation-specification.md`, which supersedes an earlier draft's Blade-0.1/Livewire-0.2/both-1.0 staging — that staging existed to manage a risk (Livewire adapter complexity) that turned out not to exist once the renderer correction in §11 was made.
 
-**Included:** Stages A–D (FieldType registry, sites/hierarchy schema with nullable `path`, Component registry facade with the `Composable` rename and `PageDefinition` registry, renderer driver seam).
-**Excluded:** any new admin screens; no navigation/media/settings tables yet; no Page Definition _enforcement_ in the editor UI yet (that's Stage G, Milestone 1) — Milestone 0 only needs the registry and the model to exist.
-**Dependencies:** none.
-**Acceptance:** full test suite green; a host can register a custom field type and a custom component via `PageBuilder::component()`; a page can belong to a site and a parent, with an optional `path`; `SectionRenderer`/`RendererDriver` behavior is provably unchanged.
+### 0.1 — Composition foundation
 
-### Milestone 1 — Installable composition foundation
+Stages A–G above, in full: Blade component registration (constructor inference, attributes, enums, value objects), categories, Page Definitions, page administration, drag/drop, iframe preview, draft/publish/revisions (sparse overrides, resolved snapshots), settings versions, public and embedded rendering, package-owned admin assets. **This single release covers what earlier drafts split across "Milestone 0" and "Milestone 1," and what an intermediate draft further split into a Blade-only sub-release and a Livewire sub-release** — collapsed here because the underlying complexity that justified those splits was corrected away, not because ambition was reduced. A component's own view freely using Livewire, Alpine, or anything else is a property of Blade rendering that exists from the first commit, requiring no separate stage.
+**Acceptance:** the full sixteen-step user journey (`docs/v1-implementation-specification.md` §3) works end to end, including a component whose own view contains a genuine, hydrating Livewire component.
 
-**Included:** Stage E (admin routes, install command), Stage G (minimal Page Definition enforcement — **reprioritized into Milestone 1 from the previous draft's Milestone 2/3**, because ecommerce/application-aware guardrails are now core to the product, not a stretch goal), page index/creation/settings screens with a Page Definition picker, public routing (homepage + nested paths + host-embedded pages via `renderPage()`), package-compiled assets, the minimal `media` table and image picker, minimal `site_settings`, Gate-based auth hooks with permissive defaults, and — **pulled forward from the previous draft's Milestone 4**, per §11's corrected assessment — a staged pre-1.0 renderer track inside this milestone (Blade adapter first, Livewire adapter second, both declared stable before this milestone's own 1.0 point) detailed fully in `docs/v1-implementation-specification.md`.
-**Excluded:** navigation, `WrapsContent`/`AcceptsChildren` exercised in the editor UI (the capabilities exist in the model from Milestone 0, but nothing in v1 needs them rendered yet), autosave-indicator polish, signed external preview links, Inertia/Vue/React rendering (still Milestone 4, unaffected by the Livewire correction).
-**Dependencies:** Milestone 0 complete.
-**Acceptance:** `composer require` → `page-builder:install` → `migrate` → register a component (and, if needed, a Page Definition) → create and publish a page that respects that definition's guardrails → view it live — entirely through package-owned screens, in roughly the target ten minutes.
+### 0.2 — Authoring maturity
+
+Only what wasn't already completed cleanly in 0.1: the `migrateSettings()` hook if not built alongside settings versions; the compiled component-definition manifest/cache if reflection-per-request proves costly sooner than expected; improved developer diagnostics for registration-time failures; media-record improvements; richer documentation.
+
+### 1.0 — stable
+
+The complete Blade-component composition workflow is stable; historical revisions render deterministically regardless of later default changes; authoring APIs (constructor inference, attributes, enums, value objects, versions) are documented and stable; no claim of a directly-registered outer Livewire component, and no Vue/React/Inertia adapter claim, anywhere in documentation.
 
 ### Milestone 2 — Complete visual composition workflow
 
-**Included:** Stage F (editor decomposition) with drag/duplicate/delete, broken-component and missing-context warnings, the unpublished-change indicator, responsive and full-page preview, visible validation errors; the navigation system end to end; fuller settings (logo/favicon/social image); paginated revision history; `WrapsContent` exercised as a real, selectable capability if more than one wrapping component is registered; signed preview links; publish/edit Gate separation.
-**Excluded:** `AcceptsChildren` with real nested drag-and-drop UI (the rendering seam exists from Milestone 0; the editor experience for it is not yet built); scaffolding commands; any field type beyond Milestone 0's registry contents.
-**Dependencies:** Milestone 1.
-**Acceptance:** the editor satisfies every item in §7's checklist; no single Livewire component holds more than one clear responsibility.
+**Included:** editor polish (broken-component and missing-context warnings, unpublished-change indicator, responsive/full-page preview, visible validation errors); navigation end to end; fuller site settings; paginated revision history; signed preview links; publish/edit Gate separation.
+**Excluded:** any second renderer/outer-adapter; a third-party `FieldType` registry; scaffolding-command polish beyond what 0.1 already ships.
+**Dependencies:** 1.0.
 
 ### Milestone 3 — Ecosystem and extensibility
 
-**Included:** `make:page-component`/`make:page-definition` generators plus discovery/caching (§10); nested-composition editor UI for `AcceptsChildren`; richer `HasComponentMeta` (categories, search in the picker); shipping `PagePublishing`/`PagePublished`/`RevisionRestored` (others only if real demand appears); swappable models via config; documentation aimed at third-party consumers.
-**Excluded:** a second renderer driver; global sections/reusable patterns; a full DAM.
+**Included:** a third-party `FieldType` registry, if real third-party demand appears (§1, §18); richer `HasComponentMeta` (search, better categorization); events beyond the initial three, if real demand appears; swappable models via config; documentation aimed at third-party consumers.
+**Excluded:** a second outer-renderer/adapter; nested composition (`AcceptsChildren`) — removed from the architecture, not merely deferred (§4), and would need to be reintroduced deliberately, not resumed from a dormant interface; global sections/reusable patterns; a full DAM.
 **Dependencies:** Milestone 2.
-**Acceptance:** a developer outside this project could plausibly install and extend the package using only published documentation.
 
 ### Milestone 4 — Additional frontend renderers
 
-**Included:** a credible Inertia/Vue or Inertia/React adapter. **No longer includes Livewire** — corrected from the previous draft: Livewire component support is resolved by the renderer-adapter design in §11 and ships far earlier, inside Milestone 1's pre-1.0 track.
-**Excluded from this plan entirely** beyond identifying the seam — Inertia's whole-page response model is a different shape of problem, needing its own dedicated spec.
-**Dependencies:** Milestone 3, plus a future dedicated design spec for the Inertia adapter specifically.
+**Included:** a credible Inertia/Vue or Inertia/React adapter for the _outer_ registered composition unit, if that becomes real, demonstrated work — genuinely separate from "a component's own view uses Vue," which already works today with zero package involvement (§11).
+**Excluded from this plan entirely** beyond identifying that this is a different, harder problem needing its own dedicated spec.
+**Dependencies:** Milestone 3, plus a future dedicated design spec.
 
 ---
 
 ## 22. First implementation slice
 
-Recommendation, revised from the previous draft to reflect the reprioritized Page Definition work: the first slice is Milestone 0 in full, plus the earliest sliver of Milestone 1 that makes the foundation — including its guardrail mechanism, which is now core rather than a stretch goal — visible rather than purely internal plumbing.
+Unchanged in spirit, corrected in sequence to match §20's stages:
 
-**Sequence:**
+1. `FieldType` gains `Toggle`/`Number`; `mapsToClass()` removed (Stage A) + tests.
+2. Sites and page hierarchy schema, including nullable `path` and the `definition` column (Stage B) + tests.
+3. The authoring model and registry: `PageBuilderComponent`/`settings()`/`Settings`/`Setting`, `PageBuilder::component()`/`components()`/`category()`/`pageDefinition()`, constructor-reflection inference, attribute support, enum/value-object hydration, sparse-override storage (Stage C) + tests — the largest single item in this sequence, and the one most worth reviewing closely before starting.
+4. The corrected `BladeComponentRenderer` (Stage D) + tests, including a nested-Livewire-renders-correctly test.
+5. Admin route group and `page-builder:install` (Stage E) + tests.
+6. Page index screen + tests.
+7. Page creation and page settings screen, including the Page Definition picker (Stage E/G) + tests.
+8. Page Definition enforcement — allowed/required/locked components, no category shortcut (Stage G) + tests.
+9. Public routing, including a null-`path` page correctly unreachable via the catch-all (Stage B/E) + tests.
 
-1. **FieldType registry** (Stage A) + tests.
-2. **Sites and page hierarchy schema**, including nullable `path` and the `definition` column (Stage B) + tests.
-3. **Component registry facade**, including the `Composable` rename and `PageBuilder::component()`/`pageDefinition()` (Stage C) + tests — needed before either "register a component" or "define a Page Definition" can be demonstrated.
-4. **Renderer driver seam** (Stage D) + tests.
-5. **Admin route group and `page-builder:install`** (Stage E, routes and install command only) + tests.
-6. **Page index screen** + tests.
-7. **Page creation and page settings screen**, including the Page Definition picker at creation (Stage E/G) + tests — retires both the "no page-metadata editing UI" gap identified in the earlier due-diligence pass on this codebase, and demonstrates the guardrail mechanism the corrected vision now treats as core.
-8. **Minimal Page Definition enforcement** in the (still monolithic) editor — allowed/required/locked components (Stage G) + tests.
-9. **Public routing**, including a page with a null `path` correctly being unreachable via the catch-all (Stage B/E) + tests — closes the loop end to end.
-
-**Explicitly out of scope for this first slice**: package asset compilation (CDN SortableJS survives one more slice), the `media` table and picker, navigation, full editor decomposition (the monolithic `PageEditor` is reused as-is behind the new admin route, with Page Definition enforcement grafted onto it), settings beyond bare name/homepage, and auth Gates beyond middleware configuration.
+**Explicitly out of scope for this first slice**: package asset compilation (CDN SortableJS survives one more slice), the `media` table and `ImageValue` picker, navigation, full editor decomposition (the monolithic `PageEditor` is reused as-is behind the new admin route), settings beyond bare name/homepage, auth Gates beyond middleware configuration, and the `migrateSettings()` hook (version _storage_ is in scope; the migration _hook_ may land in 0.1 or slip to 0.2, per `docs/v1-implementation-specification.md`).
 
 ---
 
 ## Reconciliation appendix
 
-This plan was revised once, after `docs/product-vision.md` corrected the product's audience and category from "a marketing-website page builder" to "a visual composition layer for existing Laravel applications, public and application-aware alike." This appendix summarizes exactly what changed as a result.
+This plan has been revised twice against corrections in `docs/product-vision.md` and, most recently, `docs/v1-implementation-specification.md`.
 
-**Decisions changed:**
+**First correction** (audience/category): broadened from "a marketing-website page builder" to "a visual composition layer for existing Laravel applications." Collapsed Sections/Modules/Layouts into one Component concept with capabilities; introduced Page Definitions, pulled into Milestone 1; made `pages.path` optional.
 
-- The Component model collapses Sections, Modules, and Layouts into one `Composable`-based concept described by optional capabilities (`WrapsContent`, `AcceptsChildren`, `RequiresContext`), registered through a single `PageBuilder::component()` verb, rather than three (eventually four) separate registration systems.
-- "Template" is renamed **Page Definition**, kept as a genuinely separate, non-rendering concept (not folded into Component), and its capability set is expanded (allowed/required/locked/default components) to match the ecommerce guardrail use case now explicitly in scope.
-- **Page Definitions move from Milestone 2/3 into Milestone 1** (new Stage G) — the single biggest roadmap change in this revision, because placement guardrails are now a core requirement, not a later refinement.
-- `pages.path` becomes **nullable/optional**, and public catch-all routing becomes opt-in per page, so a composition can be embedded inside a host-owned route (an ecommerce collection page, an authenticated account screen) without being forced to also be a standalone, slugged, publicly catch-all-routed page.
-- `PageBuilder::renderPage()` gains a `context` parameter, and components gain a `RequiresContext` capability, as the mechanism for "route-backed ecommerce pages" and "sections of existing routes" — resolved without any new database table or polymorphic binding mechanism.
-- The `pages.layout` column and a separate `Layoutable` contract are dropped entirely for v1; wrapping content becomes a Component capability (`WrapsContent`) that v1 doesn't need to exercise at all, because the host's own existing Blade layout already wraps composed output.
-- The Composer package/namespace rename (to `wearepixel/page-builder` / `WearePixel\PageBuilder`) is **no longer recommended for Milestone 0** — naming is explicitly unsettled per the vision document, and committing to it now would contradict that.
-- The internal `Sectionable` → `Composable` rename is **newly recommended**, independent of the product's eventual public name.
-- The audience and product-boundary language throughout (§2, §3, §6) is broadened from "marketing pages" to "any developer-exposed frontend experience," with an explicit, sharpened distinction from Filament/Nova (§3) that the previous draft only implied.
-- The single most consequential change in the plan is re-ranked from "the `FieldType` registry" to "the Component/Page Definition model" (§18) — the `FieldType` registry remains important, but it extends a model that itself had to change first.
+**Second correction** (frontend neutrality): renamed `page_sections.props` to `settings`; removed `mapsToClass()` (first proposed then); introduced `PageBuilder::category()`; and — since reversed by the third correction below — proposed a `LivewireComponentRenderer` alongside `BladeComponentRenderer`, staged as a Blade-0.1/Livewire-0.2/both-1.0 pre-1.0 track.
 
-**A second correction pass** — frontend neutrality ("the package owns composition, the application owns presentation") — is documented in full in `docs/v1-implementation-specification.md`. Its headline changes, reflected above: `page_sections.props` is renamed `page_sections.settings` (§4); `mapsToClass()` is removed rather than retained, in favour of ordinary computed methods on a component's own class (§1, §18); the renderer-driver design corrects an over-pessimistic earlier claim and separates into `BladeComponentRenderer`/`LivewireComponentRenderer` (§11), which pulls Livewire component support forward from Milestone 4 into Milestone 1's pre-1.0 track (§21); and `PageBuilder::category()` is added as a first-class registration API alongside `PageBuilder::component()` (§9).
+**Third correction, this revision** (the authoring model and the renderer simplification): the developer workflow is design → Blade components → registration → settings → categories → optional Page Definition → editor composition, where the _outer_ registered unit is always a Blade component whose own view is free to contain Livewire, Alpine, or anything else the host application already supports, with zero package-level involvement in that nesting. This makes the second correction's `LivewireComponentRenderer`/auto-detection/staged-adapter apparatus unnecessary, not merely simpler to build — it solved a problem (supporting a directly-registered outer Livewire component) that the corrected product model never actually has. Consequences, applied throughout this document:
 
-**Decisions retained:**
+- `LivewireComponentRenderer`, renderer auto-detection, and `->renderer()` are removed. One renderer, `BladeComponentRenderer`, using `<x-dynamic-component>` inside a real compiled Blade view.
+- The Blade-0.1/Livewire-0.2/both-1.0 staged track collapses into a single `0.1 — Composition foundation` release (§21).
+- `Composable` renames to `PageBuilderComponent`; `schema()`/`Schema`/`Field` rename to `settings()`/`Settings`/`Setting`.
+- The `FieldType` registry (the second correction's own headline "most consequential change") is reversed back to a closed, built-in enum for v1 — third-party field-type extensibility is real future work, deferred rather than built, because it isn't required to prove the composition workflow.
+- `AcceptsChildren` and `WrapsContent` are removed from the architecture entirely, not merely left unexercised — v1 composition is a flat list, full stop.
+- The category-to-Page-Definition convenience helper (`->handles()`) is removed — Page Definitions must list concrete component classes by hand.
+- A constructor-inference, PHP-attribute, backed-enum, and typed-value-object authoring model is introduced, materially larger than anything either prior correction specified.
+- A sparse-draft/resolved-publish "effective settings" model and a component settings-version mechanism are introduced — both genuinely load-bearing, both frozen precisely in `docs/v1-implementation-specification.md`.
+- The preview API renames from `previewLayout()` (ambiguous between "a layout" and "a full view") to `previewView()` (one explicit contract), passing an `Htmlable $composition` value object rather than a raw string.
 
-- The `sites` table, introduced now with a single default row and no multi-site UI.
-- The `FieldType` registry replacing the closed enum, and its migration approach (Stage A).
-- The three-table draft/publish/revision model (`pages`/`page_sections`/`page_revisions`), unchanged in shape.
-- The renderer driver seam (`RendererDriver`), and the non-claim that Livewire or Inertia rendering is supported yet.
-- The editor decomposition plan (§7), the settings/navigation/media architecture (§12–§14), the installation system's safe/documented split (§15), the package-asset strategy (§16), and the Gate-based auth model (§17) — none of these were narrowed by the marketing-page framing in the first place, so none needed correcting.
-- The overall five-milestone shape, with Milestone 1's acceptance bar still "install → register → compose → publish → view live in about ten minutes," now demonstrated against a guardrail-bearing page rather than a bare marketing page.
-
-**Decisions deferred (unchanged from the previous draft, restated for completeness):**
-
-- Multi-site/multi-tenant admin UI, custom domains, any hosted/SaaS product.
-- Navigation, richer settings (logo/favicon/social image), to Milestone 2.
-- Global/reusable sections or patterns, a full digital asset manager, to Milestone 3+ or later, only on demonstrated demand.
-- `WrapsContent` and `AcceptsChildren` exercised as real editor-facing features (the model supports them from Milestone 0; the UI for them is Milestone 2/3).
-- A second renderer driver (Livewire, Inertia) and any non-page composition root ("Surface"/"Region"), to Milestone 4 and beyond respectively — the latter is explicitly a seam to preserve, not a feature to build.
-
-**Unresolved decisions requiring sign-off:**
-
-1. **Pulling Page Definitions into Milestone 1** is the largest scope change in this revision. Confirm this is the right trade — it adds real work to the first release in exchange for the guardrail capability the ecommerce use case needs from day one.
-2. **The public package/product name stays unresolved.** Fixture, Lattice, and Inlay are shortlisted in `docs/product-vision.md`, with Fixture recommended, but nothing is decided. This plan proceeds using `PageBuilder` as a neutral facade name and the existing `wearepixel/blade-page-builder` Composer name as a placeholder — confirm that's acceptable to keep building against until naming is settled separately.
-3. **Confirm the `Composable` rename** (from `Sectionable`) is worth doing now, given it touches every existing component and the current test suite, even though it's mechanical and low-risk.
-4. **Confirm `WrapsContent` needing no v1 implementation is correct** — that every anticipated first-release host application is genuinely content wrapping composed output in its own existing Blade layout, with no near-term need for an editor-selectable page shell.
-5. Everything carried over from the previous sign-off list (the `sites` table now, the `FieldType` registry replacement, the compiled admin asset build, and the foundation-first sequencing in §22) still stands and is not being re-litigated here.
+**Decisions retained across all three corrections:** the `sites` table introduced now; the three-table draft/publish/revision model; the Page Definition concept itself (tightened, not removed); the iframe-based preview architecture and its host-owned, package-never-generates-a-layout discipline; the editor decomposition plan; the settings/navigation/media architecture; the installation system's safe/documented split; the package-asset strategy; the Gate-based auth model.
 
 ---
 
 ## Recommended destination
 
-This repository becomes an open-source Laravel package that a developer installs into an existing custom application to get a self-contained, database-backed visual composition layer — owning its own admin interface, routing, publishing, and revisions — while every unit of rendered content stays a real PHP/Blade component the developer wrote and controls, and every unit of business data stays exactly where it already lived. Never generated markup stored as canonical content, never business data copied into the builder to display it, and never a requirement that the host application reorganise itself around the package.
+This repository becomes an open-source Laravel package that a developer installs into an existing custom application to get a self-contained, database-backed visual composition layer — owning its own admin interface, routing, publishing, and revisions — while every unit of rendered content stays a real Blade component the developer wrote and controls, free to use Livewire, Alpine, or anything else inside it, and every unit of business data stays exactly where it already lived. Never generated markup stored as canonical content, never business data copied into the builder to display it, and never a requirement that the host application reorganise itself around the package.
 
 ## What not to build yet
 
-- Multi-site/multi-tenant admin UI (the `sites` table is a schema seam only, not a feature)
-- Custom domains, or any hosted/SaaS product
-- Billing or tenancy UI of any kind
+- Multi-site/multi-tenant admin UI, custom domains, any hosted/SaaS product, billing or tenancy UI
 - Global/reusable sections or a "patterns" library
-- A full digital asset manager — folders, tagging, transformation variants, external media
-- Page Definitions as a visually-buildable thing (they stay code-defined, by developers)
-- Livewire-component or Inertia rendering support (the seam is designed for; the drivers are not built)
-- `WrapsContent`/`AcceptsChildren` as real, editor-facing features (the capabilities exist in the model from Milestone 0; building the UI for them earlier than Milestone 2/3 would be building ahead of demonstrated need)
+- A full digital asset manager
+- Page Definitions as a visually-buildable thing
+- A directly-registrable outer Livewire (or Vue/React/Inertia) component and any adapter for one
+- Nested composition, regions, or an editor-selectable page shell (`AcceptsChildren`/`WrapsContent`) — removed from the architecture, not deferred
+- A third-party-extensible `FieldType` registry — real future work, not v1
+- A category-to-Page-Definition dynamic-membership shortcut
+- A setting-alias mechanism alongside versioned migration
+- `disabledWhen()` conditional field state
+- A database-wide settings-migration Artisan command
 - A generic, arbitrary-key application settings store beyond the fixed, typed CMS settings
-- PHP-attribute-based component registration
 - A plugin system for arbitrary third-party admin pages
-- A separate, non-page composition root ("Surface"/"Region") — the seam is preserved (§4), the concept is not built
-- Any installer behavior that edits `routes/web.php`, a service provider, or the host's Tailwind config
+- Any installer behavior that edits `routes/web.php`, a service provider, or the host's Tailwind/CSS config
 
 ## Decisions requiring your sign-off
 
-Carried forward and updated from the previous draft; see the reconciliation appendix above for the full list with context. In short:
-
-1. **Introduce the `sites` table now.** Recommended: yes (unchanged).
-2. **Replace the `FieldType` enum with a registry/contract.** Recommended: yes (unchanged).
-3. **Rename `Sectionable` to `Composable` now**, independent of the product's public name. Recommended: yes (new).
-4. **Pull minimal Page Definition enforcement into Milestone 1**, ahead of the rest of the visual-composition polish work. Recommended: yes (new, the largest scope change in this revision).
-5. **Leave the Composer package/namespace name unchanged** until naming is resolved separately, rather than renaming to `wearepixel/page-builder` as the previous draft recommended. Recommended: yes (reversed from the previous draft).
-6. **Build no `WrapsContent` implementation in v1**, relying entirely on the host's existing Blade layout to wrap composed output. Recommended: yes, pending confirmation that no near-term host application needs an editor-selectable page shell (new).
+1. **Introduce the `sites` table now.** Recommended: yes (unchanged across all three corrections).
+2. **Rename `Sectionable`/`schema()` to `PageBuilderComponent`/`settings()`.** Recommended: yes.
+3. **Reverse the `FieldType` registry decision** — keep it a closed, built-in enum for v1, defer third-party extensibility. Recommended: yes — this is a genuine reversal of a decision this same document previously called "the single most consequential change," and deserves scrutiny for exactly that reason, not a rubber stamp.
+4. **Remove `AcceptsChildren`/`WrapsContent` from the architecture entirely**, not just leave them unused. Recommended: yes, but confirm no near-term host application has a concrete, demonstrated need for nested composition or multiple selectable page shells.
+5. **Remove the directly-registered outer Livewire renderer, auto-detection, and the Blade/Livewire staged pre-1.0 track**, collapsing to a single `0.1` release. Recommended: yes — this corrects an earlier over-engineering, not a capability loss, since nested Livewire inside a registered Blade component already works with zero adapter.
+6. **Adopt the constructor-inference + attributes + enums + value-objects authoring model, and the sparse-override/resolved-snapshot settings model.** Recommended: yes — this is now the largest, most consequential piece of new architecture in the plan, and the one most worth a careful second read before implementation begins.
 7. **Ship the admin with its own compiled Tailwind/JS build.** Recommended: yes (unchanged).
-8. **Confirm the sequencing in §22** — foundation and guardrail model first, before the first visible admin screens. Recommended: yes (updated to include Page Definition work in the foundation phase).
-9. **Pull Livewire component rendering forward from Milestone 4 into Milestone 1's pre-1.0 track**, per §11's corrected renderer-adapter design. Recommended: yes — but this is a self-correction of an earlier, too-pessimistic claim in this same document, and deserves scrutiny rather than a rubber stamp; the full mechanism is specified in `docs/v1-implementation-specification.md` for exactly that reason.
+8. **Confirm the sequencing in §22** now that it reflects the corrected, collapsed roadmap. Recommended: yes.
