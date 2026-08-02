@@ -188,27 +188,34 @@ The first draft of this specification treated a directly-registered Livewire com
 
 **None of that is necessary**, because the actual developer workflow (§1) never registers a Livewire component as the _outer_ unit at all. A developer translates a design into Blade components. Those components may use Livewire _internally_, in their own view, exactly as any Blade view in any Laravel application already can. The package never needs to know, care, or provide an adapter for that — it is ordinary Blade/Livewire behaviour, entirely owned by the host application.
 
-### The v1 rendering path — one renderer
+### The v1 rendering path — one renderer, empirically verified
+
+**`<x-dynamic-component>` does not accept a fully-qualified class name directly** — confirmed by running it against this package's pinned Laravel/Livewire versions (Laravel 12.63, Livewire 4.3.3, PHP 8.4) before writing any production code: passing a class string throws `Unable to locate a class or view for component [...]`. Per this document's own instruction for exactly this outcome, the renderer resolves each component to a **registered Blade component alias** and renders through that alias instead — never falling back to manual `new $componentClass(...)` construction.
 
 ```php
 final class BladeComponentRenderer
 {
     public function render(string $componentClass, array $settings): string
     {
-        return view('page-builder::render-component', [
-            'component' => $componentClass,
-            'settings' => $settings,
-        ])->render();
+        $alias = 'page-builder-'.md5($componentClass);
+
+        Blade::component($alias, $componentClass); // idempotent; cheap to call on every render
+
+        $bindings = collect(array_keys($settings))
+            ->map(fn (string $key) => ":{$key}=\"\$settings['{$key}']\"")
+            ->implode(' ');
+
+        return Blade::render(
+            "<x-dynamic-component :component=\"\$component\" {$bindings} />",
+            ['component' => $alias, 'settings' => $settings],
+        );
     }
 }
 ```
 
-```blade
-{{-- resources/views/page-builder/render-component.blade.php --}}
-<x-dynamic-component :component="$component" :="$settings" />
-```
+This is a real, compiled Blade template — rendered through Laravel's genuine view/compiler pipeline, not a manual reflection-based invocation. This replaces today's `SectionRenderer`, which constructs each component with bare `new $componentClass(...$props)` and then manually calls `render()->with($data)->render()`, bypassing that pipeline entirely. The fix is not "add a second renderer for Livewire." It is "stop bypassing the view engine for the one renderer that exists," which also happens to be exactly what makes nested Livewire work correctly with zero further effort: because the outer component's own `.blade.php` view is now rendered through Blade's real compiler (as part of `<x-dynamic-component>` resolving and rendering it), any `<livewire:...>` tag or other Blade directive inside that view compiles and renders exactly as it would in any other Laravel view. **This is not a theoretical claim** — `tests/Feature/RendererMechanismSpikeTest.php` proves it directly: a component's own view containing `<livewire:spike-inline-widget />` renders and produces real `wire:snapshot` hydration markup, using this exact alias-based mechanism, with zero package-level Livewire awareness.
 
-This is the one, documented, Laravel-native rendering mechanism for v1: a real compiled Blade view, rendered through `view(...)->render()`, using `<x-dynamic-component>` to resolve a runtime-determined component class. This replaces today's `SectionRenderer`, which constructs each component with bare `new $componentClass(...$props)` and then manually calls `render()->with($data)->render()` — a pattern that bypasses Laravel's real, compiled view-rendering pipeline. The fix is not "add a second renderer for Livewire." It is "stop bypassing the view engine for the one renderer that exists," which also happens to be exactly what makes nested Livewire work correctly with zero further effort: because the outer component's own `.blade.php` view is now rendered through Blade's real compiler (as part of `<x-dynamic-component>` resolving and rendering it), any `<livewire:...>` tag or other Blade directive inside that view compiles and renders exactly as it would in any other Laravel view.
+The spike also confirms two supporting details this mechanism depends on: an enum or `LinkValue` setting is passed to the renderer **already hydrated** (the scalar-to-case and array-to-object conversion is the settings-resolution step's job, §10–§11, not something Blade does automatically), and an **unexposed constructor dependency resolves through Laravel's own container** — `<x-dynamic-component>`'s resolution ultimately calls the container's `make()` with the supplied bindings as named parameters, so a type-hinted, non-exposed parameter (an injected repository or service) is autowired exactly as it would be for any other Blade component, with no special handling needed for it in the renderer at all.
 
 ```blade
 {{-- resources/views/components/hero.blade.php — entirely host-owned --}}
@@ -294,7 +301,7 @@ public function __construct(
 
 `ProductRepository $products` is never a setting — nothing declares it as one. A constructor parameter becomes a page-builder setting **only** when explicitly declared, either by a supported attribute or by an entry in `settings()`. This is what a constructor parameter provides once (and only once) it's exposed this way: PHP type, nullability, enum or value-object type, and runtime default. Everything not exposed is left entirely alone — the renderer never touches, inspects, or attempts to supply a value for a parameter no attribute or `settings()` entry named. This is what makes it structurally true, not merely policy, that **editors can only change what a developer explicitly exposed** (§2's ownership boundary made concrete at the constructor level).
 
-Unexposed, container-resolvable dependencies like `$products` above are satisfied the ordinary way Laravel already resolves Blade components: rendering an outer component through `<x-dynamic-component>` (§5) goes through the service container, which auto-resolves a type-hinted, non-explicitly-supplied constructor parameter exactly as it would for any other Blade component in the application — the renderer supplies data only for the settings it knows about (the exposed ones, plus any matching runtime context), and the container fills in everything else. No special-casing is needed here; it is Laravel's existing behaviour, not new package logic. This is verified directly by the renderer spike (§27).
+Unexposed, container-resolvable dependencies like `$products` above are satisfied the ordinary way Laravel already resolves Blade components: rendering an outer component through `<x-dynamic-component>` (§5) goes through the service container, which auto-resolves a type-hinted, non-explicitly-supplied constructor parameter exactly as it would for any other Blade component in the application — the renderer supplies data only for the settings it knows about (the exposed ones, plus any matching runtime context), and the container fills in everything else. No special-casing is needed here; it is Laravel's existing behaviour, not new package logic. This is verified directly by the renderer spike (§5, `tests/Feature/RendererMechanismSpikeTest.php`).
 
 **Registration must reject an attribute or `settings()` declaration with no corresponding constructor parameter** — the same validation direction as before, now stated alongside its converse: exposure is opt-in per parameter, and a declared setting with no parameter to attach to is a registration-time error, not a runtime one.
 
