@@ -191,11 +191,10 @@ Unchanged in decomposition strategy: one thin `PageEditor` orchestrator plus `Co
 ```php
 interface PageBuilderComponent
 {
-    public static function settings(): Settings;
 }
 ```
 
-Renamed from `Composable` to `PageBuilderComponent` — direct, searchable, and immediately understandable, which matters more here than an abstractly elegant name. `schema()` renames to `settings()`, returning a `Settings` object (§9, `docs/v1-implementation-specification.md`). This is the entire required surface. A component that implements nothing more than this behaves like every component in the current codebase's test fixtures does today.
+Renamed from `Composable` to `PageBuilderComponent` — direct, searchable, and immediately understandable, which matters more here than an abstractly elegant name. **It is a marker interface, not a contract with a required method.** `settings(): Settings` (renamed from `schema(): Schema`) remains fully supported and preferred for complex schemas, but is optional — a component may declare its settings via constructor attributes instead, and requiring `settings()` on the interface itself would make it impossible for an attribute-only component to satisfy the contract, since PHP cannot make an interface method simultaneously required and optional. A component's resolved settings are built from whichever of attributes, `settings()`, or both a class actually declares, merged by setting name with `settings()` taking precedence — full detail, including the rule that a constructor parameter is never an editor setting unless explicitly exposed by one of those two mechanisms, is frozen in `docs/v1-implementation-specification.md` §7–§9 and is not restated here to avoid the two documents drifting on the same detail.
 
 ### A registered component is always a Blade component
 
@@ -342,7 +341,7 @@ A draft `page_sections.settings` row stores only what an editor has explicitly o
 
 ### Component settings versions
 
-A component may declare `public static function settingsVersion(): int` (default `1`), recorded on every stored instance and revision snapshot. A version mismatch at hydration time triggers an in-memory-only `migrateSettings(array $settings, int $fromVersion): array` if the component provides one, or a visible developer/editor warning if it doesn't — never a silent rewrite of stored data, and never a database-wide migration framework in v1. No separate setting-alias mechanism exists alongside this — a simple rename is exactly the "structural change" `migrateSettings()` already handles, and supporting two overlapping mechanisms for the same problem was rejected as needlessly ambiguous.
+A component may declare `public static function settingsVersion(): int` (default `1`), recorded on every stored instance and revision snapshot. A version mismatch at hydration time triggers an in-memory-only `migrateSettings(array $settings, int $fromVersion): array` if the component provides one; if it doesn't, resolution follows the same visitor/draft/publish-blocking distinction specified for an orphaned enum value (`docs/v1-implementation-specification.md` §10) — never a silent rewrite of stored data, and never a database-wide migration framework in v1. No separate setting-alias mechanism exists alongside this — a simple rename is exactly the "structural change" `migrateSettings()` already handles, and supporting two overlapping mechanisms for the same problem was rejected as needlessly ambiguous.
 
 ---
 

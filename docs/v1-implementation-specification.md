@@ -267,11 +267,36 @@ One registration verb for the one renderable concept (`component`/`components`),
 ```php
 interface PageBuilderComponent
 {
-    public static function settings(): Settings;
 }
 ```
 
-**Named `PageBuilderComponent`, not `Composable`.** An earlier draft used the more abstract `Composable`; this revision uses a direct, searchable name a Laravel developer immediately understands, which matters more here than abstract elegance. The one required method is `settings(): Settings`, not `schema(): Schema` — the public vocabulary is "settings" throughout; internally, the package may still represent a built definition however is convenient, but that is an implementation detail, not something a developer needs to know.
+**`PageBuilderComponent` is a marker interface — it declares no methods.** An earlier draft of this document required `public static function settings(): Settings` on the interface itself, which is incompatible with also permitting attribute-only components that declare no `settings()` method at all — PHP cannot make an interface method simultaneously required and optional. `settings()` remains fully supported and is preferred for complex schemas, but it is one of two ways a component may declare its editor-facing metadata, not a contractual requirement:
+
+```php
+public static function settings(): Settings; // optional — present on the class if used
+```
+
+The registry builds a component's resolved settings definition from up to three sources: constructor-property attributes (§9), the optional fluent `settings()` method, and registration-time metadata (a category, icon, or description supplied to `PageBuilder::component()`). Where both attributes and `settings()` declare the same setting, the fluent declaration overrides the attribute's metadata for that setting. Constructor PHP type, nullability, and default value are authoritative regardless of which style declared the field. **No trait is required merely to make an attribute-only component valid** — the marker interface plus attributes on the constructor is sufficient on its own.
+
+### A constructor parameter is not a setting unless explicitly exposed
+
+Not every constructor parameter is an editor setting. A component's constructor may contain injected services and internal application dependencies that must never become editable:
+
+```php
+public function __construct(
+    private ProductRepository $products,
+    #[Text(label: 'Heading')]
+    public string $heading = 'Featured products',
+    #[Number(label: 'Limit')]
+    public int $limit = 8,
+) {}
+```
+
+`ProductRepository $products` is never a setting — nothing declares it as one. A constructor parameter becomes a page-builder setting **only** when explicitly declared, either by a supported attribute or by an entry in `settings()`. This is what a constructor parameter provides once (and only once) it's exposed this way: PHP type, nullability, enum or value-object type, and runtime default. Everything not exposed is left entirely alone — the renderer never touches, inspects, or attempts to supply a value for a parameter no attribute or `settings()` entry named. This is what makes it structurally true, not merely policy, that **editors can only change what a developer explicitly exposed** (§2's ownership boundary made concrete at the constructor level).
+
+Unexposed, container-resolvable dependencies like `$products` above are satisfied the ordinary way Laravel already resolves Blade components: rendering an outer component through `<x-dynamic-component>` (§5) goes through the service container, which auto-resolves a type-hinted, non-explicitly-supplied constructor parameter exactly as it would for any other Blade component in the application — the renderer supplies data only for the settings it knows about (the exposed ones, plus any matching runtime context), and the container fills in everything else. No special-casing is needed here; it is Laravel's existing behaviour, not new package logic. This is verified directly by the renderer spike (§27).
+
+**Registration must reject an attribute or `settings()` declaration with no corresponding constructor parameter** — the same validation direction as before, now stated alongside its converse: exposure is opt-in per parameter, and a declared setting with no parameter to attach to is a registration-time error, not a runtime one.
 
 ```php
 final class Hero extends Component implements PageBuilderComponent
@@ -348,13 +373,29 @@ public static function settings(): Settings
 
 The package infers the default heading, the default toggle state, the enum type, and nullability, all from the constructor. **Reflection happens at registration time in development, and once, at compiled-manifest-build time, for production** (§16) — never repeated on every render request.
 
+### Constructor defaults are the exclusive source of truth for top-level settings
+
+For a setting that maps directly to a top-level constructor parameter, **the constructor default is the only permitted default — there is no competing schema-level default for the same setting.** An earlier draft of this document allowed `->text('heading')->default('Welcome')` as an escape hatch alongside a constructor default. That escape hatch is removed for top-level settings: there must be exactly one runtime source of truth, and permitting two (even if they're expected to agree) invites exactly the kind of silent drift this whole authoring model exists to prevent.
+
+```php
+public string $heading = 'Welcome'; // authoritative — the only default
+```
+
+```php
+->text('heading')->default('Welcome'); // not permitted for a top-level, constructor-backed setting
+```
+
+**A required, non-nullable, top-level exposed setting with no constructor default fails registration.** It does not fall back to a schema-level default instead — there is no schema-level default to fall back to for a top-level setting, by design.
+
+**Schema-level defaults remain legitimate only where structurally necessary: inside a `repeater` or `group` field's own item sub-schema, for a sub-field that doesn't map to a top-level constructor parameter of the outer component at all.** A repeater's stored value is an array of items (§12); an individual item's sub-fields aren't named constructor parameters of `Hero` or `CollectionPage` — they're keys within one array-typed constructor parameter (`public array $testimonials = []`). There is no constructor to reflect a per-sub-field default from in that case, so `->text('quote')->default('')` inside a repeater's item schema is the correct, and only, place a schema-level default belongs. The boundary is exact: a schema-level default is permitted exactly where there is no corresponding top-level constructor parameter to be authoritative instead, never as an alternative to one that exists.
+
 ### Registration-time validation
 
 The following fail immediately, with a clear developer-facing exception, at the point a component is registered — never discovered later at render time:
 
-- A `settings()` field with no matching constructor parameter.
+- An attribute or `settings()` field with no matching constructor parameter (§7).
 - A `select`'s declared enum (via `->options(EnumClass::class)`) that doesn't match the constructor parameter's actual type-hint.
-- A required, non-nullable constructor parameter with no default and no explicit `settings()`-level `->default(...)` override.
+- A required, non-nullable, top-level constructor parameter with no default — with no schema-level default permitted to substitute for it (see above).
 - A duplicate setting name declared twice.
 
 ---
@@ -426,7 +467,17 @@ enum ImageSize: string implements SettingOptions
     ->options(ImageSize::class)
 ```
 
-The package displays labeled options in the admin, persists the backed scalar value (`'small'`), hydrates the enum case before constructing the Blade component, validates that a stored value corresponds to a real case, and falls back to the constructor default if it doesn't (an orphaned value from a removed case is treated identically to "no override present," not as an error). `SettingOptions` (a lightweight interface with one method, `label(): string`) is only needed when labels can't be derived sensibly — an enum that doesn't implement it gets a convention-derived label from its case name (`Str::headline($case->name)`).
+The package displays labeled options in the admin, persists the backed scalar value (`'small'`), hydrates the enum case before constructing the Blade component, and validates that a stored value corresponds to a real case. `SettingOptions` (a lightweight interface with one method, `label(): string`) is only needed when labels can't be derived sensibly — an enum that doesn't implement it gets a convention-derived label from its case name (`Str::headline($case->name)`).
+
+### Orphaned enum values are never silently substituted in every context alike
+
+A stored value that no longer corresponds to a real enum case (a case was removed after content referencing it was created) is not treated the same way everywhere — an earlier draft of this document silently fell back to the constructor default in all contexts, which hides a real content problem from the one audience (an editor or developer) positioned to fix it:
+
+- **Public rendering**: use the constructor default, log a structured warning (component handle, field name, orphaned value, page id), and continue rendering normally. A visitor never sees an error.
+- **Draft/admin preview**: use the constructor default _and_ render a visible, specific warning in the preview output — the same inline-placeholder mechanism used for a broken or missing-context component (`docs/product-redirection-plan.md` §11) — so the person who can fix it sees that something needs attention.
+- **Publishing**: **block publication** until the invalid setting is corrected or migrated. `PublishPage` resolves every component's effective settings before writing a new revision; if any resolution encounters an orphaned enum value, the publish action fails with a specific, actionable error naming the component and field, rather than freezing a known-bad value into a historical snapshot.
+
+The same distinction — warn-and-continue for visitors, visible warning for editors, hard block at publish — applies to a failed settings-version migration where no `migrateSettings()` path exists for the stored version (§14): the visitor and admin behaviour mirror the enum case exactly, and publishing a component with settings that can't be resolved against its current definition is blocked for the same reason.
 
 ---
 
@@ -545,7 +596,7 @@ public static function migrateSettings(array $settings, int $fromVersion): array
 }
 ```
 
-If no migration path exists for the version gap, hydration proceeds as best it can and produces a clear developer/editor warning — treated with the same visible-to-editors, silent-to-visitors discipline as a broken component (`docs/product-redirection-plan.md` §11) — rather than a silent, potentially-incorrect render.
+If no migration path exists for the version gap, resolution follows the same visitor/draft/publish distinction specified for an orphaned enum value (§10): warn and continue for a visitor, a visible warning in draft/preview, and a hard block at publish.
 
 **Migration is in-memory only, on every hydration of an old-versioned record, and never persists a rewrite back to the database merely because a page was viewed or rendered.** A future explicit command could someday bulk-upgrade stored records and bump their recorded version — genuinely future work, not built now. No database-wide migration framework and no Artisan migration generator ship in v1.
 
