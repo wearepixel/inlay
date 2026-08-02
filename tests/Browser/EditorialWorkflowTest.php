@@ -36,7 +36,7 @@ it('creates a page from the index and opens its editor', function () {
         ->press('Create page')
         // Livewire's redirectRoute() after save() lands here.
         ->assertSee('Home')
-        ->assertSee('No components yet.');
+        ->assertSee('This page has no Components yet.');
 
     expect(Page::sole())
         ->title->toBe('Home')
@@ -116,6 +116,13 @@ it('duplicates, shows drag connectivity, and deletes a component', function () {
 
     expect($page->sections()->count())->toBe(2);
     $duplicate = $page->sections()->where('id', '!=', $section->id)->sole();
+
+    // Duplicating selects the copy and opens its settings in the
+    // contextual sidebar - the tree itself is a separate pane now, not
+    // visible alongside it, so interacting with tree rows again means
+    // going back first, exactly as a real editor would.
+    $editor->assertVisible('@back-to-components')
+        ->click('@back-to-components');
 
     // Proves the drag UI is connected (both rows are draggable handles
     // wired to the same Alpine component that calls $wire.updateOrder()) -

@@ -17,6 +17,14 @@ final class Settings
 
     private ?Setting $lastField = null;
 
+    /**
+     * An explicit override for the tree/settings-header instance label (see
+     * SectionInstanceLabel) - a schema-level declaration rather than a
+     * per-field one, since it names which *already-declared* field to read,
+     * not a new field of its own.
+     */
+    private ?string $instanceLabelField = null;
+
     public static function make(): self
     {
         return new self;
@@ -253,6 +261,26 @@ final class Settings
         }
 
         return $labels;
+    }
+
+    /**
+     * Names a short text field whose value should identify this component's
+     * instance in the tree and settings header (e.g. "Hero - 'Welcome'")
+     * instead of the deterministic heading/title/name/label heuristic
+     * SectionInstanceLabel otherwise falls back to. Only meaningful for a
+     * FieldType::Text field - naming anything else is simply ignored, the
+     * same as the heuristic ignoring one.
+     */
+    public function instanceLabel(string $field): self
+    {
+        $this->instanceLabelField = $field;
+
+        return $this;
+    }
+
+    public function instanceLabelField(): ?string
+    {
+        return $this->instanceLabelField;
     }
 
     public function field(string $name): ?Setting

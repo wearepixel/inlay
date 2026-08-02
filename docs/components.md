@@ -160,6 +160,24 @@ $settings->link('cta')->label('Button')->badge('New');
 
 A required field (`->required()`) that's currently empty shows a calm inline hint in the inspector, not an alarming one - being unfilled while a page is mid-composition is a normal state, not an error.
 
+## Instance labels
+
+The component tree identifies each row by the component's display name plus a short instance detail, so a page with three `Hero` components reads as `Hero - "Welcome"`, `Hero - "Our story"`, `Hero - "Get in touch"` rather than three indistinguishable `hero` rows. By default this is a deterministic heuristic (`WearePixel\Inlay\Support\SectionInstanceLabel`) that checks, in order, a setting named `heading`, `title`, `name`, or `label`, then falls back to the first declared `text()` setting - always a short plain-text field, never a `textarea()`, `richtext()`, `image()`, `select()`, `repeater()`, or `group()`, so a list label can never surface long-form, structured, or sensitive content.
+
+If none of those names fit, name the field explicitly instead of relying on the guess:
+
+```php
+public static function settings(): Settings
+{
+    return Settings::make()
+        ->text('eyebrow')->label('Eyebrow')
+        ->text('headline')->label('Headline')
+        ->instanceLabel('headline');
+}
+```
+
+`instanceLabel()` only takes effect for a `text()` field - naming anything else is simply ignored, the same as the heuristic ignoring one. This is deliberately the only instance-naming mechanism the editor has: there is no separate, arbitrary "rename this component" field independent of its actual settings, since that would need its own storage and its own place in the inspector for what the heuristic (or an explicit `instanceLabel()`) already covers in the common case.
+
 ## Mixing attributes and fluent definitions
 
 A single component can declare some settings via attributes and others via `settings()`. When both declare a field with the **same name**, the fluent declaration wins - the merge adopts every fluent field first, then adopts any attribute-declared field whose name wasn't already claimed. In practice this means: use attributes for the ordinary case, and drop into `settings()` only for the field that needs a repeater, a hand-tuned option list, or anything else attributes can't express - the two fields never actually collide unless you specifically override one.

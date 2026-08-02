@@ -19,8 +19,12 @@ it('renders the section list with drag data attributes, the add-section picker, 
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->assertSee('data-section-id="'.$section->id.'"', escape: false)
-        ->assertSee('test-hero')
-        ->assertSeeHtml('x-data="inlaySortableTree"')
+        // The tree shows the component's registered display name and an
+        // instance detail guessed from its "heading" setting, not the raw
+        // handle - see SectionInstanceLabel.
+        ->assertSee('Hero')
+        ->assertSee('Hi')
+        ->assertSeeHtml('x-data="inlayEditorSidebar')
         ->assertSee('Publish')
         ->call('openPicker')
         ->assertSeeHtml('wire:click="addSection(\'test-hero\')"');

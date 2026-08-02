@@ -19,6 +19,8 @@ use WearePixel\Inlay\Models\PageSection;
 use WearePixel\Inlay\Schema\FieldType;
 use WearePixel\Inlay\Schema\Setting;
 use WearePixel\Inlay\Schema\Settings;
+use WearePixel\Inlay\Support\ComponentDefinition;
+use WearePixel\Inlay\Support\SectionInstanceLabel;
 use WearePixel\Inlay\Support\SectionRegistry;
 use WearePixel\Inlay\Support\SectionRenderer;
 
@@ -107,6 +109,12 @@ final class PageEditor extends Component
         $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($definition, []);
         $this->showingPicker = false;
         $this->bumpPreview();
+
+        // The picker has no way to optimistically switch the contextual
+        // sidebar to this brand new section's settings client-side - unlike
+        // a tree row click, its id doesn't exist until this method creates
+        // it - so the client learns which one to show from this event.
+        $this->dispatch('section-selected', id: $section->id);
     }
 
     public function duplicateSection(int $sectionId): void
@@ -126,6 +134,10 @@ final class PageEditor extends Component
         $this->selectedSectionId = $duplicate->id;
         $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($definition, $duplicate->settings ?? []);
         $this->bumpPreview();
+
+        // Same reasoning as addSection() - the duplicate's id doesn't exist
+        // client-side until this method creates it.
+        $this->dispatch('section-selected', id: $duplicate->id);
     }
 
     public function deleteSection(int $sectionId): void
@@ -137,6 +149,7 @@ final class PageEditor extends Component
         if ($this->selectedSectionId === $sectionId) {
             $this->selectedSectionId = null;
             $this->editingProps = [];
+            $this->dispatch('selection-cleared');
         }
 
         $this->bumpPreview();
@@ -206,6 +219,12 @@ final class PageEditor extends Component
     public function toggleHistory(): void
     {
         $this->showingHistory = ! $this->showingHistory;
+
+        // The contextual sidebar has no server-rendered "history" state of
+        // its own to react to - it decides what to show entirely
+        // client-side (see inlayEditorSidebar in inlay.js), so it needs to
+        // be told explicitly rather than inferring this from a prop change.
+        $this->dispatch('history-toggled', showing: $this->showingHistory);
     }
 
     public function restore(int $revisionId): void
@@ -219,16 +238,50 @@ final class PageEditor extends Component
         $this->showingHistory = false;
         $this->bumpPreview();
         $this->dispatch('revision-restored');
+        $this->dispatch('selection-cleared');
     }
 
     public function render(): View
     {
-        $schema = $this->resolveSelectedSettings();
+        $sections = $this->page->sections()->orderBy('order')->get();
+        $selectedSection = $this->selectedSectionId
+            ? $sections->firstWhere('id', $this->selectedSectionId)
+            : null;
+
+        if ($this->selectedSectionId && ! $selectedSection) {
+            // The selected component no longer exists - deleted from
+            // another tab or session, since this session's own delete and
+            // restore() already clear selectedSectionId themselves before
+            // reaching here. Fall back to the component tree rather than
+            // rendering a settings pane for a component that's gone.
+            $this->selectedSectionId = null;
+            $this->editingProps = [];
+            $this->dispatch('selection-cleared');
+        }
+
+        $selectedDefinition = $selectedSection
+            ? app(SectionRegistry::class)->definition($selectedSection->handle)
+            : null;
+
+        $schema = $selectedDefinition?->settings;
         $components = collect(app(SectionRegistry::class)->all());
 
         return view('inlay::livewire.page-editor', [
             'title' => "{$this->page->title} · Inlay",
-            'sections' => $this->page->sections()->orderBy('order')->get(),
+            'sections' => $sections,
+            // Display name + a best-guess instance detail (e.g. "Hero" /
+            // "Welcome") for every section in the tree - see
+            // SectionInstanceLabel. Keyed by section id so the view doesn't
+            // need to re-resolve each component's definition itself.
+            'sectionLabels' => $sections->mapWithKeys(fn (PageSection $section) => [
+                $section->id => $this->instanceLabel(
+                    app(SectionRegistry::class)->definition($section->handle),
+                    $section->settings ?? [],
+                ),
+            ]),
+            'selectedInstance' => $selectedDefinition
+                ? $this->instanceLabel($selectedDefinition, $selectedSection->settings ?? [])
+                : null,
             'availableComponents' => $components->groupBy(fn ($component) => $component->category),
             // A slug => {label, icon} lookup for the component picker's
             // "recent" row, which tracks recently-added handles client-side
@@ -242,6 +295,18 @@ final class PageEditor extends Component
             'previewUrl' => $this->previewUrl(),
             'revisions' => $this->page->revisions()->get(),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $storedSettings
+     * @return array{name: string, detail: ?string}
+     */
+    private function instanceLabel(ComponentDefinition $definition, array $storedSettings): array
+    {
+        return [
+            'name' => $definition->name,
+            'detail' => SectionInstanceLabel::detail($definition, $storedSettings),
+        ];
     }
 
     /**
@@ -298,23 +363,6 @@ final class PageEditor extends Component
     private function bumpPreview(): void
     {
         $this->previewVersion++;
-    }
-
-    private function resolveSelectedSettings(): ?Settings
-    {
-        if (! $this->selectedSectionId) {
-            return null;
-        }
-
-        $section = PageSection::whereKey($this->selectedSectionId)
-            ->where('page_id', $this->page->id)
-            ->first();
-
-        if (! $section) {
-            return null;
-        }
-
-        return app(SectionRegistry::class)->definition($section->handle)->settings;
     }
 
     /**

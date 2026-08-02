@@ -30,139 +30,184 @@
         </div>
     </div>
 
-    <div class="inlay-editor">
-        <div class="inlay-editor__column">
-            <div class="inlay-editor__heading">
-                <span class="inlay-eyebrow">Components</span>
-                <button type="button" wire:click="openPicker" data-test="open-picker" class="inlay-button inlay-button--small inlay-button--primary">+ Add</button>
-            </div>
-
-            <ul class="inlay-tree" x-data="inlaySortableTree" x-ref="list" role="listbox" aria-label="Page components">
-                @forelse ($sections as $section)
-                    <li
-                        data-section-id="{{ $section->id }}"
-                        data-test="tree-item-{{ $section->id }}"
-                        wire:key="section-{{ $section->id }}"
-                        wire:click="selectSection({{ $section->id }})"
-                        draggable="true"
-                        tabindex="0"
-                        role="option"
-                        aria-selected="{{ $selectedSectionId === $section->id ? 'true' : 'false' }}"
-                        x-on:dragstart="dragStart({{ $section->id }})"
-                        x-on:dragover="dragOver($event)"
-                        x-on:drop="drop({{ $section->id }})"
-                        x-on:keydown.enter.prevent="$el.click()"
-                        x-on:keydown.down.prevent.stop="focusAdjacentRow({{ $section->id }}, 1)"
-                        x-on:keydown.up.prevent.stop="focusAdjacentRow({{ $section->id }}, -1)"
-                        x-on:keydown.alt.down.prevent.stop="moveRow({{ $section->id }}, 1)"
-                        x-on:keydown.alt.up.prevent.stop="moveRow({{ $section->id }}, -1)"
-                        x-on:keydown.delete.prevent="$el.querySelector('[data-test^=delete-]')?.click()"
-                        class="inlay-tree__item {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}"
-                    >
-                        <span class="inlay-tree__handle" data-test="drag-handle-{{ $section->id }}" aria-hidden="true">::</span>
-                        <span class="inlay-tree__label">{{ $section->handle }}</span>
-                        <span class="inlay-tree__actions">
-                            <button type="button" wire:click.stop="duplicateSection({{ $section->id }})" data-test="duplicate-{{ $section->id }}" class="inlay-tree__icon-button" title="Duplicate" aria-label="Duplicate {{ $section->handle }}">&#10697;</button>
-                            <button
-                                type="button"
-                                wire:click.stop="deleteSection({{ $section->id }})"
-                                wire:confirm="Remove this component from the page?"
-                                data-test="delete-{{ $section->id }}"
-                                class="inlay-tree__icon-button inlay-tree__icon-button--danger"
-                                title="Delete"
-                                aria-label="Delete {{ $section->handle }}"
-                            >&times;</button>
-                        </span>
-                    </li>
-                @empty
-                    <li class="inlay-empty-state">
-                        No components yet. Click <strong>+ Add</strong> to choose one from the picker.
-                    </li>
-                @endforelse
-            </ul>
-
-            @if ($showingHistory)
-                <p class="inlay-eyebrow" style="margin-top: 20px;">Version history</p>
-                <ul class="inlay-history">
-                    @forelse ($revisions as $revision)
-                        <li class="inlay-history__item">
-                            <span>{{ $revision->label ?? $revision->created_at->diffForHumans() }}</span>
-                            <button type="button" wire:click="restore({{ $revision->id }})" data-test="restore-{{ $revision->id }}" class="inlay-button inlay-button--small">Restore</button>
-                        </li>
-                    @empty
-                        <li class="inlay-empty-state">No revisions yet - publish this page to create the first one.</li>
-                    @endforelse
-                </ul>
-            @endif
+    <div
+        class="inlay-editor"
+        x-data="inlayEditorSidebar(@js($showingHistory ? 'history' : ($selectedSchema ? 'settings' : 'tree')), @js($selectedSectionId))"
+        x-on:section-selected.window="showSettings($event.detail.id)"
+        x-on:selection-cleared.window="toTree()"
+        x-on:history-toggled.window="onHistoryToggled($event.detail.showing)"
+        x-on:keydown.escape.window="onEscape()"
+    >
+        <div class="inlay-mobile-tabs" role="tablist" aria-label="Editor panel">
+            <button type="button" role="tab" data-test="mobile-panel-edit" class="inlay-mobile-tabs__tab" :class="mobilePanel === 'edit' ? 'is-active' : ''" :aria-selected="(mobilePanel === 'edit').toString()" x-on:click="mobilePanel = 'edit'">Edit</button>
+            <button type="button" role="tab" data-test="mobile-panel-preview" class="inlay-mobile-tabs__tab" :class="mobilePanel === 'preview' ? 'is-active' : ''" :aria-selected="(mobilePanel === 'preview').toString()" x-on:click="mobilePanel = 'preview'">Preview</button>
         </div>
 
-        <div class="inlay-editor__column">
-            <div class="inlay-editor__heading">
-                <span class="inlay-eyebrow">Settings</span>
-            </div>
+        <p class="inlay-sr-only" role="status" aria-live="polite" x-text="announcement()"></p>
 
-            @if ($selectedSchema)
-                <div x-data="{ activeTab: 0 }">
-                    @if ($inspectorTabs->count() > 1)
-                        <div class="inlay-tabs" role="tablist">
-                            @foreach ($inspectorTabs as $index => $tab)
+        <div class="inlay-editor__sidebar" :class="mobilePanel === 'preview' ? 'inlay-mobile-hide' : ''">
+
+            {{-- Component tree (default sidebar state) --}}
+            <div x-show="view === 'tree'" x-cloak>
+                <div class="inlay-editor__heading">
+                    <span class="inlay-eyebrow">Components</span>
+                    <button type="button" wire:click="openPicker" data-test="open-picker" class="inlay-button inlay-button--small inlay-button--primary">+ Add</button>
+                </div>
+
+                <ul class="inlay-tree" x-ref="list" role="listbox" aria-label="Page components">
+                    @forelse ($sections as $section)
+                        <li
+                            data-section-id="{{ $section->id }}"
+                            data-test="tree-item-{{ $section->id }}"
+                            wire:key="section-{{ $section->id }}"
+                            wire:click="selectSection({{ $section->id }})"
+                            x-on:click="showSettings({{ $section->id }})"
+                            draggable="true"
+                            tabindex="0"
+                            role="option"
+                            aria-selected="{{ $selectedSectionId === $section->id ? 'true' : 'false' }}"
+                            x-on:dragstart="dragStart({{ $section->id }})"
+                            x-on:dragover="dragOver($event)"
+                            x-on:drop="drop({{ $section->id }})"
+                            x-on:keydown.enter.prevent="$el.click()"
+                            x-on:keydown.down.prevent.stop="focusAdjacentRow({{ $section->id }}, 1)"
+                            x-on:keydown.up.prevent.stop="focusAdjacentRow({{ $section->id }}, -1)"
+                            x-on:keydown.alt.down.prevent.stop="moveRow({{ $section->id }}, 1)"
+                            x-on:keydown.alt.up.prevent.stop="moveRow({{ $section->id }}, -1)"
+                            x-on:keydown.delete.prevent="$el.querySelector('[data-test^=delete-]')?.click()"
+                            class="inlay-tree__item {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}"
+                        >
+                            <span class="inlay-tree__handle" data-test="drag-handle-{{ $section->id }}" aria-hidden="true">::</span>
+                            <span class="inlay-tree__label">
+                                <span class="inlay-tree__label-name">{{ $sectionLabels[$section->id]['name'] }}</span>
+                                @if ($sectionLabels[$section->id]['detail'])
+                                    <span class="inlay-tree__label-detail">- &ldquo;{{ $sectionLabels[$section->id]['detail'] }}&rdquo;</span>
+                                @endif
+                            </span>
+                            <span class="inlay-tree__actions">
+                                <button type="button" wire:click.stop="duplicateSection({{ $section->id }})" data-test="duplicate-{{ $section->id }}" class="inlay-tree__icon-button" title="Duplicate" aria-label="Duplicate {{ $sectionLabels[$section->id]['name'] }}">&#10697;</button>
                                 <button
                                     type="button"
-                                    role="tab"
-                                    class="inlay-tabs__tab"
-                                    :class="activeTab === {{ $index }} ? 'is-active' : ''"
-                                    :aria-selected="(activeTab === {{ $index }}).toString()"
-                                    x-on:click="activeTab = {{ $index }}"
-                                >{{ $tab['label'] }}</button>
-                            @endforeach
-                        </div>
-                    @endif
+                                    wire:click.stop="deleteSection({{ $section->id }})"
+                                    wire:confirm="Remove this component from the page?"
+                                    data-test="delete-{{ $section->id }}"
+                                    class="inlay-tree__icon-button inlay-tree__icon-button--danger"
+                                    title="Delete"
+                                    aria-label="Delete {{ $sectionLabels[$section->id]['name'] }}"
+                                >&times;</button>
+                            </span>
+                        </li>
+                    @empty
+                        <li class="inlay-empty-state inlay-empty-state--tree">
+                            <p class="inlay-empty-state__title">No components yet</p>
+                            <p>This page has no Components yet. Add a Component to begin composing the page.</p>
+                        </li>
+                    @endforelse
+                </ul>
+            </div>
 
-                    @foreach ($inspectorTabs as $index => $tab)
-                        <div role="tabpanel" @if ($inspectorTabs->count() > 1) x-show="activeTab === {{ $index }}" @endif>
-                            @foreach ($tab['groups'] as $group)
-                                @if ($group['label'])
-                                    <div class="inlay-group-section" x-data="inlayCollapsibleGroup(@js($group['label']), false)">
-                                        <button
-                                            type="button"
-                                            class="inlay-group-section__header"
-                                            x-on:click="toggle()"
-                                            :aria-expanded="(!collapsed).toString()"
-                                        >
-                                            {{ $group['label'] }}
-                                            <span class="inlay-group-section__chevron" :class="collapsed ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
-                                        </button>
-                                        <div class="inlay-group-section__body" x-show="!collapsed" x-transition>
-                                            @foreach ($group['fields'] as $field)
-                                                <div @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
-                                                    @include('inlay::fields.' . $field->type->value, [
-                                                        'field' => $field,
-                                                        'modelPath' => "editingProps.{$field->name}",
-                                                    ])
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @else
-                                    @foreach ($group['fields'] as $field)
-                                        <div @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
-                                            @include('inlay::fields.' . $field->type->value, [
-                                                'field' => $field,
-                                                'modelPath' => "editingProps.{$field->name}",
-                                            ])
-                                        </div>
-                                    @endforeach
-                                @endif
-                            @endforeach
-                        </div>
-                    @endforeach
+            {{-- Settings inspector (shown while a component is selected) --}}
+            <div x-show="view === 'settings'" x-cloak>
+                <div class="inlay-editor__heading">
+                    <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-to-components">
+                        <span aria-hidden="true">&larr;</span> Components
+                    </button>
                 </div>
-            @else
-                <p class="inlay-inspector__empty">Select a component on the left to edit its settings.</p>
+
+                @if ($selectedInstance)
+                    <h2 class="inlay-instance-heading">
+                        {{ $selectedInstance['name'] }}
+                        @if ($selectedInstance['detail'])
+                            <span class="inlay-instance-heading__detail">- &ldquo;{{ $selectedInstance['detail'] }}&rdquo;</span>
+                        @endif
+                    </h2>
+                @endif
+
+                @if ($selectedSchema)
+                    <div x-data="{ activeTab: 0 }">
+                        @if ($inspectorTabs->count() > 1)
+                            <div class="inlay-tabs" role="tablist">
+                                @foreach ($inspectorTabs as $index => $tab)
+                                    <button
+                                        type="button"
+                                        role="tab"
+                                        class="inlay-tabs__tab"
+                                        :class="activeTab === {{ $index }} ? 'is-active' : ''"
+                                        :aria-selected="(activeTab === {{ $index }}).toString()"
+                                        x-on:click="activeTab = {{ $index }}"
+                                    >{{ $tab['label'] }}</button>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @foreach ($inspectorTabs as $index => $tab)
+                            <div role="tabpanel" @if ($inspectorTabs->count() > 1) x-show="activeTab === {{ $index }}" @endif>
+                                @foreach ($tab['groups'] as $group)
+                                    @if ($group['label'])
+                                        <div class="inlay-group-section" x-data="inlayCollapsibleGroup(@js($group['label']), false)">
+                                            <button
+                                                type="button"
+                                                class="inlay-group-section__header"
+                                                x-on:click="toggle()"
+                                                :aria-expanded="(!collapsed).toString()"
+                                            >
+                                                {{ $group['label'] }}
+                                                <span class="inlay-group-section__chevron" :class="collapsed ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+                                            </button>
+                                            <div class="inlay-group-section__body" x-show="!collapsed" x-transition>
+                                                @foreach ($group['fields'] as $field)
+                                                    <div @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
+                                                        @include('inlay::fields.' . $field->type->value, [
+                                                            'field' => $field,
+                                                            'modelPath' => "editingProps.{$field->name}",
+                                                        ])
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @else
+                                        @foreach ($group['fields'] as $field)
+                                            <div @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
+                                                @include('inlay::fields.' . $field->type->value, [
+                                                    'field' => $field,
+                                                    'modelPath' => "editingProps.{$field->name}",
+                                                ])
+                                            </div>
+                                        @endforeach
+                                    @endif
+                                @endforeach
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="inlay-inspector__empty">Select a component from the list to edit its settings.</p>
+                @endif
+            </div>
+
+            {{-- Version history --}}
+            @if ($showingHistory)
+                <div x-show="view === 'history'" x-cloak>
+                    <div class="inlay-editor__heading">
+                        <button type="button" class="inlay-back-link" wire:click="toggleHistory" data-test="close-history">
+                            <span aria-hidden="true">&larr;</span> Components
+                        </button>
+                    </div>
+                    <p class="inlay-eyebrow">Version history</p>
+                    <ul class="inlay-history">
+                        @forelse ($revisions as $revision)
+                            <li class="inlay-history__item">
+                                <span>{{ $revision->label ?? $revision->created_at->diffForHumans() }}</span>
+                                <button type="button" wire:click="restore({{ $revision->id }})" data-test="restore-{{ $revision->id }}" class="inlay-button inlay-button--small">Restore</button>
+                            </li>
+                        @empty
+                            <li class="inlay-empty-state">No revisions yet - publish this page to create the first one.</li>
+                        @endforelse
+                    </ul>
+                </div>
             @endif
         </div>
 
-        <div class="inlay-editor__column">
+        <div class="inlay-editor__preview-column" :class="mobilePanel === 'edit' ? 'inlay-mobile-hide' : ''">
             <div class="inlay-preview" x-data="inlayViewportSelector">
                 <div class="inlay-preview__toolbar">
                     <span>Preview</span>
@@ -192,7 +237,18 @@
             x-on:keydown.enter.window.prevent="chooseHighlighted()"
             wire:click.self="closePicker"
         >
-            <div class="inlay-picker__panel" role="dialog" aria-modal="true" aria-label="Add a component">
+            <div
+                class="inlay-picker__panel"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Add a component"
+                x-transition:enter="inlay-picker__panel-enter"
+                x-transition:enter-start="inlay-picker__panel-enter-start"
+                x-transition:enter-end="inlay-picker__panel-enter-end"
+                x-transition:leave="inlay-picker__panel-leave"
+                x-transition:leave-start="inlay-picker__panel-leave-start"
+                x-transition:leave-end="inlay-picker__panel-leave-end"
+            >
                 <div class="inlay-picker__search-row">
                     <input
                         type="text"

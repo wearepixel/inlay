@@ -113,11 +113,16 @@
 .inlay-main {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .inlay-topbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   padding: 20px 32px;
   border-bottom: 1px solid var(--inlay-border);
@@ -127,6 +132,7 @@
 .inlay-topbar__actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -303,20 +309,34 @@
 
 /* Editor layout */
 
+/*
+ * A contextual sidebar (structure OR settings, never both) plus a dominant
+ * preview - the preview is the point of a visual composition tool, not the
+ * settings form. 360px keeps the sidebar a stable width appropriate for
+ * forms regardless of how many settings a component declares (its own
+ * content scrolls internally - see .inlay-editor__sidebar overflow-y -
+ * rather than ever changing the column width); at common desktop widths
+ * that leaves the preview at roughly 70-75% of the editor's width, per the
+ * brief for the editor's own layout redesign.
+ */
 .inlay-editor {
   display: grid;
-  grid-template-columns: 260px 320px 1fr;
-  height: calc(100vh - 65px);
+  grid-template-columns: 360px 1fr;
+  /* Fills whatever height the topbar leaves behind (see .inlay-main's own
+     flex-column layout) rather than assuming a fixed topbar height - the
+     topbar wraps onto a second line at narrow widths, so a hardcoded
+     calc(100vh - Npx) would either clip content or leave a gap. */
+  flex: 1;
+  min-height: 0;
 }
 
-.inlay-editor__column {
+.inlay-editor__sidebar {
   border-right: 1px solid var(--inlay-border);
   overflow-y: auto;
   padding: 20px;
 }
 
-.inlay-editor__column:last-child {
-  border-right: none;
+.inlay-editor__preview-column {
   padding: 0;
 }
 
@@ -325,6 +345,58 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 14px;
+}
+
+.inlay-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--inlay-text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.inlay-back-link:hover {
+  color: var(--inlay-text);
+}
+
+.inlay-back-link:focus-visible {
+  outline: 2px solid var(--inlay-focus);
+  outline-offset: 2px;
+}
+
+.inlay-instance-heading {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.inlay-instance-heading__detail {
+  font-weight: 400;
+  color: var(--inlay-text-muted);
+}
+
+/* Screen-reader-only live region announcing sidebar pane changes */
+.inlay-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Mobile panel switcher - hidden entirely above the narrow-screen
+   breakpoint, see the @media block below. */
+.inlay-mobile-tabs {
+  display: none;
 }
 
 /* Component tree */
@@ -373,10 +445,18 @@
   flex: 1;
   min-width: 0;
   font-size: 13px;
-  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.inlay-tree__label-name {
+  font-weight: 500;
+}
+
+.inlay-tree__label-detail {
+  color: var(--inlay-text-muted);
+  font-weight: 400;
 }
 
 .inlay-tree__actions {
@@ -418,6 +498,16 @@
   padding: 20px 0;
 }
 
+.inlay-empty-state--tree {
+  padding: 8px 2px;
+}
+
+.inlay-empty-state__title {
+  color: var(--inlay-text);
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
 /* Preview */
 
 .inlay-preview {
@@ -445,30 +535,69 @@
   background: white;
 }
 
-/* Component picker modal */
-
+/*
+ * Component picker - a left-anchored drawer rather than a centered dialog.
+ * The Add flow already needs a real dialog (it's modal - a scrim over the
+ * whole editor, Escape closes it, focus starts in its search field), so a
+ * left drawer costs nothing extra in JavaScript over a centered one: same
+ * Alpine component (inlayComponentPicker), same keyboard handlers, same
+ * focus-on-open. It's purely a positioning choice, made here in CSS - and
+ * anchoring it to the same edge the contextual sidebar occupies makes the
+ * picker read as an extension of that sidebar (the thing you're about to
+ * add to) rather than an unrelated popup floating over the preview, which
+ * a centered dialog would.
+ */
 .inlay-picker__overlay {
   position: fixed;
   inset: 0;
   background: rgba(20, 18, 14, 0.35);
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 8vh;
+  align-items: stretch;
+  justify-content: flex-start;
   z-index: 40;
 }
 
 .inlay-picker__panel {
-  width: 640px;
-  max-width: calc(100vw - 40px);
-  max-height: 76vh;
+  width: 420px;
+  max-width: 90vw;
+  height: 100%;
   background: var(--inlay-surface);
-  border-radius: 10px;
-  border: 1px solid var(--inlay-border);
-  box-shadow: 0 20px 50px rgba(20, 18, 14, 0.2);
+  border-right: 1px solid var(--inlay-border);
+  box-shadow: 20px 0 50px rgba(20, 18, 14, 0.2);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.inlay-picker__panel-enter {
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
+}
+
+.inlay-picker__panel-enter-start {
+  transform: translateX(-16px);
+  opacity: 0;
+}
+
+.inlay-picker__panel-enter-end {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.inlay-picker__panel-leave {
+  transition:
+    transform 120ms ease,
+    opacity 120ms ease;
+}
+
+.inlay-picker__panel-leave-start {
+  opacity: 1;
+}
+
+.inlay-picker__panel-leave-end {
+  transform: translateX(-16px);
+  opacity: 0;
 }
 
 .inlay-picker__search-row {
@@ -495,7 +624,9 @@
 
 .inlay-picker__grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* A single column reads more comfortably at the drawer's 420px width than
+     the two columns a wider centered dialog had room for. */
+  grid-template-columns: 1fr;
   gap: 8px;
   padding: 0 8px;
 }
@@ -963,4 +1094,80 @@
 
 .inlay-picker__recent-title {
   padding: 12px 8px 6px;
+}
+
+/* Responsive editor layout */
+
+/* Narrow admin viewport (tablet): the sidebar stays usable for forms at a
+   fixed width, but proportionally wider gives long labels and select
+   dropdowns more room without eating too far into the preview - which
+   remains a real, usable size at this width, just less dominant than on a
+   full desktop viewport. */
+@media (max-width: 1024px) {
+  .inlay-editor {
+    grid-template-columns: 38% 1fr;
+  }
+}
+
+/* Small screen: one panel at a time (component tree/settings/history, or
+   preview) via the segmented control in the topbar, rather than squeezing
+   both into unusably narrow columns. Both panels stay in the DOM - only
+   .inlay-mobile-hide's display:none is scoped to this breakpoint - so the
+   same x-show-driven tree/settings/history switching above still works
+   unchanged inside whichever one is currently visible. */
+@media (max-width: 720px) {
+  .inlay-mobile-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--inlay-bg);
+    border-bottom: 1px solid var(--inlay-border);
+    padding: 8px;
+  }
+
+  .inlay-mobile-tabs__tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 8px;
+    border-radius: var(--inlay-radius);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inlay-text-muted);
+    cursor: pointer;
+  }
+
+  .inlay-mobile-tabs__tab.is-active {
+    background: var(--inlay-surface);
+    color: var(--inlay-text);
+    box-shadow: 0 1px 2px rgba(20, 18, 14, 0.08);
+  }
+
+  .inlay-mobile-tabs__tab:focus-visible {
+    outline: 2px solid var(--inlay-focus);
+    outline-offset: -2px;
+  }
+
+  /* Grid semantics aren't useful once only one panel is ever visible at a
+     time - a plain block with each panel independently taking the full
+     height reads just as easily and avoids the empty-track sizing quirks
+     of a two-item grid with one item hidden. Still flex:1/min-height:0 from
+     the base rule above, so it fills whatever space the (possibly wrapped,
+     two-line) topbar and mobile tab bar leave behind. */
+  .inlay-editor {
+    display: block;
+  }
+
+  .inlay-editor__sidebar,
+  .inlay-editor__preview-column {
+    height: 100%;
+  }
+
+  .inlay-mobile-hide {
+    display: none !important;
+  }
+
+  .inlay-picker__panel {
+    width: 100%;
+    max-width: 100%;
+  }
 }

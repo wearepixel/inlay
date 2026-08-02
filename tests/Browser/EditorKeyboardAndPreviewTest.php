@@ -16,8 +16,14 @@ it('reorders components with a keyboard shortcut, not just by dragging', functio
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
 
-    $editor->click("@tree-item-{$first->id}")
-        ->keys("[data-section-id=\"{$first->id}\"]", 'Alt+ArrowDown')
+    // Deliberately not preceded by a click on the row: clicking a tree row
+    // now opens its settings and replaces the tree pane entirely, which
+    // would hide the very row this test sends keys to. keys() focuses its
+    // target element itself (Playwright's locator.press()), so a real
+    // click isn't needed just to focus it - matching the actual keyboard
+    // interaction of tabbing to a row and reordering it without ever
+    // opening its settings.
+    $editor->keys("[data-section-id=\"{$first->id}\"]", 'Alt+ArrowDown')
         ->wait(1);
 
     expect($first->fresh()->order)->toBe(1)
@@ -31,8 +37,8 @@ it('deletes the focused component with the Delete key, after confirmation', func
     $editor = visit("/inlay/pages/{$page->id}/edit");
     $editor->script('window.confirm = () => true;');
 
-    $editor->click("@tree-item-{$section->id}")
-        ->keys("[data-section-id=\"{$section->id}\"]", 'Delete')
+    // See the reorder test above for why this isn't preceded by a click.
+    $editor->keys("[data-section-id=\"{$section->id}\"]", 'Delete')
         ->wait(1);
 
     expect($page->sections()->count())->toBe(0);
