@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Support;
+namespace WeArePixel\Inlay\Support;
 
 /**
  * Optional - only needed when a backed enum's case names don't produce a

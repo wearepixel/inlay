@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Livewire;
+namespace WeArePixel\Inlay\Livewire;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
-use WearePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Models\Page;
 
 #[Layout('inlay::layout')]
 final class PageIndex extends Component

@@ -45,7 +45,7 @@ Inlay registers **no routes on its own**. Call `Inlay::routes()` once from your 
 
 ```php
 // routes/web.php
-use WearePixel\Inlay\Facades\Inlay;
+use WeArePixel\Inlay\Facades\Inlay;
 
 Inlay::routes();
 ```
@@ -80,7 +80,7 @@ The editor's preview pane is a real `<iframe>` pointed at your application's act
 
 ```php
 // AppServiceProvider::boot(), or anywhere that runs before a preview request
-use WearePixel\Inlay\Facades\Inlay;
+use WeArePixel\Inlay\Facades\Inlay;
 
 Inlay::previewView('inlay-previews.default');
 ```
@@ -94,7 +94,7 @@ Inlay::previewView('inlay-previews.default');
 
 Your view receives:
 
-- `$page` - the `WearePixel\Inlay\Models\Page` being previewed.
+- `$page` - the `WeArePixel\Inlay\Models\Page` being previewed.
 - `$composition` - an `Illuminate\Contracts\Support\Htmlable` containing the rendered components. Echo it directly (`{{ $composition }}` is safe - it's already-rendered HTML, not raw user input).
 - `$context` - reserved for future use; currently always `null`.
 
@@ -102,14 +102,14 @@ With no `previewView()` configured, the preview falls back to a bare, clearly-la
 
 ## Registering Components
 
-A Component is any Blade class component that implements the marker interface `WearePixel\Inlay\Contracts\InlayComponent`:
+A Component is any Blade class component that implements the marker interface `WeArePixel\Inlay\Contracts\InlayComponent`:
 
 ```php
 namespace App\Inlay\Components;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WearePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Contracts\InlayComponent;
 
 final class Hero extends Component implements InlayComponent
 {
@@ -139,7 +139,7 @@ The handle (`hero`) is what gets persisted against a page's sections - never the
 The component picker groups components by category, using an optional `#[ComponentMeta]` class attribute:
 
 ```php
-use WearePixel\Inlay\Attributes\ComponentMeta;
+use WeArePixel\Inlay\Attributes\ComponentMeta;
 
 #[ComponentMeta(
     label: 'Hero',
@@ -163,8 +163,8 @@ For a simple component, a class + view is more ceremony than it needs - declare 
 {{-- resources/views/inlay/components/hero.blade.php --}}
 <?php
 
-use WearePixel\Inlay\Schema\Settings;
-use WearePixel\Inlay\SingleFile\Component;
+use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\SingleFile\Component;
 
 component(
     Component::make('hero')
@@ -193,8 +193,8 @@ It compiles into the exact same internal representation a class + view component
 Declare a setting directly on the constructor parameter it maps to:
 
 ```php
-use WearePixel\Inlay\Attributes\Select;
-use WearePixel\Inlay\Attributes\Text;
+use WeArePixel\Inlay\Attributes\Select;
+use WeArePixel\Inlay\Attributes\Text;
 
 final class Hero extends Component implements InlayComponent
 {
@@ -217,7 +217,7 @@ Attributes exist for every field type: `Text`, `Textarea`, `Richtext`, `Number`,
 Declare a static `settings()` method returning a `Settings` definition instead, useful for repeaters, groups, or when you'd rather keep field configuration out of the constructor signature:
 
 ```php
-use WearePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Schema\Settings;
 
 final class FeaturedCollection extends Component implements InlayComponent
 {
@@ -265,10 +265,10 @@ enum ImageSize: string
 }
 ```
 
-The package persists the enum's scalar `value`, hydrates the matching case before constructing your component, and validates that a stored value corresponds to a real case. If you want a label other than the case name's title-cased form, implement `WearePixel\Inlay\Support\SettingOptions`:
+The package persists the enum's scalar `value`, hydrates the matching case before constructing your component, and validates that a stored value corresponds to a real case. If you want a label other than the case name's title-cased form, implement `WeArePixel\Inlay\Support\SettingOptions`:
 
 ```php
-enum ImageSize: string implements \WearePixel\Inlay\Support\SettingOptions
+enum ImageSize: string implements \WeArePixel\Inlay\Support\SettingOptions
 {
     case Small = 'small';
     case Large = 'large';
@@ -287,11 +287,11 @@ An orphaned stored value (a case that's since been removed from the enum) falls 
 
 ### `LinkValue`
 
-The `Link` field type hydrates into `WearePixel\Inlay\Support\LinkValue`, a plain value object:
+The `Link` field type hydrates into `WeArePixel\Inlay\Support\LinkValue`, a plain value object:
 
 ```php
-use WearePixel\Inlay\Attributes\Link;
-use WearePixel\Inlay\Support\LinkValue;
+use WeArePixel\Inlay\Attributes\Link;
+use WeArePixel\Inlay\Support\LinkValue;
 
 final class Hero extends Component implements InlayComponent
 {
@@ -400,7 +400,7 @@ Render a page's latest published revision from your own route or controller with
 
 ```php
 // A route or controller your application already owns
-Route::get('/{page:slug}', function (\WearePixel\Inlay\Models\Page $page) {
+Route::get('/{page:slug}', function (\WeArePixel\Inlay\Models\Page $page) {
     return view('pages.show', ['page' => $page]);
 });
 ```

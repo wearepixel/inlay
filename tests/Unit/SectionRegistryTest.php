@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Support\SectionRegistry;
-use WearePixel\Inlay\Tests\Fixtures\TestFaqSection;
-use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
+use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
+use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 it('resolves a registered slug to its section class', function () {
     $registry = new SectionRegistry(['test-hero' => TestHeroSection::class]);

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Support;
+namespace WeArePixel\Inlay\Support;
 
-use WearePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Schema\Settings;
 
 /**
  * The single internal representation every registered component compiles

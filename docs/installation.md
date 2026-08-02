@@ -26,7 +26,7 @@ php artisan migrate
 Add one line to your own `routes/web.php`, after your application's own routes:
 
 ```php
-use WearePixel\Inlay\Facades\Inlay;
+use WeArePixel\Inlay\Facades\Inlay;
 
 Inlay::routes();
 ```
@@ -67,9 +67,9 @@ namespace App\Inlay\Components;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WearePixel\Inlay\Attributes\ComponentMeta;
-use WearePixel\Inlay\Attributes\Text;
-use WearePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Attributes\ComponentMeta;
+use WeArePixel\Inlay\Attributes\Text;
+use WeArePixel\Inlay\Contracts\InlayComponent;
 
 #[ComponentMeta(label: 'Hero', category: 'Headers', description: 'A page heading with introductory copy.')]
 final class Hero extends Component implements InlayComponent
@@ -119,7 +119,7 @@ The editor's preview pane is a real iframe pointed at your own frontend. Tell In
 
 ```php
 // app/Providers/AppServiceProvider.php
-use WearePixel\Inlay\Facades\Inlay;
+use WeArePixel\Inlay\Facades\Inlay;
 
 public function boot(): void
 {
@@ -149,7 +149,7 @@ Inlay doesn't register a public route for you - wire the page into your own rout
 
 ```php
 // routes/web.php
-use WearePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Models\Page;
 
 Route::get('/{page:slug}', function (Page $page) {
     return view('pages.show', ['page' => $page]);

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Console;
+namespace WeArePixel\Inlay\Console;
 
 use Illuminate\Console\Command;
 

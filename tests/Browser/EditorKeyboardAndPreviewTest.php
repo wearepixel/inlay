@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 
 beforeEach(function () {
     config(['inlay.sections' => ['hero' => BrowserHeroSection::class]]);

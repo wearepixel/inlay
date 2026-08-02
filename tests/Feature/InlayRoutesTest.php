@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Models\Page;
 
 it('registers the packaged admin routes under the configured prefix and name', function () {
     expect(route('inlay.pages.index'))->toContain('/inlay/pages')

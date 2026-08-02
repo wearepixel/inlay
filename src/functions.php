@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\SingleFile\Component;
-use WearePixel\Inlay\SingleFile\Registration;
+use WeArePixel\Inlay\SingleFile\Component;
+use WeArePixel\Inlay\SingleFile\Registration;
 
 if (! function_exists('component')) {
     /**

@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use WearePixel\Inlay\Livewire\PageEditor;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
+use WeArePixel\Inlay\Livewire\PageEditor;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
     config(['inlay.sections' => [

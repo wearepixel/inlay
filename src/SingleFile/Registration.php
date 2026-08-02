@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\SingleFile;
+namespace WeArePixel\Inlay\SingleFile;
 
 /**
  * Backs the global component() function. A single-file component's Blade

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Http\Controllers;
+namespace WeArePixel\Inlay\Http\Controllers;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\HtmlString;
-use WearePixel\Inlay\InlayManager;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Models\PageSection;
-use WearePixel\Inlay\Support\SectionRenderer;
+use WeArePixel\Inlay\InlayManager;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Models\PageSection;
+use WeArePixel\Inlay\Support\SectionRenderer;
 
 /**
  * Renders a page's current draft composition through the same Blade

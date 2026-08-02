@@ -1,7 +1,7 @@
 <?php
 
 declare(strict_types=1);
-use WearePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Models\Page;
 
 it('publishes the config and runs migrations', function () {
     $this->artisan('inlay:install')

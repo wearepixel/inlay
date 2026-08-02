@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Attributes\Text;
-use WearePixel\Inlay\Attributes\Toggle;
-use WearePixel\Inlay\Contracts\InlayComponent;
-use WearePixel\Inlay\Schema\FieldType;
-use WearePixel\Inlay\Schema\Settings;
-use WearePixel\Inlay\Support\ComponentDefinitionResolver;
+use WeArePixel\Inlay\Attributes\Text;
+use WeArePixel\Inlay\Attributes\Toggle;
+use WeArePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Schema\FieldType;
+use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Support\ComponentDefinitionResolver;
 
 it('infers PHP type, nullability, and default from the constructor for a fluent-only component', function () {
     $definition = (new ComponentDefinitionResolver)->resolve(ResolverFluentOnlyComponent::class);

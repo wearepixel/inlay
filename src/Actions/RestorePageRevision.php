@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Actions;
+namespace WeArePixel\Inlay\Actions;
 
 use Illuminate\Support\Facades\DB;
-use WearePixel\Inlay\Models\PageRevision;
+use WeArePixel\Inlay\Models\PageRevision;
 
 final class RestorePageRevision
 {

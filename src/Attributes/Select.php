@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Attributes;
+namespace WeArePixel\Inlay\Attributes;
 
 use Attribute;
-use WearePixel\Inlay\Schema\FieldType;
-use WearePixel\Inlay\Schema\Setting;
+use WeArePixel\Inlay\Schema\FieldType;
+use WeArePixel\Inlay\Schema\Setting;
 
 #[Attribute(Attribute::TARGET_PARAMETER)]
 final class Select implements FieldAttribute

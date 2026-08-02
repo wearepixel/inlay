@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Tests\Fixtures;
+namespace WeArePixel\Inlay\Tests\Fixtures;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WearePixel\Inlay\Attributes\Select;
-use WearePixel\Inlay\Attributes\Text;
-use WearePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Attributes\Select;
+use WeArePixel\Inlay\Attributes\Text;
+use WeArePixel\Inlay\Contracts\InlayComponent;
 
 final class TestRequiredFieldSection extends Component implements InlayComponent
 {

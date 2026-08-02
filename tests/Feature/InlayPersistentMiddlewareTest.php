@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Auth\Middleware\Authenticate;
 use Livewire\Mechanisms\PersistentMiddleware\PersistentMiddleware;
-use WearePixel\Inlay\Facades\Inlay;
+use WeArePixel\Inlay\Facades\Inlay;
 
 it('registers config(\'inlay.middleware\') as Livewire persistent middleware, resolving aliases to concrete classes', function () {
     config(['inlay.middleware' => ['web', 'auth']]);

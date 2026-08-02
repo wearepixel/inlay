@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Actions;
+namespace WeArePixel\Inlay\Actions;
 
 use Illuminate\Support\Facades\DB;
-use WearePixel\Inlay\Enums\PageStatus;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Models\PageRevision;
-use WearePixel\Inlay\Models\PageSection;
-use WearePixel\Inlay\Support\SectionRegistry;
-use WearePixel\Inlay\Support\SectionRenderer;
+use WeArePixel\Inlay\Enums\PageStatus;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Models\PageRevision;
+use WeArePixel\Inlay\Models\PageSection;
+use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Support\SectionRenderer;
 
 final class PublishPage
 {

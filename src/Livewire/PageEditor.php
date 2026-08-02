@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Livewire;
+namespace WeArePixel\Inlay\Livewire;
 
 use BackedEnum;
 use Illuminate\Contracts\View\View;
@@ -12,17 +12,17 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
-use WearePixel\Inlay\Actions\PublishPage;
-use WearePixel\Inlay\Actions\RestorePageRevision;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Models\PageSection;
-use WearePixel\Inlay\Schema\FieldType;
-use WearePixel\Inlay\Schema\Setting;
-use WearePixel\Inlay\Schema\Settings;
-use WearePixel\Inlay\Support\ComponentDefinition;
-use WearePixel\Inlay\Support\SectionInstanceLabel;
-use WearePixel\Inlay\Support\SectionRegistry;
-use WearePixel\Inlay\Support\SectionRenderer;
+use WeArePixel\Inlay\Actions\PublishPage;
+use WeArePixel\Inlay\Actions\RestorePageRevision;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Models\PageSection;
+use WeArePixel\Inlay\Schema\FieldType;
+use WeArePixel\Inlay\Schema\Setting;
+use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Support\ComponentDefinition;
+use WeArePixel\Inlay\Support\SectionInstanceLabel;
+use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Support\SectionRenderer;
 
 #[Layout('inlay::layout')]
 final class PageEditor extends Component

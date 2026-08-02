@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Schema\FieldType;
-use WearePixel\Inlay\SingleFile\ComponentLoader;
-use WearePixel\Inlay\Support\ComponentSourceType;
-use WearePixel\Inlay\Tests\Fixtures\SingleFile\SingleFileImageSize;
+use WeArePixel\Inlay\Schema\FieldType;
+use WeArePixel\Inlay\SingleFile\ComponentLoader;
+use WeArePixel\Inlay\Support\ComponentSourceType;
+use WeArePixel\Inlay\Tests\Fixtures\SingleFile\SingleFileImageSize;
 
 beforeEach(function () {
     $this->loader = new ComponentLoader;

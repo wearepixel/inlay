@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Support;
+namespace WeArePixel\Inlay\Support;
 
 use BackedEnum;
 use InvalidArgumentException;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionNamedType;
-use WearePixel\Inlay\Attributes\FieldAttribute;
-use WearePixel\Inlay\Schema\Setting;
-use WearePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Attributes\FieldAttribute;
+use WeArePixel\Inlay\Schema\Setting;
+use WeArePixel\Inlay\Schema\Settings;
 
 /**
  * Builds a component's resolved Settings definition from constructor-property

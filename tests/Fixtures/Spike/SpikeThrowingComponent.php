@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Tests\Fixtures\Spike;
+namespace WeArePixel\Inlay\Tests\Fixtures\Spike;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;

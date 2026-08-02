@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use WearePixel\Inlay\Livewire\PageIndex;
-use WearePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Livewire\PageIndex;
+use WeArePixel\Inlay\Models\Page;
 
 it('lists pages, most recently updated first', function () {
     $older = Page::create(['title' => 'About', 'slug' => 'about']);

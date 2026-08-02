@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Support;
+namespace WeArePixel\Inlay\Support;
 
 use Illuminate\Support\Str;
-use WearePixel\Inlay\Schema\FieldType;
+use WeArePixel\Inlay\Schema\FieldType;
 
 /**
  * Turns a page section's raw stored settings into a short, human-readable

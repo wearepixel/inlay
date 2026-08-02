@@ -5,10 +5,10 @@ declare(strict_types=1);
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
-use WearePixel\Inlay\Livewire\PageEditor;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
-use WearePixel\Inlay\Tests\Fixtures\TestRequiredFieldSection;
+use WeArePixel\Inlay\Livewire\PageEditor;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
+use WeArePixel\Inlay\Tests\Fixtures\TestRequiredFieldSection;
 
 beforeEach(function () {
     config(['inlay.sections' => [

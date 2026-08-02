@@ -2,6 +2,6 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Tests\TestCase;
+use WeArePixel\Inlay\Tests\TestCase;
 
 uses(TestCase::class)->in('Feature', 'Unit', 'Browser');

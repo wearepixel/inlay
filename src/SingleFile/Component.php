@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\SingleFile;
+namespace WeArePixel\Inlay\SingleFile;
 
-use WearePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Schema\Settings;
 
 /**
  * The fluent declaration a single-file component's own PHP block builds
  * and passes to the global component() function - not a Blade component
  * class, and not related to Illuminate\View\Component. It exists only to
- * be compiled into a WearePixel\Inlay\Support\ComponentDefinition by
+ * be compiled into a WeArePixel\Inlay\Support\ComponentDefinition by
  * SingleFileComponentLoader; nothing else ever holds a reference to it.
  */
 final class Component

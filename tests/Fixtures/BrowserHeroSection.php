@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Tests\Fixtures;
+namespace WeArePixel\Inlay\Tests\Fixtures;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WearePixel\Inlay\Attributes\ComponentMeta;
-use WearePixel\Inlay\Contracts\InlayComponent;
-use WearePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Attributes\ComponentMeta;
+use WeArePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Schema\Settings;
 
 /**
  * A component-picker/editor fixture used by the browser test suite: a plain

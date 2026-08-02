@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Enums\PageStatus;
-use WearePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Enums\PageStatus;
+use WeArePixel\Inlay\Models\Page;
 
 it('relates pages to sections and revisions, and casts settings/snapshot as arrays', function () {
     $page = Page::create(['title' => 'Home', 'slug' => 'home']);

@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Auth\User;
-use WearePixel\Inlay\Enums\PageStatus;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
+use WeArePixel\Inlay\Enums\PageStatus;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 
 /**
  * Confirms config('inlay.middleware') actually protects the admin's

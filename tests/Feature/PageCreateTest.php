@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use WearePixel\Inlay\Enums\PageStatus;
-use WearePixel\Inlay\Livewire\PageCreate;
-use WearePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Enums\PageStatus;
+use WeArePixel\Inlay\Livewire\PageCreate;
+use WeArePixel\Inlay\Models\Page;
 
 it('creates a draft page and redirects to its editor', function () {
     $component = Livewire::test(PageCreate::class)

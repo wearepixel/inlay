@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Http\Controllers;
+namespace WeArePixel\Inlay\Http\Controllers;
 
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 

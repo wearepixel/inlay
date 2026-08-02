@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Log;
-use WearePixel\Inlay\Support\SectionRegistry;
-use WearePixel\Inlay\Support\SectionRenderer;
-use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
+use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Support\SectionRenderer;
+use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 it('renders each section through its own Blade view with resolved effective settings', function () {
     $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));

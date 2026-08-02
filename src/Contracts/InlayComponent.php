@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Contracts;
+namespace WeArePixel\Inlay\Contracts;
 
 /**
  * A marker interface - deliberately empty. A component may declare its

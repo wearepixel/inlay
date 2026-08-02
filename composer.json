@@ -19,7 +19,7 @@
   },
   "autoload": {
     "psr-4": {
-      "WearePixel\\Inlay\\": "src/"
+      "WeArePixel\\Inlay\\": "src/"
     },
     "files": [
       "src/functions.php"
@@ -27,13 +27,13 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "WearePixel\\Inlay\\Tests\\": "tests/"
+      "WeArePixel\\Inlay\\Tests\\": "tests/"
     }
   },
   "extra": {
     "laravel": {
       "providers": [
-        "WearePixel\\Inlay\\InlayServiceProvider"
+        "WeArePixel\\Inlay\\InlayServiceProvider"
       ]
     }
   },

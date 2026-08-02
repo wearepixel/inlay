@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Support;
+namespace WeArePixel\Inlay\Support;
 
 use BackedEnum;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use Throwable;
-use WearePixel\Inlay\Schema\FieldType;
-use WearePixel\Inlay\Schema\Setting;
+use WeArePixel\Inlay\Schema\FieldType;
+use WeArePixel\Inlay\Schema\Setting;
 
 /**
  * Renders each registered component through Laravel's real view engine -

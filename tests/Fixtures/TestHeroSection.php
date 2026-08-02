@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Tests\Fixtures;
+namespace WeArePixel\Inlay\Tests\Fixtures;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WearePixel\Inlay\Attributes\ComponentMeta;
-use WearePixel\Inlay\Attributes\Image;
-use WearePixel\Inlay\Attributes\Select;
-use WearePixel\Inlay\Attributes\Text;
-use WearePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Attributes\ComponentMeta;
+use WeArePixel\Inlay\Attributes\Image;
+use WeArePixel\Inlay\Attributes\Select;
+use WeArePixel\Inlay\Attributes\Text;
+use WeArePixel\Inlay\Contracts\InlayComponent;
 
 #[ComponentMeta(label: 'Hero', category: 'Headers', description: 'A large banner with a heading and image.', icon: '🖼')]
 final class TestHeroSection extends Component implements InlayComponent

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Attributes;
+namespace WeArePixel\Inlay\Attributes;
 
 use Attribute;
 

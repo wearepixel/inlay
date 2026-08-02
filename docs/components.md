@@ -1,6 +1,6 @@
 # Component authoring guide
 
-A Component is an ordinary Laravel Blade class component - `Illuminate\View\Component` - that implements `WearePixel\Inlay\Contracts\InlayComponent`, a marker interface with no required methods. Nothing downstream (the registry, the picker, the settings inspector, rendering, publishing, revisions) treats a Component any differently based on how its settings were declared - this document covers both authoring styles and how they interact.
+A Component is an ordinary Laravel Blade class component - `Illuminate\View\Component` - that implements `WeArePixel\Inlay\Contracts\InlayComponent`, a marker interface with no required methods. Nothing downstream (the registry, the picker, the settings inspector, rendering, publishing, revisions) treats a Component any differently based on how its settings were declared - this document covers both authoring styles and how they interact.
 
 ## Class + view Components
 
@@ -11,7 +11,7 @@ namespace App\Inlay\Components;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WearePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Contracts\InlayComponent;
 
 final class Hero extends Component implements InlayComponent
 {
@@ -46,10 +46,10 @@ Declare a setting directly on the constructor parameter it maps to, using one of
 There is no `Repeater` or `Group` attribute - a repeatable/grouped item schema has no single constructor parameter to attach to, so those two are fluent-only.
 
 ```php
-use WearePixel\Inlay\Attributes\Number;
-use WearePixel\Inlay\Attributes\Select;
-use WearePixel\Inlay\Attributes\Text;
-use WearePixel\Inlay\Attributes\Toggle;
+use WeArePixel\Inlay\Attributes\Number;
+use WeArePixel\Inlay\Attributes\Select;
+use WeArePixel\Inlay\Attributes\Text;
+use WeArePixel\Inlay\Attributes\Toggle;
 
 final class Hero extends Component implements InlayComponent
 {
@@ -78,7 +78,7 @@ Every attribute accepts `label`, `help`, `required`, and `visibleWhen` (an array
 Declare a static `settings(): Settings` method instead, useful for repeaters, groups, or keeping configuration out of the constructor signature entirely:
 
 ```php
-use WearePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Schema\Settings;
 
 final class Faq extends Component implements InlayComponent
 {
@@ -162,7 +162,7 @@ A required field (`->required()`) that's currently empty shows a calm inline hin
 
 ## Instance labels
 
-The component tree identifies each row by the component's display name plus a short instance detail, so a page with three `Hero` components reads as `Hero - "Welcome"`, `Hero - "Our story"`, `Hero - "Get in touch"` rather than three indistinguishable `hero` rows. By default this is a deterministic heuristic (`WearePixel\Inlay\Support\SectionInstanceLabel`) that checks, in order, a setting named `heading`, `title`, `name`, or `label`, then falls back to the first declared `text()` setting - always a short plain-text field, never a `textarea()`, `richtext()`, `image()`, `select()`, `repeater()`, or `group()`, so a list label can never surface long-form, structured, or sensitive content.
+The component tree identifies each row by the component's display name plus a short instance detail, so a page with three `Hero` components reads as `Hero - "Welcome"`, `Hero - "Our story"`, `Hero - "Get in touch"` rather than three indistinguishable `hero` rows. By default this is a deterministic heuristic (`WeArePixel\Inlay\Support\SectionInstanceLabel`) that checks, in order, a setting named `heading`, `title`, `name`, or `label`, then falls back to the first declared `text()` setting - always a short plain-text field, never a `textarea()`, `richtext()`, `image()`, `select()`, `repeater()`, or `group()`, so a list label can never surface long-form, structured, or sensitive content.
 
 If none of those names fit, name the field explicitly instead of relying on the guess:
 
@@ -187,7 +187,7 @@ A single component can declare some settings via attributes and others via `sett
 An optional `#[ComponentMeta]` class attribute controls how a component appears in the admin's component picker:
 
 ```php
-use WearePixel\Inlay\Attributes\ComponentMeta;
+use WeArePixel\Inlay\Attributes\ComponentMeta;
 
 #[ComponentMeta(
     label: 'Hero',
@@ -233,10 +233,10 @@ enum ImageSize: string
 }
 ```
 
-The stored value is always the enum's scalar `value`; the enum case is hydrated back before your component is constructed. Implement `WearePixel\Inlay\Support\SettingOptions` for custom labels (otherwise a case gets `Str::headline($case->name)`):
+The stored value is always the enum's scalar `value`; the enum case is hydrated back before your component is constructed. Implement `WeArePixel\Inlay\Support\SettingOptions` for custom labels (otherwise a case gets `Str::headline($case->name)`):
 
 ```php
-enum ImageSize: string implements \WearePixel\Inlay\Support\SettingOptions
+enum ImageSize: string implements \WeArePixel\Inlay\Support\SettingOptions
 {
     case Small = 'small';
     case Large = 'large';
@@ -251,10 +251,10 @@ enum ImageSize: string implements \WearePixel\Inlay\Support\SettingOptions
 }
 ```
 
-Implement `WearePixel\Inlay\Support\DescribesSettingOptions` as well (they're independent interfaces - adding one is never a breaking change for a case that already implements the other) to show a short explanatory description under the field once that option is selected:
+Implement `WeArePixel\Inlay\Support\DescribesSettingOptions` as well (they're independent interfaces - adding one is never a breaking change for a case that already implements the other) to show a short explanatory description under the field once that option is selected:
 
 ```php
-enum ImageSize: string implements \WearePixel\Inlay\Support\SettingOptions, \WearePixel\Inlay\Support\DescribesSettingOptions
+enum ImageSize: string implements \WeArePixel\Inlay\Support\SettingOptions, \WeArePixel\Inlay\Support\DescribesSettingOptions
 {
     case Small = 'small';
     case Large = 'large';
@@ -277,11 +277,11 @@ An orphaned stored value (a case removed from the enum after content was authore
 
 ## `LinkValue`
 
-The `Link` field type hydrates to `WearePixel\Inlay\Support\LinkValue`, a plain readonly value object with `label`, `url`, and `openInNewTab`:
+The `Link` field type hydrates to `WeArePixel\Inlay\Support\LinkValue`, a plain readonly value object with `label`, `url`, and `openInNewTab`:
 
 ```php
-use WearePixel\Inlay\Attributes\Link;
-use WearePixel\Inlay\Support\LinkValue;
+use WeArePixel\Inlay\Attributes\Link;
+use WeArePixel\Inlay\Support\LinkValue;
 
 public function __construct(
     #[Link(label: 'Call to action')]
@@ -335,8 +335,8 @@ For a simple component, defining a class and a separate view is more ceremony th
 <?php
 
 use App\Enums\ImageSize;
-use WearePixel\Inlay\Schema\Settings;
-use WearePixel\Inlay\SingleFile\Component;
+use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\SingleFile\Component;
 
 component(
     Component::make('hero')
@@ -373,7 +373,7 @@ Everything else about authoring settings - field types, `visibleWhen()`, enums, 
 Register a single file explicitly, e.g. from `AppServiceProvider::boot()`:
 
 ```php
-use WearePixel\Inlay\Facades\Inlay;
+use WeArePixel\Inlay\Facades\Inlay;
 
 Inlay::singleFileComponent(resource_path('views/inlay/components/hero.blade.php'));
 ```
@@ -392,7 +392,7 @@ Cannot register single-file component [hero] - a class-based component is alread
 
 ### Referencing a single-file component without a class
 
-A future Page Definition's component allow-list needs to name components, but a single-file component has no PHP class to put in a list of `::class` references. `WearePixel\Inlay\Support\ComponentHandle` is a small typed value object for exactly this case, decided now so that whenever Page Definitions ship, there's already a safe, IDE-discoverable way to reference a handle-only component rather than a raw string:
+A future Page Definition's component allow-list needs to name components, but a single-file component has no PHP class to put in a list of `::class` references. `WeArePixel\Inlay\Support\ComponentHandle` is a small typed value object for exactly this case, decided now so that whenever Page Definitions ship, there's already a safe, IDE-discoverable way to reference a handle-only component rather than a raw string:
 
 ```php
 // Illustrative - Page Definitions are not implemented yet.

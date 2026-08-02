@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Attributes;
+namespace WeArePixel\Inlay\Attributes;
 
-use WearePixel\Inlay\Schema\Setting;
+use WeArePixel\Inlay\Schema\Setting;
 
 /**
  * Implemented by every supported inlay attribute (Text, Toggle, Select,

@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 
 /**
  * The two-pane editor redesign: a contextual sidebar (component tree OR a

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Tests\Fixtures;
+namespace WeArePixel\Inlay\Tests\Fixtures;
 
-use WearePixel\Inlay\Support\DescribesSettingOptions;
+use WeArePixel\Inlay\Support\DescribesSettingOptions;
 
 enum TestSizeWithDescription: string implements DescribesSettingOptions
 {

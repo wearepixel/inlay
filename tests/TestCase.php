@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Tests;
+namespace WeArePixel\Inlay\Tests;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Route;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\Concerns\WithLaravelMigrations;
 use Orchestra\Testbench\TestCase as Orchestra;
-use WearePixel\Inlay\Facades\Inlay;
-use WearePixel\Inlay\InlayServiceProvider;
-use WearePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Facades\Inlay;
+use WeArePixel\Inlay\InlayServiceProvider;
+use WeArePixel\Inlay\Models\Page;
 
 abstract class TestCase extends Orchestra
 {

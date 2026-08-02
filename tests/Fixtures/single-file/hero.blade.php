@@ -1,8 +1,8 @@
 <?php
 
-use WearePixel\Inlay\Schema\Settings;
-use WearePixel\Inlay\SingleFile\Component;
-use WearePixel\Inlay\Tests\Fixtures\SingleFile\SingleFileImageSize;
+use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\SingleFile\Component;
+use WeArePixel\Inlay\Tests\Fixtures\SingleFile\SingleFileImageSize;
 
 component(
     Component::make('single-file-hero')

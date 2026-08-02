@@ -1,7 +1,7 @@
 <?php
 
-use WearePixel\Inlay\Schema\Settings;
-use WearePixel\Inlay\SingleFile\Component;
+use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\SingleFile\Component;
 
 component(
     Component::make('single-file-nested-livewire')

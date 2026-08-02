@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Models;
+namespace WeArePixel\Inlay\Models;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
-use WearePixel\Inlay\Enums\PageStatus;
+use WeArePixel\Inlay\Enums\PageStatus;
 
 /**
  * @property int $id

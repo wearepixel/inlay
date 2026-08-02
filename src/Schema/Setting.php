@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Schema;
+namespace WeArePixel\Inlay\Schema;
 
 final class Setting
 {

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\SingleFile;
+namespace WeArePixel\Inlay\SingleFile;
 
 use InvalidArgumentException;
-use WearePixel\Inlay\Schema\Setting;
-use WearePixel\Inlay\Schema\Settings;
-use WearePixel\Inlay\Support\ComponentDefinition;
-use WearePixel\Inlay\Support\ComponentSourceType;
+use WeArePixel\Inlay\Schema\Setting;
+use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Support\ComponentDefinition;
+use WeArePixel\Inlay\Support\ComponentSourceType;
 
 /**
  * Compiles a single-file component's Blade file into the same

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 use Livewire\Livewire;
-use WearePixel\Inlay\Support\LinkValue;
-use WearePixel\Inlay\Tests\Fixtures\Spike\SpikeComponent;
-use WearePixel\Inlay\Tests\Fixtures\Spike\SpikeImageSize;
-use WearePixel\Inlay\Tests\Fixtures\Spike\SpikeInlineWidget;
-use WearePixel\Inlay\Tests\Fixtures\Spike\SpikeThrowingComponent;
+use WeArePixel\Inlay\Support\LinkValue;
+use WeArePixel\Inlay\Tests\Fixtures\Spike\SpikeComponent;
+use WeArePixel\Inlay\Tests\Fixtures\Spike\SpikeImageSize;
+use WeArePixel\Inlay\Tests\Fixtures\Spike\SpikeInlineWidget;
+use WeArePixel\Inlay\Tests\Fixtures\Spike\SpikeThrowingComponent;
 
 /**
  * A focused spike proving the exact renderer mechanism the v1 specification commits

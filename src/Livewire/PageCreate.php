@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Livewire;
+namespace WeArePixel\Inlay\Livewire;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use WearePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Models\Page;
 
 #[Layout('inlay::layout')]
 final class PageCreate extends Component

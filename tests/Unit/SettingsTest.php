@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Schema\FieldType;
-use WearePixel\Inlay\Schema\Settings;
-use WearePixel\Inlay\Support\DescribesSettingOptions;
-use WearePixel\Inlay\Support\SettingOptions;
+use WeArePixel\Inlay\Schema\FieldType;
+use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Support\DescribesSettingOptions;
+use WeArePixel\Inlay\Support\SettingOptions;
 
 it('builds a settings definition with chained modifiers per field', function () {
     $settings = Settings::make()

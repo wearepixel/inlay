@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Schema;
+namespace WeArePixel\Inlay\Schema;
 
 use BackedEnum;
 use Closure;
 use InvalidArgumentException;
 use LogicException;
-use WearePixel\Inlay\Support\SettingOptions;
+use WeArePixel\Inlay\Support\SettingOptions;
 
 final class Settings
 {

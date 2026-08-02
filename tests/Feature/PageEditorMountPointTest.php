@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
     config(['inlay.sections' => [

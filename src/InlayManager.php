@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay;
+namespace WeArePixel\Inlay;
 
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
-use WearePixel\Inlay\SingleFile\ComponentLoader;
-use WearePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\SingleFile\ComponentLoader;
+use WeArePixel\Inlay\Support\SectionRegistry;
 
 /**
  * The single developer-facing entry point for wiring Inlay into a host

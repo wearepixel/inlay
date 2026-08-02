@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Enums\PageStatus;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
-use WearePixel\Inlay\Tests\Fixtures\TestFaqSection;
+use WeArePixel\Inlay\Enums\PageStatus;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
+use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
 
 /**
  * Exercises the complete editorial workflow end to end in a real browser,

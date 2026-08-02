@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Facades;
+namespace WeArePixel\Inlay\Facades;
 
 use Illuminate\Support\Facades\Facade;
-use WearePixel\Inlay\InlayManager;
+use WeArePixel\Inlay\InlayManager;
 
 /**
  * @method static void routes()

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Facades\Inlay;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
+use WeArePixel\Inlay\Facades\Inlay;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
     config(['inlay.sections' => [

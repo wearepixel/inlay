@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use WearePixel\Inlay\Actions\PublishPage;
-use WearePixel\Inlay\Actions\RestorePageRevision;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
+use WeArePixel\Inlay\Actions\PublishPage;
+use WeArePixel\Inlay\Actions\RestorePageRevision;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
     config(['inlay.sections' => [

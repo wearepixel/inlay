@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace WearePixel\Inlay\Support;
+namespace WeArePixel\Inlay\Support;
 
 use InvalidArgumentException;
 use ReflectionClass;
-use WearePixel\Inlay\Attributes\ComponentMeta;
-use WearePixel\Inlay\Contracts\InlayComponent;
+use WeArePixel\Inlay\Attributes\ComponentMeta;
+use WeArePixel\Inlay\Contracts\InlayComponent;
 
 /**
  * Resolves a registered handle to its ComponentDefinition regardless of

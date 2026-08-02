@@ -6,7 +6,7 @@
     if ($field->enumClass && $selectCurrentValue !== null) {
         $selectCase = ($field->enumClass)::tryFrom($selectCurrentValue);
 
-        if ($selectCase instanceof \WearePixel\Inlay\Support\DescribesSettingOptions) {
+        if ($selectCase instanceof \WeArePixel\Inlay\Support\DescribesSettingOptions) {
             $selectDescription = $selectCase->optionDescription();
         }
     }

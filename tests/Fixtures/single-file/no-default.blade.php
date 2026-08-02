@@ -1,7 +1,7 @@
 <?php
 
-use WearePixel\Inlay\Schema\Settings;
-use WearePixel\Inlay\SingleFile\Component;
+use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\SingleFile\Component;
 
 // Deliberately omits ->default() - used to test the "invalid Settings
 // definition" registration error, since a single-file component has no

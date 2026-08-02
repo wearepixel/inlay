@@ -3,16 +3,16 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use WearePixel\Inlay\Actions\PublishPage;
-use WearePixel\Inlay\Actions\RestorePageRevision;
-use WearePixel\Inlay\Enums\PageStatus;
-use WearePixel\Inlay\Facades\Inlay;
-use WearePixel\Inlay\Livewire\PageEditor;
-use WearePixel\Inlay\Models\Page;
-use WearePixel\Inlay\Support\SectionRegistry;
-use WearePixel\Inlay\Support\SectionRenderer;
-use WearePixel\Inlay\Tests\Fixtures\Spike\SpikeInlineWidget;
-use WearePixel\Inlay\Tests\Fixtures\TestHeroSection;
+use WeArePixel\Inlay\Actions\PublishPage;
+use WeArePixel\Inlay\Actions\RestorePageRevision;
+use WeArePixel\Inlay\Enums\PageStatus;
+use WeArePixel\Inlay\Facades\Inlay;
+use WeArePixel\Inlay\Livewire\PageEditor;
+use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Support\SectionRenderer;
+use WeArePixel\Inlay\Tests\Fixtures\Spike\SpikeInlineWidget;
+use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
     config(['inlay.sections' => []]);
