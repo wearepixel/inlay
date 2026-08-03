@@ -22,10 +22,11 @@ final class InstallCommand extends Command
         $this->newLine();
         $this->components->info('Inlay is installed. Next steps:');
         $this->components->bulletList([
-            'Call Inlay::routes() from your own routes/web.php to register the admin.',
-            "Set config('inlay.middleware') to guard it - the default ['web'] alone leaves it public.",
+            'Call Inlay::adminRoutes() from your own routes/web.php to register the admin.',
+            "Set config('inlay.admin.middleware') to guard it - the default ['web'] alone leaves it public.",
             "Register your first block in config('inlay.blocks').",
             'Call Inlay::previewView() so the preview iframe renders using your real frontend.',
+            'Call Inlay::pageRoutes() if you want Inlay to serve published Pages publicly - see docs/routing.md.',
         ]);
 
         return self::SUCCESS;

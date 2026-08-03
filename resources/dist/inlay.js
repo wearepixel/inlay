@@ -48,6 +48,18 @@ document.addEventListener("alpine:init", () => {
       },
 
       /**
+       * Page-level settings (title, public path, metadata, homepage,
+       * publishing info) are a distinct context from a block's own
+       * settings - reachable from the header regardless of which block, if
+       * any, is currently selected - so this never touches
+       * lastSelectedId, and backToTree() returns to the tree exactly as it
+       * would from a block's settings.
+       */
+      showPageSettings() {
+        this.view = "page-settings";
+      },
+
+      /**
        * Distinct from backToTree(): this responds to the server telling us
        * the previously-selected block is simply gone (deleted, or a
        * revision restore replaced every section), so there is no id left to
@@ -78,7 +90,7 @@ document.addEventListener("alpine:init", () => {
           return;
         }
 
-        if (this.view === "settings") {
+        if (this.view === "settings" || this.view === "page-settings") {
           this.backToTree();
         } else if (this.view === "history") {
           this.$wire.toggleHistory();
@@ -88,6 +100,10 @@ document.addEventListener("alpine:init", () => {
       announcement() {
         if (this.view === "settings") {
           return "Editing block settings";
+        }
+
+        if (this.view === "page-settings") {
+          return "Editing page settings";
         }
 
         if (this.view === "history") {

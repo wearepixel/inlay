@@ -14,7 +14,7 @@ beforeEach(function () {
 });
 
 it('overwrites live sections from a revision snapshot and creates a new revision', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => ['heading' => 'Original']]);
 
     $original = app(PublishPage::class)->execute($page);

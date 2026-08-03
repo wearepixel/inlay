@@ -32,8 +32,8 @@ Test with at least two registered blocks (one with several settings including a 
 
 ## Validation errors
 
-- [ ] Page creation: submitting an empty title shows a clear error, doesn't lose the slug value already entered.
-- [ ] Page creation: a duplicate slug shows a clear error identifying the conflict, doesn't silently fail.
+- [ ] Page creation: submitting an empty title shows a clear error, doesn't lose the path value already entered.
+- [ ] Page creation: a duplicate path shows a clear error identifying the conflict, doesn't silently fail.
 - [ ] Image upload: a non-image file is rejected with a clear message, not a silent no-op.
 
 ## Block-picker search
@@ -78,9 +78,9 @@ Test with at least two registered blocks (one with several settings including a 
 
 ## Authentication behaviour
 
-- [ ] With `config('inlay.middleware')` set to include `auth`, an unauthenticated visit to any admin URL is actually blocked, not just the page index.
+- [ ] With `config('inlay.admin.middleware')` set to include `auth`, an unauthenticated visit to any admin URL is actually blocked, not just the page index.
 - [ ] A logged-in, authorized user can complete the full workflow without being unexpectedly challenged again mid-session.
-- [ ] Confirm `config('inlay.middleware')` is documented as insecure-by-default in the README/installation guide, and that this hasn't drifted from what's actually shipped.
+- [ ] Confirm `config('inlay.admin.middleware')` is documented as insecure-by-default in the README/installation guide, and that this hasn't drifted from what's actually shipped.
 
 ## Draft/published divergence
 

@@ -17,7 +17,7 @@ beforeEach(function () {
 });
 
 it('renders a text input and select options for the selected section schema', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-hero',
         'order' => 0,
@@ -37,7 +37,7 @@ it('renders a text input and select options for the selected section schema', fu
 it('stores an uploaded image and persists its path to the selected section settings', function () {
     Storage::fake('public');
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-hero',
         'order' => 0,
@@ -57,7 +57,7 @@ it('stores an uploaded image and persists its path to the selected section setti
 it('rejects a non-image upload and does not persist it to the selected section settings', function () {
     Storage::fake('public');
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-hero',
         'order' => 0,
@@ -77,7 +77,7 @@ it('rejects a non-image upload and does not persist it to the selected section s
 it('shows a calm inline hint for an empty required field, and hides it once filled', function () {
     config(['inlay.blocks' => ['test-required' => TestRequiredFieldSection::class]]);
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-required', 'order' => 0, 'settings' => []]);
 
     // A required-but-empty field is a normal state while composing a page,
@@ -95,7 +95,7 @@ it('shows a calm inline hint for an empty required field, and hides it once fill
 it("shows an enum case's optional description under a Select field once it's the current value", function () {
     config(['inlay.blocks' => ['test-required' => TestRequiredFieldSection::class]]);
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-required', 'order' => 0, 'settings' => ['size' => 'large']]);
 
     Livewire::test(PageEditor::class, ['page' => $page])

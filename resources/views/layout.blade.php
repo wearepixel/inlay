@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? 'Inlay' }}</title>
-    <link rel="stylesheet" href="{{ route('inlay.assets.css') }}">
+    <link rel="stylesheet" href="{{ route('inlay.admin.assets.css') }}">
 </head>
 <body class="inlay">
     <div class="inlay-shell">
@@ -12,8 +12,8 @@
             <div class="inlay-sidebar__brand">Inlay</div>
             <nav class="inlay-nav">
                 <a
-                    href="{{ route('inlay.pages.index') }}"
-                    class="inlay-nav__link {{ request()->routeIs('inlay.pages.*') ? 'is-active' : '' }}"
+                    href="{{ route('inlay.admin.pages.index') }}"
+                    class="inlay-nav__link {{ request()->routeIs('inlay.admin.pages.*') ? 'is-active' : '' }}"
                 >Pages</a>
             </nav>
         </aside>
@@ -23,7 +23,7 @@
         </div>
     </div>
 
-    <script src="{{ route('inlay.assets.js') }}" defer></script>
+    <script src="{{ route('inlay.admin.assets.js') }}" defer></script>
     @livewireScripts
 </body>
 </html>

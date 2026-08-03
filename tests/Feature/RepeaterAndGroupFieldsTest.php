@@ -16,7 +16,7 @@ beforeEach(function () {
 });
 
 it('adds and removes repeater items, persisting each edit', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-faq', 'order' => 0, 'settings' => ['items' => []]]);
 
     $test = Livewire::test(PageEditor::class, ['page' => $page])
@@ -36,7 +36,7 @@ it('adds and removes repeater items, persisting each edit', function () {
 });
 
 it('defaults a Group field to an array, not an empty string, when a section is added', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->call('addSection', 'test-group')

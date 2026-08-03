@@ -10,7 +10,7 @@ beforeEach(function () {
 });
 
 it('reorders blocks with a keyboard shortcut, not just by dragging', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $first = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => ['heading' => 'First']]);
     $second = $page->sections()->create(['handle' => 'hero', 'order' => 1, 'settings' => ['heading' => 'Second']]);
 
@@ -31,7 +31,7 @@ it('reorders blocks with a keyboard shortcut, not just by dragging', function ()
 });
 
 it('deletes the focused block with the Delete key, after confirmation', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
@@ -45,7 +45,7 @@ it('deletes the focused block with the Delete key, after confirmation', function
 });
 
 it('navigates and adds a block from the picker with arrow keys and Enter', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
 
@@ -59,7 +59,7 @@ it('navigates and adds a block from the picker with arrow keys and Enter', funct
 });
 
 it('remembers the selected preview viewport and actually narrows the iframe', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
 

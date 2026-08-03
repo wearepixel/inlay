@@ -4,7 +4,7 @@ This documents the editor-facing workflow in plain language - what someone manag
 
 ## Page creation
 
-From the page index (`/inlay/pages`), click **New page**. Give it a title; a URL-safe slug is generated automatically from it as you type. You can edit the slug by hand - once you do, it stops following the title automatically, so you don't lose an intentional edit. Click **Create page** to open the new page's editor.
+From the page index (`/inlay/pages`), click **New page**. Give it a title - the only required field. A public path is optional: leave it blank for a page your application renders itself through its own route (see the README's "[Embedded rendering](../README.md#embedded-rendering)"), or fill it in (e.g. `about/team`) to have Inlay serve it publicly once published. The field beneath it shows the exact URL the page will publish at, reflecting whatever prefix your application has configured. You can also set a meta title, a meta description, and mark the page as your site's homepage. Click **Create page** to open the new page's editor.
 
 The page index itself lists every page, most recently updated first, with a search box that filters by title and a status badge (draft or published) next to each one.
 
@@ -14,6 +14,10 @@ The editor is two panes, not three:
 
 1. **The contextual sidebar** (left) - shows the page's block tree by default, and switches to a selected block's settings when you're editing one. The two never share space; selecting a block replaces the tree rather than appearing alongside it.
 2. **Preview** (right) - a real iframe showing the page as your own application would actually render it, given the dominant share of the editor's width. This is a visual composition tool built around the preview, not a settings form with a preview bolted on the side.
+
+## Page Settings
+
+Click **Page Settings** in the header to edit the page itself - title, public path, homepage status, meta title, and meta description - separately from any block's settings. This replaces the tree in the contextual sidebar exactly like selecting a block does; it is not a third, permanently-visible column, and the dominant preview pane is unaffected. It's organised into three sections: **General** (title, public path with its live effective-URL preview, and the homepage checkbox), **Search metadata** (meta title and description), and **Publishing** (the page's current status and when it was last published). Click **Save page settings** to persist changes - unlike block settings, which save automatically as you type, page settings save as one explicit action, since a title/path/homepage change is a more deliberate edit than tweaking a block's field. Click **&larr; Blocks** to return to the tree.
 
 ## Block selection
 

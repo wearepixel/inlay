@@ -8,7 +8,7 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 
 /**
- * Confirms config('inlay.middleware') actually protects the admin's
+ * Confirms config('inlay.admin.middleware') actually protects the admin's
  * initial GET requests, and that a legitimately authenticated session can
  * still complete a full Livewire action (add/select/publish) end to end -
  * i.e. an 'auth'-guarded admin doesn't wrongly block a real, authenticated
@@ -47,7 +47,7 @@ it('allows an authenticated visitor to load the admin and complete a real Livewi
 
     $this->actingAs($user);
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
     visit('/inlay-secure/pages')->assertSee('Pages')->assertSee('New page');
@@ -67,10 +67,10 @@ it('allows an authenticated visitor to load the admin and complete a real Livewi
  * publishing, etc) - the initial page load worked fine, every action after
  * it did not. Root cause: Livewire's persistent middleware re-runs the
  * *original* route's middleware against a *cloned* request on every action -
- * so when config('inlay.middleware') resolved the "web" group into that
+ * so when config('inlay.admin.middleware') resolved the "web" group into that
  * persistent set, EncryptCookies ran a second time against a cookie its
  * first pass had already decrypted, failed, and silently dropped it,
- * leaving the clone with no session at all. See InlayManager::routes() for
+ * leaving the clone with no session at all. See InlayManager::adminRoutes() for
  * the fix (only middleware beyond "web" persists).
  *
  * This test performs a genuine login through TestCase's own '/test-login'
@@ -83,7 +83,7 @@ it('allows an authenticated visitor to load the admin and complete a real Livewi
  * afterwards, because this plugin's in-process AMPHP server keeps one
  * booted Application - and with it the auth guard's already-resolved user -
  * alive across what a real server would treat as separate requests. So this
- * assertion passes identically whether InlayManager::routes() is fixed or
+ * assertion passes identically whether InlayManager::adminRoutes() is fixed or
  * not; it is kept as real coverage of the login-then-act happy path, not as
  * a regression guard for this specific bug. The fix itself was verified
  * against a real `php artisan serve` process in a standalone sandbox app,
@@ -96,7 +96,7 @@ it('keeps a real, cookie-based session logged in across a Livewire action', func
         'password' => bcrypt('password'),
     ]);
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
     visit('/test-login')

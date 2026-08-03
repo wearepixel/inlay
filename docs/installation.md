@@ -28,34 +28,42 @@ Add one line to your own `routes/web.php`, after your application's own routes:
 ```php
 use WeArePixel\Inlay\Facades\Inlay;
 
-Inlay::routes();
+Inlay::adminRoutes();
 ```
 
-This registers the packaged admin under `/inlay` by default (`config('inlay.route_prefix')`). Visit `/inlay/pages` and you should see an empty page index - there's nothing to compose yet, because no block is registered.
+This registers the packaged admin under `/inlay` by default (`config('inlay.admin.prefix')`). Visit `/inlay/pages` and you should see an empty page index - there's nothing to compose yet, because no block is registered.
+
+`Inlay::adminRoutes()` only registers the admin. If you also want Inlay to serve published Pages at a public URL with no route or controller of your own, add `Inlay::pageRoutes()` too (or call the combined `Inlay::routes()` instead of both) - see [docs/routing.md](routing.md). This guide covers the admin-only path first, since it's what every install needs regardless.
 
 ## 4. Set your admin middleware
 
 Open `config/inlay.php`:
 
 ```php
-'middleware' => ['web'],
+'admin' => [
+    'middleware' => ['web'],
+],
 ```
 
 **Stop here before going further if your application has real content or real users.** `['web']` alone means anyone who can reach your application can create, edit, and delete pages - there is no authentication or authorization built into the package itself, by design (the package is deliberately auth-agnostic; your application owns that decision). At minimum:
 
 ```php
-'middleware' => ['web', 'auth'],
+'admin' => [
+    'middleware' => ['web', 'auth'],
+],
 ```
 
 If your application uses Laravel's default `auth` guard and has a `login` named route, this is enough to require a logged-in user. If not every authenticated user should be able to manage pages, layer in your own authorization:
 
 ```php
-'middleware' => ['web', 'auth', 'can:manage-pages'],
+'admin' => [
+    'middleware' => ['web', 'auth', 'can:manage-pages'],
+],
 ```
 
 where `manage-pages` is a `Gate::define()` or policy ability your application defines - Inlay has no opinion on how you express it, it just needs a middleware name Laravel already understands.
 
-You do not need to do anything else to make this middleware apply to every admin action, not just the first page load - `Inlay::routes()` already handles registering it as [Livewire persistent middleware](https://livewire.laravel.com/docs/security#middleware-persistence-with-hierarchical-routing) for you. See the README's "[Why Livewire middleware persistence matters](../README.md#why-livewire-middleware-persistence-matters)" if you want the mechanical detail.
+You do not need to do anything else to make this middleware apply to every admin action, not just the first page load - `Inlay::adminRoutes()` already handles registering it as [Livewire persistent middleware](https://livewire.laravel.com/docs/security#middleware-persistence-with-hierarchical-routing) for you. See the README's "[Why Livewire middleware persistence matters](../README.md#why-livewire-middleware-persistence-matters)" if you want the mechanical detail. This is a separate setting from `config('inlay.pages.middleware')`, which guards public Pages instead - see [docs/routing.md](routing.md).
 
 ## 5. Write your first block
 
@@ -138,20 +146,38 @@ If you skip this step, the preview pane still works - it falls back to a plain, 
 
 ## 7. Create and publish your first page
 
-1. Visit `/inlay/pages` and click **New page**. Give it a title (a slug is generated automatically).
+1. Visit `/inlay/pages` and click **New page**. Give it a title. A public path is optional - leave it blank if you'd rather render this page through a route your own application already owns (step 8, option B below).
 2. In the editor, click **+ Add**, choose **Hero** from the picker, and edit its heading in the inspector.
 3. Watch the preview pane update.
 4. Click **Publish**.
 
 ## 8. Render it on your actual site
 
-Inlay doesn't register a public route for you - wire the page into your own routing however you already do:
+Pick one of two options - see [docs/routing.md](routing.md) for the full reference.
+
+**Option A - let Inlay serve it publicly.** Give the page a public path (e.g. `about`) in step 7, then register `Inlay::pageRoutes()`:
+
+```php
+// routes/web.php
+Inlay::pageRoutes(prefix: 'pages'); // -> /pages/about
+```
+
+```blade
+{{-- resources/views/inlay/pages/show.blade.php --}}
+<x-app-layout>
+    {{ $composition }}
+</x-app-layout>
+```
+
+Configure this view path with `config('inlay.pages.view')` if you'd rather use a different name.
+
+**Option B - render it through a route you already own:**
 
 ```php
 // routes/web.php
 use WeArePixel\Inlay\Models\Page;
 
-Route::get('/{page:slug}', function (Page $page) {
+Route::get('/{page:path}', function (Page $page) {
     return view('pages.show', ['page' => $page]);
 });
 ```
@@ -163,10 +189,11 @@ Route::get('/{page:slug}', function (Page $page) {
 </x-app-layout>
 ```
 
-Visit the page's slug on your site and you should see the published `Hero` block, styled by your own application's CSS - not Inlay's.
+Either way, visit the page's URL and you should see the published `Hero` block, styled by your own application's CSS - not Inlay's.
 
 ## Next steps
 
+- [docs/routing.md](routing.md) - the full public routing reference (prefixes, nested paths, the homepage, `Inlay::url()`).
 - [docs/blocks.md](blocks.md) - the full block-authoring reference (fluent settings, enums, `LinkValue`, nested Livewire).
 - [docs/editor.md](editor.md) - the editor-facing workflow in plain language.
 - [README.md](../README.md#current-limitations) - what this release deliberately doesn't include yet.

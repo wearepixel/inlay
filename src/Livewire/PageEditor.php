@@ -8,14 +8,18 @@ use BackedEnum;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use WeArePixel\Inlay\Actions\PublishPage;
 use WeArePixel\Inlay\Actions\RestorePageRevision;
+use WeArePixel\Inlay\Actions\SetPageAsHomepage;
+use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Models\PageSection;
+use WeArePixel\Inlay\Rules\PagePath;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
@@ -52,9 +56,69 @@ final class PageEditor extends Component
     /** @var array<string, mixed> */
     public array $imageUploads = [];
 
+    public string $pageTitle = '';
+
+    public string $pagePath = '';
+
+    public string $pageMetaTitle = '';
+
+    public string $pageMetaDescription = '';
+
+    public bool $pageIsHomepage = false;
+
     public function mount(Page $page): void
     {
         $this->page = $page;
+        $this->pageTitle = $page->title;
+        $this->pagePath = $page->path ?? '';
+        $this->pageMetaTitle = $page->meta_title ?? '';
+        $this->pageMetaDescription = $page->meta_description ?? '';
+        $this->pageIsHomepage = $page->is_homepage;
+    }
+
+    /**
+     * The URL the page will publish at, reflecting the Page Settings
+     * panel's currently-typed (not-yet-saved) path/homepage state, exactly
+     * as PageCreate's own effectiveUrl does - never read from the database
+     * directly, since it must update live as an editor types.
+     */
+    #[Computed]
+    public function pageEffectiveUrl(): ?string
+    {
+        $page = new Page([
+            'path' => Page::normalizePath($this->pagePath),
+            'is_homepage' => $this->pageIsHomepage,
+        ]);
+
+        return app(InlayManager::class)->url($page);
+    }
+
+    public function savePageSettings(): void
+    {
+        $this->validate([
+            'pageTitle' => ['required', 'string', 'max:255'],
+            'pagePath' => ['nullable', 'string', 'max:255', new PagePath(ignorePageId: $this->page->id)],
+            'pageMetaTitle' => ['nullable', 'string', 'max:255'],
+            'pageMetaDescription' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $wasHomepage = $this->page->is_homepage;
+
+        $this->page->update([
+            'title' => $this->pageTitle,
+            'path' => $this->pagePath,
+            'meta_title' => $this->pageMetaTitle !== '' ? $this->pageMetaTitle : null,
+            'meta_description' => $this->pageMetaDescription !== '' ? $this->pageMetaDescription : null,
+        ]);
+
+        if ($this->pageIsHomepage) {
+            app(SetPageAsHomepage::class)->execute($this->page);
+        } elseif ($wasHomepage) {
+            $this->page->update(['is_homepage' => false]);
+        }
+
+        $this->page->refresh();
+        $this->dispatch('setting-saved');
     }
 
     /**
@@ -265,6 +329,7 @@ final class PageEditor extends Component
 
         $schema = $selectedDefinition?->settings;
         $blocks = collect(app(BlockRegistry::class)->all());
+        $revisions = $this->page->revisions()->get();
 
         return view('inlay::livewire.page-editor', [
             'title' => "{$this->page->title} · Inlay",
@@ -293,7 +358,8 @@ final class PageEditor extends Component
             'selectedSchema' => $schema,
             'inspectorTabs' => $this->inspectorTabs($schema),
             'previewUrl' => $this->previewUrl(),
-            'revisions' => $this->page->revisions()->get(),
+            'revisions' => $revisions,
+            'latestRevision' => $revisions->first(),
         ]);
     }
 
@@ -357,7 +423,7 @@ final class PageEditor extends Component
 
     private function previewUrl(): string
     {
-        return route('inlay.pages.preview', $this->page).'?v='.$this->previewVersion;
+        return route('inlay.admin.pages.preview', $this->page).'?v='.$this->previewVersion;
     }
 
     private function bumpPreview(): void

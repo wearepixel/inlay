@@ -47,7 +47,7 @@ abstract class TestCase extends Orchestra
     {
         // A named 'login' route is all Illuminate\Auth\Middleware\Authenticate
         // needs to redirect an unauthenticated request to - used only by the
-        // browser test that configures config('inlay.middleware') with 'auth'.
+        // browser test that configures config('inlay.admin.middleware') with 'auth'.
         Route::get('/login', fn () => 'login')->name('login');
 
         // A genuine, cookie-based login flow (distinct from the '/login'
@@ -86,17 +86,25 @@ abstract class TestCase extends Orchestra
         // empty, unbound model rather than a 404 or the real record.
         Route::middleware('web')->get('/site/{page}', fn (Page $page) => view('public-page', ['page' => $page]))->name('site.page');
 
-        Inlay::routes();
+        // Only the admin routes are registered here, deliberately not the
+        // combined Inlay::routes() - a root-level Inlay::pageRoutes() is a
+        // genuine catch-all, and registering it in this file's shared
+        // defineRoutes() would shadow every other route below it (the
+        // 'inlay-secure' group, this file's own /login and /site/{page}
+        // stubs) for the entire suite. Tests that specifically exercise
+        // public Page routing register Inlay::pageRoutes() themselves,
+        // scoped to just that test.
+        Inlay::adminRoutes();
 
         // A second, permanently-registered copy of the same admin routes
         // guarded by 'auth' - used only by the browser test that proves
-        // config('inlay.middleware') actually protects the admin. This
+        // config('inlay.admin.middleware') actually protects the admin. This
         // exists as a fixed route group (rather than toggling
-        // config('inlay.middleware') per test) because Inlay::routes()
-        // bakes the configured middleware into the route group at
-        // registration time, during this same defineRoutes() call -
-        // Pest's beforeEach() runs after the application has already
-        // booted, too late to influence it.
+        // config('inlay.admin.middleware') per test) because
+        // Inlay::adminRoutes() bakes the configured middleware into the
+        // route group at registration time, during this same
+        // defineRoutes() call - Pest's beforeEach() runs after the
+        // application has already booted, too late to influence it.
         Route::group([
             'prefix' => 'inlay-secure',
             'as' => 'inlay-secure.',
@@ -108,7 +116,7 @@ abstract class TestCase extends Orchestra
     {
         // The framework's own users/cache/jobs tables - not used by most of
         // this suite, but needed by the browser tests that authenticate a
-        // real user against config('inlay.middleware').
+        // real user against config('inlay.admin.middleware').
         $this->loadLaravelMigrations();
 
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');

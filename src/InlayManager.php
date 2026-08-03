@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace WeArePixel\Inlay;
 
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\HtmlString;
 use Livewire\Livewire;
+use RuntimeException;
+use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\SingleFile\BlockLoader;
 use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\SectionRenderer;
 
 /**
  * The single developer-facing entry point for wiring Inlay into a host
@@ -19,15 +24,40 @@ final class InlayManager
 {
     private ?string $previewView = null;
 
+    private bool $pageRoutesRegistered = false;
+
+    private ?string $activePagesPrefix = null;
+
+    private ?string $activePagesView = null;
+
     /**
-     * Registers the packaged admin routes (page index, create, editor,
-     * preview) under config('inlay.route_prefix') / config('inlay.middleware').
-     * Called explicitly by the host application, e.g. in routes/web.php,
-     * after its own routes - the package registers nothing on its own.
+     * @var array<int, string>|null
+     */
+    private ?array $activePagesMiddleware = null;
+
+    /**
+     * Registers both the packaged admin routes and Inlay-owned public Page
+     * routes - a convenience for a host that wants both with no
+     * per-group configuration. Equivalent to calling adminRoutes() and
+     * pageRoutes() separately, which is what most hosts documented in
+     * docs/routing.md actually want (pageRoutes() alone, or not at all,
+     * favouring their own application-owned routes instead).
      */
     public function routes(): void
     {
-        $middleware = (array) config('inlay.middleware', ['web']);
+        $this->adminRoutes();
+        $this->pageRoutes();
+    }
+
+    /**
+     * Registers the packaged admin routes (page index, create, editor,
+     * preview) under config('inlay.admin.prefix') / config('inlay.admin.middleware').
+     * Called explicitly by the host application, e.g. in routes/web.php,
+     * after its own routes - the package registers nothing on its own.
+     */
+    public function adminRoutes(): void
+    {
+        $middleware = (array) config('inlay.admin.middleware', ['web']);
 
         // Every admin action after the first page load (add/reorder/delete a
         // block, persist a setting, publish) is dispatched to Livewire's
@@ -60,10 +90,150 @@ final class InlayManager
         );
 
         Route::group([
-            'prefix' => config('inlay.route_prefix', 'inlay'),
-            'as' => 'inlay.',
+            'prefix' => config('inlay.admin.prefix', 'inlay'),
+            'as' => 'inlay.admin.',
             'middleware' => $middleware,
         ], __DIR__.'/../routes/admin.php');
+
+        // See the matching call in pageRoutes() for why this is needed -
+        // makes route('inlay.admin.*') reliable immediately, not just once
+        // an actual request has been dispatched.
+        Route::getRoutes()->refreshNameLookups();
+    }
+
+    /**
+     * Registers Inlay-owned public routing for published Pages - a single
+     * route resolving any path against config('inlay.pages.view') (or the
+     * $view argument), rendering it as a real Blade view your application
+     * owns entirely (docs/routing.md). Inlay never registers this
+     * automatically; a host must opt in explicitly, and a root-level
+     * (unprefixed) registration is a genuine catch-all that must be
+     * registered last, after the host's own routes.
+     *
+     * Method arguments override config('inlay.pages.*'), which overrides
+     * the package's own defaults. 'pages', '/pages', 'pages/', and
+     * '/pages/' are all normalised to the same internal prefix value.
+     *
+     * Calling this twice in the same process with equivalent resolved
+     * configuration is a harmless no-op (the second call is ignored);
+     * calling it twice with genuinely different configuration throws,
+     * since only one public Page route registration can be "the" active
+     * one for Inlay::url() to generate against.
+     *
+     * @param  array<int, string>|null  $middleware
+     */
+    public function pageRoutes(?string $prefix = null, ?string $view = null, ?array $middleware = null): void
+    {
+        $resolvedPrefix = self::normalizePrefix($prefix ?? config('inlay.pages.prefix'));
+        $resolvedView = $view ?? config('inlay.pages.view', 'inlay.pages.show');
+        $resolvedMiddleware = $middleware ?? (array) config('inlay.pages.middleware', ['web']);
+
+        if ($this->pageRoutesRegistered) {
+            if ($this->activePagesPrefix === $resolvedPrefix
+                && $this->activePagesView === $resolvedView
+                && $this->activePagesMiddleware === $resolvedMiddleware) {
+                return;
+            }
+
+            throw new RuntimeException(
+                'Inlay::pageRoutes() has already been registered in this process with different configuration. '
+                .'Registering it more than once with incompatible prefix/view/middleware is not supported - '
+                .'call it exactly once, e.g. from your application\'s routes/web.php.'
+            );
+        }
+
+        $this->pageRoutesRegistered = true;
+        $this->activePagesPrefix = $resolvedPrefix;
+        $this->activePagesView = $resolvedView;
+        $this->activePagesMiddleware = $resolvedMiddleware;
+
+        Route::group([
+            'prefix' => $resolvedPrefix,
+            'as' => 'inlay.pages.',
+            'middleware' => $resolvedMiddleware,
+        ], __DIR__.'/../routes/pages.php');
+
+        // Laravel's route name lookup is a cache populated when a route is
+        // first added to the collection - at that exact moment, a group's
+        // 'as' prefix is already merged in, but this route's own ->name()
+        // call (inside routes/pages.php) hasn't run yet, so the cache would
+        // otherwise hold "inlay.pages." (no "show") until something else
+        // happens to rebuild it (Laravel does this itself the first time it
+        // matches an incoming request against the route collection, which
+        // is why this is invisible in a normal request lifecycle - pages.php
+        // is required by the host's own routes/web.php, long before any
+        // request is dispatched). Forcing it here makes route('inlay.pages.
+        // show') and Inlay::url() reliable immediately, including from a
+        // console command or test that never dispatches a real request.
+        Route::getRoutes()->refreshNameLookups();
+    }
+
+    /**
+     * The host-owned Blade view PagesController renders a public Page
+     * through - whatever pageRoutes() was actually registered with (which
+     * may have overridden config('inlay.pages.view') via its own $view
+     * argument), falling back to config directly if pageRoutes() hasn't
+     * run yet in this process.
+     */
+    public function resolvePagesView(): string
+    {
+        return $this->activePagesView ?? config('inlay.pages.view', 'inlay.pages.show');
+    }
+
+    /**
+     * Normalises a configured public-route prefix so 'pages', '/pages',
+     * 'pages/', and '/pages/' all behave identically, and an all-slash or
+     * empty value means "no prefix" (root-level routing) rather than a
+     * literal empty path segment.
+     */
+    private static function normalizePrefix(?string $prefix): ?string
+    {
+        if ($prefix === null) {
+            return null;
+        }
+
+        $trimmed = trim($prefix, "/ \t\n\r\0\x0B");
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * The public URL for a Page, generated from live configuration rather
+     * than the database - a Page row never stores a route prefix, so
+     * changing config('inlay.pages.prefix') (or the prefix argument to a
+     * fresh pageRoutes() call) changes every Page's URL immediately,
+     * without touching a single Page row (docs/routing.md).
+     *
+     * Uses the real named route when pageRoutes() has been registered in
+     * this process (so nested paths generate correctly through Laravel's
+     * own URL generator); otherwise falls back to building the URL
+     * manually from config, so URL display inside the admin stays useful
+     * even when route registration happens in a different application
+     * bootstrap path than the one currently running (e.g. a queued job, a
+     * console command) - see the InlayManager class docblock.
+     *
+     * Returns null for a non-homepage Page with no public path - it has
+     * no Inlay-owned public URL, by design (it's host-rendered only).
+     */
+    public function url(Page $page): ?string
+    {
+        if (! $page->is_homepage && $page->path === null) {
+            return null;
+        }
+
+        $path = $page->is_homepage ? null : $page->path;
+
+        if ($this->pageRoutesRegistered && Route::has('inlay.pages.show')) {
+            return route('inlay.pages.show', $path === null ? [] : ['path' => $path], absolute: false);
+        }
+
+        $prefix = $this->pageRoutesRegistered
+            ? $this->activePagesPrefix
+            : self::normalizePrefix(config('inlay.pages.prefix'));
+
+        $segments = array_filter([$prefix, $path], fn (?string $segment): bool => $segment !== null && $segment !== '');
+
+        return '/'.implode('/', $segments);
     }
 
     /**
@@ -81,6 +251,27 @@ final class InlayManager
     public function resolvePreviewView(): ?string
     {
         return $this->previewView;
+    }
+
+    /**
+     * Renders a Page's latest published revision as a genuine Htmlable
+     * composition - the same primitive both the public PagesController and
+     * <x-inlay::render> use internally, also directly usable by a host
+     * application that wants to embed a Page inside a route it already
+     * owns (docs/routing.md). A Page with no revisions yet (never
+     * published) renders as empty, exactly like an empty section list -
+     * there is no "draft preview" meaning here, that's what
+     * Inlay::previewView() is for.
+     *
+     * @param  array<string, mixed>|null  $context
+     */
+    public function renderPage(Page $page, ?array $context = null): Htmlable
+    {
+        $revision = $page->revisions()->first();
+
+        $sections = $revision?->snapshot['sections'] ?? [];
+
+        return new HtmlString(app(SectionRenderer::class)->render($sections, $context));
     }
 
     /**

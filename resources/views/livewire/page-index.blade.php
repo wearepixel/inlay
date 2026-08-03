@@ -13,7 +13,7 @@
                 style="width: 220px;"
                 data-test="page-search"
             >
-            <a href="{{ route('inlay.pages.create') }}" class="inlay-button inlay-button--primary">New page</a>
+            <a href="{{ route('inlay.admin.pages.create') }}" class="inlay-button inlay-button--primary">New page</a>
         </div>
     </div>
 
@@ -34,15 +34,23 @@
                     @foreach ($pages as $page)
                         <tr wire:key="page-{{ $page->id }}">
                             <td>
-                                <a href="{{ route('inlay.pages.edit', $page) }}" class="inlay-table__title">{{ $page->title }}</a>
-                                <div class="inlay-table__slug">/{{ $page->slug }}</div>
+                                <a href="{{ route('inlay.admin.pages.edit', $page) }}" class="inlay-table__title">{{ $page->title }}</a>
+                                <div class="inlay-table__slug">
+                                    @if ($page->is_homepage)
+                                        <span class="inlay-badge">Homepage</span>
+                                    @elseif ($page->path !== null)
+                                        {{ $this->url($page) }}
+                                    @else
+                                        <span style="opacity: 0.6;">No public path</span>
+                                    @endif
+                                </div>
                             </td>
                             <td>
                                 <span class="inlay-badge inlay-badge--{{ $page->status->value }}">{{ $page->status->value }}</span>
                             </td>
                             <td>{{ $page->updated_at?->diffForHumans() }}</td>
                             <td style="text-align: right;">
-                                <a href="{{ route('inlay.pages.edit', $page) }}" class="inlay-button inlay-button--small">Edit</a>
+                                <a href="{{ route('inlay.admin.pages.edit', $page) }}" class="inlay-button inlay-button--small">Edit</a>
                                 <button
                                     type="button"
                                     wire:click="delete({{ $page->id }})"

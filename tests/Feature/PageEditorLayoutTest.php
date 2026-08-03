@@ -14,7 +14,7 @@ beforeEach(function () {
 });
 
 it('renders the section list with drag data attributes, the add-section picker, and the preview pane', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => ['heading' => 'Hi', 'layout' => 'image-right']]);
 
     Livewire::test(PageEditor::class, ['page' => $page])

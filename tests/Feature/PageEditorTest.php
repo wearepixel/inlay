@@ -15,7 +15,7 @@ beforeEach(function () {
 });
 
 it('adds a section with no stored overrides, resolving effective settings from the block defaults', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->call('addSection', 'test-hero')
@@ -31,7 +31,7 @@ it('adds a section with no stored overrides, resolving effective settings from t
 });
 
 it('persists drag-reordering', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $first = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
     $second = $page->sections()->create(['handle' => 'test-hero', 'order' => 1, 'settings' => []]);
 
@@ -44,7 +44,7 @@ it('persists drag-reordering', function () {
 });
 
 it('loads a selected section into editingProps with effective settings, and persists only the field that was edited', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-hero',
         'order' => 0,
@@ -64,7 +64,7 @@ it('loads a selected section into editingProps with effective settings, and pers
 });
 
 it('publishes the page', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => ['heading' => 'Hi', 'layout' => 'image-right']]);
 
     Livewire::test(PageEditor::class, ['page' => $page])
@@ -76,7 +76,7 @@ it('publishes the page', function () {
 });
 
 it('duplicates a section, copying its stored settings and selecting the copy', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => ['heading' => 'Original']]);
 
     Livewire::test(PageEditor::class, ['page' => $page])
@@ -92,7 +92,7 @@ it('duplicates a section, copying its stored settings and selecting the copy', f
 });
 
 it('deletes a section and clears the selection if it was selected', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
 
     Livewire::test(PageEditor::class, ['page' => $page])
@@ -105,7 +105,7 @@ it('deletes a section and clears the selection if it was selected', function () 
 });
 
 it('bumps the preview version on a mutating action so the preview iframe is forced to reload', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->assertSet('previewVersion', 0)

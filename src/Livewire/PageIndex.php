@@ -9,6 +9,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
+use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
 
 #[Layout('inlay::layout')]
@@ -21,6 +22,11 @@ final class PageIndex extends Component
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function url(Page $page): ?string
+    {
+        return app(InlayManager::class)->url($page);
     }
 
     public function delete(int $pageId): void

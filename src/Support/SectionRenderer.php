@@ -36,9 +36,19 @@ final class SectionRenderer
      * not just an internal-consistency guarantee - handle/settings are
      * defensively treated as optional rather than assumed present.
      *
+     * `$context` is host-supplied, request-specific data with no schema
+     * Inlay understands (the collection currently being viewed, the
+     * authenticated customer) - it is merged underneath each block's own
+     * resolved settings before binding, so a block's own field names always
+     * win on a collision, and a block whose Blade view declares a matching
+     * property picks up the context value the same way it already picks up
+     * an ordinary container-resolvable dependency (docs/v1-implementation-
+     * specification.md §9). Inlay itself never inspects or validates it.
+     *
      * @param  iterable<array{handle?: string, settings?: array<string, mixed>}>  $sections
+     * @param  array<string, mixed>|null  $context
      */
-    public function render(iterable $sections): string
+    public function render(iterable $sections, ?array $context = null): string
     {
         $html = '';
 
@@ -47,7 +57,7 @@ final class SectionRenderer
                 $definition = $this->registry->definition($section['handle'] ?? '');
                 $settings = $this->resolveEffectiveSettings($definition, $section['settings'] ?? []);
 
-                $html .= $this->renderBlock($definition, $settings);
+                $html .= $this->renderBlock($definition, array_merge($context ?? [], $settings));
             } catch (Throwable $exception) {
                 // A malformed or unresolvable block must not take down
                 // every other block on the page.

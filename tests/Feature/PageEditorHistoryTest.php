@@ -15,7 +15,7 @@ beforeEach(function () {
 });
 
 it('lists revisions and restores a chosen one', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => ['heading' => 'Original', 'layout' => 'image-right']]);
     $original = app(PublishPage::class)->execute($page);
 

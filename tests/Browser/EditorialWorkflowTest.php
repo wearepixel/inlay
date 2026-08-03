@@ -32,7 +32,7 @@ it('creates a page from the index and opens its editor', function () {
         ->assertSee('No pages yet')
         ->click('New page')
         ->fill('#page-title', 'Home')
-        ->assertValue('#page-slug', 'home')
+        ->fill('#page-path', 'home')
         ->press('Create page')
         // Livewire's redirectRoute() after save() lands here.
         ->assertSee('Home')
@@ -40,12 +40,12 @@ it('creates a page from the index and opens its editor', function () {
 
     expect(Page::sole())
         ->title->toBe('Home')
-        ->slug->toBe('home')
+        ->path->toBe('home')
         ->status->toBe(PageStatus::Draft);
 });
 
 it('opens the block picker, searches, and adds a block grouped by category', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
 
@@ -75,7 +75,7 @@ it('opens the block picker, searches, and adds a block grouped by category', fun
 });
 
 it('selects a block, edits a setting, and shows conditional visibility', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
@@ -97,7 +97,7 @@ it('selects a block, edits a setting, and shows conditional visibility', functio
 });
 
 it('duplicates, shows drag connectivity, and deletes a block', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
@@ -140,7 +140,7 @@ it('duplicates, shows drag connectivity, and deletes a block', function () {
 });
 
 it('reloads the preview iframe with the current draft content', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => ['heading' => 'Hi there']]);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
@@ -151,7 +151,7 @@ it('reloads the preview iframe with the current draft content', function () {
 });
 
 it('publishes, diverges draft from published output, republishes, and restores an earlier revision', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => ['heading' => 'Welcome to Acme']]);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");

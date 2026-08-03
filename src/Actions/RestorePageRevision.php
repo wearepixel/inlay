@@ -18,7 +18,7 @@ final class RestorePageRevision
 
             $page->sections()->delete();
 
-            foreach ($revision->snapshot as $sectionData) {
+            foreach ($revision->snapshot['sections'] as $sectionData) {
                 // The snapshot's own `id` refers to the section row that
                 // existed when this revision was published, which no longer
                 // exists (it was just deleted above) - a fresh row gets a
@@ -33,6 +33,18 @@ final class RestorePageRevision
                     'settings' => $sectionData['settings'],
                 ]);
             }
+
+            // Page-level metadata is restored onto the live Page row too,
+            // the same as sections - restoring an older revision should
+            // bring back the title/meta description it was published with,
+            // not just its content. `path` and `is_homepage` are
+            // deliberately left untouched - see PublishPage's docblock for
+            // why they're routing/identity state, not revisioned content.
+            $page->update([
+                'title' => $revision->snapshot['title'],
+                'meta_title' => $revision->snapshot['meta_title'],
+                'meta_description' => $revision->snapshot['meta_description'],
+            ]);
 
             return $this->publishPage->execute(
                 $page,

@@ -1,7 +1,13 @@
-<div>
+<div
+    x-data="inlayEditorSidebar(@js($showingHistory ? 'history' : ($selectedSchema ? 'settings' : 'tree')), @js($selectedSectionId))"
+    x-on:section-selected.window="showSettings($event.detail.id)"
+    x-on:selection-cleared.window="toTree()"
+    x-on:history-toggled.window="onHistoryToggled($event.detail.showing)"
+    x-on:keydown.escape.window="onEscape()"
+>
     <div class="inlay-topbar">
         <div>
-            <a href="{{ route('inlay.pages.index') }}" class="inlay-eyebrow" style="text-decoration: none;">&larr; All pages</a>
+            <a href="{{ route('inlay.admin.pages.index') }}" class="inlay-eyebrow" style="text-decoration: none;">&larr; All pages</a>
             <h1>{{ $page->title }}</h1>
         </div>
         <div
@@ -22,6 +28,7 @@
             <span wire:loading.delay wire:target="editingProps" class="inlay-status inlay-status--saving">Saving&hellip;</span>
             <span x-show="message" x-cloak x-text="message" x-transition.opacity class="inlay-status inlay-status--success" role="status" aria-live="polite"></span>
 
+            <button type="button" x-on:click="showPageSettings()" data-test="open-page-settings" class="inlay-button inlay-button--ghost">Page Settings</button>
             <button type="button" wire:click="toggleHistory" data-test="toggle-history" class="inlay-button inlay-button--ghost" aria-expanded="{{ $showingHistory ? 'true' : 'false' }}">History</button>
             <button type="button" wire:click="publish" wire:loading.attr="disabled" wire:target="publish" data-test="publish" class="inlay-button inlay-button--primary">
                 <span wire:loading.remove wire:target="publish">Publish</span>
@@ -30,14 +37,7 @@
         </div>
     </div>
 
-    <div
-        class="inlay-editor"
-        x-data="inlayEditorSidebar(@js($showingHistory ? 'history' : ($selectedSchema ? 'settings' : 'tree')), @js($selectedSectionId))"
-        x-on:section-selected.window="showSettings($event.detail.id)"
-        x-on:selection-cleared.window="toTree()"
-        x-on:history-toggled.window="onHistoryToggled($event.detail.showing)"
-        x-on:keydown.escape.window="onEscape()"
-    >
+    <div class="inlay-editor">
         <div class="inlay-mobile-tabs" role="tablist" aria-label="Editor panel">
             <button type="button" role="tab" data-test="mobile-panel-edit" class="inlay-mobile-tabs__tab" :class="mobilePanel === 'edit' ? 'is-active' : ''" :aria-selected="(mobilePanel === 'edit').toString()" x-on:click="mobilePanel = 'edit'">Edit</button>
             <button type="button" role="tab" data-test="mobile-panel-preview" class="inlay-mobile-tabs__tab" :class="mobilePanel === 'preview' ? 'is-active' : ''" :aria-selected="(mobilePanel === 'preview').toString()" x-on:click="mobilePanel = 'preview'">Preview</button>
@@ -182,6 +182,63 @@
                 @else
                     <p class="inlay-inspector__empty">Select a block from the list to edit its settings.</p>
                 @endif
+            </div>
+
+            {{-- Page settings (title, public path, metadata, homepage, publishing info) --}}
+            <div x-show="view === 'page-settings'" x-cloak>
+                <div class="inlay-editor__heading">
+                    <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-from-page-settings">
+                        <span aria-hidden="true">&larr;</span> Blocks
+                    </button>
+                </div>
+
+                <p class="inlay-eyebrow">General</p>
+                <div class="inlay-field">
+                    <label class="inlay-field__label" for="page-settings-title">Title</label>
+                    <input id="page-settings-title" type="text" wire:model="pageTitle" class="inlay-input" data-test="page-settings-title">
+                    @error('pageTitle') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
+                </div>
+                <div class="inlay-field">
+                    <label class="inlay-field__label" for="page-settings-path">Public path</label>
+                    <input id="page-settings-path" type="text" wire:model.live.debounce.300ms="pagePath" class="inlay-input" placeholder="about/team" data-test="page-settings-path">
+                    <p class="inlay-field__help">
+                        Optional. Leave blank for a page with no public URL of its own.
+                        @if ($this->pageEffectiveUrl)
+                            Publishes at <code data-test="page-settings-effective-url">{{ $this->pageEffectiveUrl }}</code>.
+                        @endif
+                    </p>
+                    @error('pagePath') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
+                </div>
+                <div class="inlay-field">
+                    <label class="inlay-field__label" style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" wire:model="pageIsHomepage" data-test="page-settings-is-homepage">
+                        Set as homepage
+                    </label>
+                    <p class="inlay-field__help">Serves this page at your site's root URL. Replaces the current homepage, if one is already set.</p>
+                </div>
+
+                <p class="inlay-eyebrow">Search metadata</p>
+                <div class="inlay-field">
+                    <label class="inlay-field__label" for="page-settings-meta-title">Meta title</label>
+                    <input id="page-settings-meta-title" type="text" wire:model="pageMetaTitle" class="inlay-input" data-test="page-settings-meta-title">
+                    <p class="inlay-field__help">Falls back to the title above when left blank.</p>
+                    @error('pageMetaTitle') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
+                </div>
+                <div class="inlay-field">
+                    <label class="inlay-field__label" for="page-settings-meta-description">Meta description</label>
+                    <textarea id="page-settings-meta-description" wire:model="pageMetaDescription" class="inlay-input" rows="3" data-test="page-settings-meta-description"></textarea>
+                    @error('pageMetaDescription') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
+                </div>
+
+                <p class="inlay-eyebrow">Publishing</p>
+                <p class="inlay-field__help">Status: <span class="inlay-badge inlay-badge--{{ $page->status->value }}">{{ $page->status->value }}</span></p>
+                @if ($latestRevision)
+                    <p class="inlay-field__help" data-test="page-settings-last-published">Last published {{ $latestRevision->created_at->diffForHumans() }}{{ $latestRevision->label ? " ({$latestRevision->label})" : '' }}.</p>
+                @else
+                    <p class="inlay-field__help" data-test="page-settings-last-published">Never published.</p>
+                @endif
+
+                <button type="button" wire:click="savePageSettings" class="inlay-button inlay-button--primary" data-test="save-page-settings">Save page settings</button>
             </div>
 
             {{-- Version history --}}

@@ -7,18 +7,18 @@ use WeArePixel\Inlay\Livewire\PageIndex;
 use WeArePixel\Inlay\Models\Page;
 
 it('lists pages, most recently updated first', function () {
-    $older = Page::create(['title' => 'About', 'slug' => 'about']);
+    $older = Page::create(['title' => 'About', 'path' => 'about']);
     $older->forceFill(['updated_at' => now()->subDay()])->save();
 
-    Page::create(['title' => 'Home', 'slug' => 'home']);
+    Page::create(['title' => 'Home', 'path' => 'home']);
 
     Livewire::test(PageIndex::class)
         ->assertSeeInOrder(['Home', 'About']);
 });
 
 it('filters pages by title search', function () {
-    Page::create(['title' => 'Home', 'slug' => 'home']);
-    Page::create(['title' => 'Contact', 'slug' => 'contact']);
+    Page::create(['title' => 'Home', 'path' => 'home']);
+    Page::create(['title' => 'Contact', 'path' => 'contact']);
 
     Livewire::test(PageIndex::class)
         ->set('search', 'Contact')
@@ -27,7 +27,7 @@ it('filters pages by title search', function () {
 });
 
 it('deletes a page', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     Livewire::test(PageIndex::class)
         ->call('delete', $page->id)
@@ -38,7 +38,7 @@ it('deletes a page', function () {
 
 it('paginates with its own inlay-owned view, never Laravel\'s default Tailwind pagination markup', function () {
     for ($i = 1; $i <= 25; $i++) {
-        Page::create(['title' => "Page {$i}", 'slug' => "page-{$i}"]);
+        Page::create(['title' => "Page {$i}", 'path' => "page-{$i}"]);
     }
 
     $html = Livewire::test(PageIndex::class)->html();

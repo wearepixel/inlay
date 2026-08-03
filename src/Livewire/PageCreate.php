@@ -5,50 +5,65 @@ declare(strict_types=1);
 namespace WeArePixel\Inlay\Livewire;
 
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use WeArePixel\Inlay\Actions\SetPageAsHomepage;
+use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Rules\PagePath;
 
 #[Layout('inlay::layout')]
 final class PageCreate extends Component
 {
     public string $title = '';
 
-    public string $slug = '';
+    public string $path = '';
+
+    public string $metaTitle = '';
+
+    public string $metaDescription = '';
+
+    public bool $isHomepage = false;
 
     /**
-     * Must be a public (Livewire-hydrated) property, not a plain private
-     * one - Livewire reconstructs the component from its public-property
-     * snapshot on every request, so a private property silently resets to
-     * its default every round trip and would never actually remember that
-     * the slug was edited by hand.
+     * The URL this page will resolve to once published, shown live beneath
+     * the path field so an editor sees the effect of the active
+     * Inlay::pageRoutes() prefix without it ever being stored on the Page
+     * itself (docs/routing.md).
      */
-    public bool $slugManuallyEdited = false;
-
-    public function updatedTitle(): void
+    #[Computed]
+    public function effectiveUrl(): ?string
     {
-        if (! $this->slugManuallyEdited) {
-            $this->slug = Str::slug($this->title);
-        }
-    }
+        $page = new Page([
+            'path' => Page::normalizePath($this->path),
+            'is_homepage' => $this->isHomepage,
+        ]);
 
-    public function updatedSlug(): void
-    {
-        $this->slugManuallyEdited = true;
+        return app(InlayManager::class)->url($page);
     }
 
     public function save(): void
     {
-        $validated = $this->validate([
+        $this->validate([
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('pages', 'slug')],
+            'path' => ['nullable', 'string', 'max:255', new PagePath],
+            'metaTitle' => ['nullable', 'string', 'max:255'],
+            'metaDescription' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $page = Page::create($validated);
+        $page = Page::create([
+            'title' => $this->title,
+            'path' => $this->path,
+            'meta_title' => $this->metaTitle !== '' ? $this->metaTitle : null,
+            'meta_description' => $this->metaDescription !== '' ? $this->metaDescription : null,
+        ]);
 
-        $this->redirectRoute('inlay.pages.edit', ['page' => $page], navigate: false);
+        if ($this->isHomepage) {
+            app(SetPageAsHomepage::class)->execute($page);
+        }
+
+        $this->redirectRoute('inlay.admin.pages.edit', ['page' => $page], navigate: false);
     }
 
     public function render(): View

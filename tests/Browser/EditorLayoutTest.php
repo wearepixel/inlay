@@ -17,7 +17,7 @@ beforeEach(function () {
 });
 
 it('opens in block-tree mode by default, with the preview dominant and no permanent settings column', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
@@ -38,7 +38,7 @@ it('opens in block-tree mode by default, with the preview dominant and no perman
 });
 
 it('selecting a block replaces the tree with its settings, and back returns to the tree with focus restored', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
@@ -64,7 +64,7 @@ it('selecting a block replaces the tree with its settings, and back returns to t
 });
 
 it('opens settings with Enter and returns to the tree with Escape', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
@@ -85,7 +85,7 @@ it('opens settings with Enter and returns to the tree with Escape', function () 
 });
 
 it('adding from the picker selects the new block and opens its settings', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
 
@@ -98,8 +98,28 @@ it('adding from the picker selects the new block and opens its settings', functi
     $editor->assertMissing("@tree-item-{$section->id}");
 });
 
+it('opens Page Settings from the header with no JavaScript error, and returns to the tree', function () {
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
+
+    $editor = visit("/inlay/pages/{$page->id}/edit");
+
+    // Regression check: the header lives outside the block tree/preview
+    // pane's own markup - a real bug here had the "Page Settings" button's
+    // x-on:click call an Alpine method defined on a *different* x-data
+    // scope than the one wrapping the button, throwing "showPageSettings
+    // is not defined" and leaving the tree showing instead of switching to
+    // the Page Settings pane.
+    $editor->click('Page Settings')
+        ->assertVisible('#page-settings-title')
+        ->assertNoJavaScriptErrors();
+
+    $editor->click('@back-from-page-settings')
+        ->assertMissing('#page-settings-title')
+        ->assertSee('Blocks');
+});
+
 it('safely returns to the tree if the selected block is deleted', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
@@ -121,7 +141,7 @@ it('safely returns to the tree if the selected block is deleted', function () {
 });
 
 it('does not overflow horizontally at a narrow viewport, and switches panels via the segmented control', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
     $editor = visit("/inlay/pages/{$page->id}/edit")->resize(390, 800);

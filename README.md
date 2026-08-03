@@ -39,40 +39,46 @@ php artisan vendor:publish --tag=inlay-config
 php artisan migrate
 ```
 
-### Registering `Inlay::routes()`
+### Registering routes
 
-Inlay registers **no routes on its own**. Call `Inlay::routes()` once from your own `routes/web.php`, after your application's own routes:
+Inlay registers **no routes on its own, of any kind**. You opt into each part explicitly, from your own `routes/web.php`:
 
 ```php
 // routes/web.php
 use WeArePixel\Inlay\Facades\Inlay;
 
-Inlay::routes();
+Inlay::adminRoutes();          // the admin - page index, editor, preview
+Inlay::pageRoutes();           // published Pages, served publicly by Inlay itself
+Inlay::routes();               // both of the above, as a convenience
 ```
 
-This registers the packaged admin - page index, page creation, the page editor, and the preview endpoint - under `config('inlay.route_prefix')` (`inlay` by default, so `/inlay/pages`, `/inlay/pages/create`, and so on) with route names prefixed `inlay.`.
+`adminRoutes()` registers the admin under `config('inlay.admin.prefix')` (`inlay` by default, so `/inlay/pages`, `/inlay/pages/create`, and so on) with route names prefixed `inlay.admin.`. `pageRoutes()` is what makes a published Page reachable at a real public URL with no controller of your own - see [Public routing](#public-routing) below and [docs/routing.md](docs/routing.md) for the full reference (prefixes, nested paths, the homepage, route ordering). Most applications only need `adminRoutes()` plus either `pageRoutes()` **or** their own routes calling `Inlay::renderPage()` - rarely both, and never neither.
 
 ### Configuring admin middleware
 
-`config('inlay.middleware')` controls what guards the admin. The default is:
+`config('inlay.admin.middleware')` controls what guards the admin. The default is:
 
 ```php
-'middleware' => ['web'],
+'admin' => [
+    'middleware' => ['web'],
+],
 ```
 
-**This is not a production authentication configuration.** With nothing else added, every route `Inlay::routes()` registers - including deleting a page - is public to anyone who can reach your application. At minimum, add your own authentication guard:
+**This is not a production authentication configuration.** With nothing else added, every route `Inlay::adminRoutes()` registers - including deleting a page - is public to anyone who can reach your application. At minimum, add your own authentication guard:
 
 ```php
-'middleware' => ['web', 'auth'],
+'admin' => [
+    'middleware' => ['web', 'auth'],
+],
 ```
 
-Add authorization too if not every authenticated user should have admin access, e.g. `['web', 'auth', 'can:manage-pages']`. See [docs/installation.md](docs/installation.md) for a worked example.
+Add authorization too if not every authenticated user should have admin access, e.g. `['web', 'auth', 'can:manage-pages']`. See [docs/installation.md](docs/installation.md) for a worked example. This is entirely separate from `config('inlay.pages.middleware')`, which guards public Page requests instead - a visitor never needs an admin session to view a published Page, and an admin session is never required to serve one.
 
 ### Why Livewire middleware persistence matters
 
-The admin's every action after the first page load - adding a block, editing a setting, publishing - is dispatched to Livewire's own `/livewire/update` endpoint, not back through `Inlay::routes()`. Middleware that isn't explicitly told to persist across that boundary would otherwise guard only the _initial_ page load, leaving every subsequent action unprotected for a session that's since been revoked or expired.
+The admin's every action after the first page load - adding a block, editing a setting, publishing - is dispatched to Livewire's own `/livewire/update` endpoint, not back through `Inlay::adminRoutes()`. Middleware that isn't explicitly told to persist across that boundary would otherwise guard only the _initial_ page load, leaving every subsequent action unprotected for a session that's since been revoked or expired.
 
-`Inlay::routes()` handles this for you: it resolves `config('inlay.middleware')` to concrete middleware classes and registers them with Livewire as [persistent middleware](https://livewire.laravel.com/docs/security#middleware-persistence-with-hierarchical-routing), so they re-run on every subsequent admin action too. You don't need to configure this separately - just make sure your real middleware is in `config('inlay.middleware')` before `Inlay::routes()` runs.
+`Inlay::adminRoutes()` handles this for you: it resolves `config('inlay.admin.middleware')` to concrete middleware classes and registers them with Livewire as [persistent middleware](https://livewire.laravel.com/docs/security#middleware-persistence-with-hierarchical-routing), so they re-run on every subsequent admin action too. You don't need to configure this separately - just make sure your real middleware is in `config('inlay.admin.middleware')` before `Inlay::adminRoutes()` runs.
 
 ### Configuring `Inlay::previewView()`
 
@@ -403,7 +409,7 @@ The nested `<livewire:contact-form />` mounts and hydrates exactly as it would a
 
 ### Adding and editing a page
 
-From `/inlay/pages`, create a page (title + slug), then compose it in the editor: open the block picker, search or browse by category, add a block, select it in the tree to edit its settings in the inspector, and watch the preview iframe reload. See [docs/editor.md](docs/editor.md) for the full editor-facing workflow.
+From `/inlay/pages`, create a page (title, and optionally a public path, meta title/description, and homepage status), then compose it in the editor: open the block picker, search or browse by category, add a block, select it in the tree to edit its settings in the inspector, and watch the preview iframe reload. Page-level fields (title, path, metadata, homepage) are edited separately from block settings, via **Page Settings** in the editor's header - see [docs/editor.md](docs/editor.md) for the full editor-facing workflow.
 
 ### Draft and publish behaviour
 
@@ -415,17 +421,45 @@ Every publish creates a new, immutable revision. The editor's version history li
 
 ## Rendering on your site
 
-### Public routes
+Inlay never registers public routes automatically. You get to choose, per Page, between two integration styles - and can mix both in the same application:
 
-Inlay registers no public-facing routes of its own. Where and how a `Page`'s content appears on your site - `/{slug}`, `/blog/{slug}`, a controller, whatever your application already does - is entirely up to you. This is deliberate: composition is the package's job; your application owns its own URL structure and presentation.
+- **Automatic public Pages**, via `Inlay::pageRoutes()` - Inlay resolves the path, loads the published Page, and renders your configured view. No route or controller of your own needed. See [Public routing](#public-routing) below.
+- **Application-owned routes**, rendering a Page through routes your application already owns - via `Inlay::renderPage()` or `<x-inlay::render>`. Use this when a Page needs data or context your route already has (the current tenant, a resolved model, an A/B test bucket) that Inlay's own routing has no way to supply.
+
+A Page with no public `path` and not set as the homepage is intentionally host-rendered only - it never resolves through `Inlay::pageRoutes()`, by design.
+
+### Public routing
+
+```php
+// routes/web.php
+Inlay::pageRoutes(prefix: 'pages'); // -> /pages/{path}, e.g. /pages/about
+```
+
+Stored path `test/test` with `prefix: 'pages'` resolves at `/pages/test/test`. **The configured prefix is not part of the Page's stored path. It is added only when routing or generating the public URL** - changing the prefix changes every Page's URL immediately, without touching a single Page row. See [docs/routing.md](docs/routing.md) for the full reference: root vs. prefixed routing, nested paths, the homepage, route registration order, and `Inlay::url()`.
+
+The configured view receives the same three values as `previewView()`:
+
+```blade
+{{-- resources/views/inlay/pages/show.blade.php --}}
+<x-app-layout>
+    <title>{{ $page->effectiveMetaTitle() }}</title>
+    @if ($page->effectiveMetaDescription())
+        <meta name="description" content="{{ $page->effectiveMetaDescription() }}">
+    @endif
+
+    {{ $composition }}
+</x-app-layout>
+```
+
+Inlay never injects `<title>`/`<meta>` tags into your layout itself - your view is responsible for echoing `effectiveMetaTitle()`/`effectiveMetaDescription()` wherever your own `<head>` expects them. `effectiveMetaTitle()` falls back to the Page's title when no meta title is set; `effectiveMetaDescription()` returns `null` when none is set (nothing is auto-generated from block content).
 
 ### Embedded rendering
 
-Render a page's latest published revision from your own route or controller with the `<x-inlay::render>` Blade component:
+Render a Page's latest published revision from a route your own application already owns, with `Inlay::renderPage()` or the `<x-inlay::render>` Blade component:
 
 ```php
 // A route or controller your application already owns
-Route::get('/{page:slug}', function (\WeArePixel\Inlay\Models\Page $page) {
+Route::get('/{page:path}', function (\WeArePixel\Inlay\Models\Page $page) {
     return view('pages.show', ['page' => $page]);
 });
 ```
@@ -433,15 +467,15 @@ Route::get('/{page:slug}', function (\WeArePixel\Inlay\Models\Page $page) {
 ```blade
 {{-- resources/views/pages/show.blade.php --}}
 <x-app-layout>
-    <x-inlay::render :page="$page" />
+    <x-inlay::render :page="$page" :context="['collection' => $collection ?? null]" />
 </x-app-layout>
 ```
 
-A page with no published revision renders nothing - there's no draft leakage onto a public route.
+`$context` is optional, host-supplied data with no schema Inlay understands - merged underneath each block's own resolved settings, so a block whose own Blade view declares a matching property picks it up the same way it already picks up an ordinary container-resolvable dependency. Inlay never inspects or validates it. A page with no published revision renders nothing - there's no draft leakage onto a public route.
 
 ### Frontend styling neutrality
 
-The package owns composition; your application owns presentation, completely. Inlay never loads Tailwind, Bootstrap, or any CSS framework into your public pages - `<x-inlay::render>` outputs exactly what your own block views render, in whatever styling system your application already uses. The admin's own design (loaded only under `Inlay::routes()`'s prefix) is entirely separate, self-hosted, and never touches your public output.
+The package owns composition; your application owns presentation, completely. Inlay never loads Tailwind, Bootstrap, or any CSS framework into your public pages - `<x-inlay::render>` and `Inlay::pageRoutes()` both output exactly what your own block views render, in whatever styling system your application already uses. The admin's own design (loaded only under `Inlay::adminRoutes()`'s prefix) is entirely separate, self-hosted, and never touches your public output.
 
 ### Nested Livewire inside an Inlay block
 

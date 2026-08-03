@@ -5,22 +5,20 @@ declare(strict_types=1);
 namespace WeArePixel\Inlay\View\Components;
 
 use Illuminate\Contracts\Support\Htmlable;
-use Illuminate\Support\HtmlString;
 use Illuminate\View\Component;
+use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
-use WeArePixel\Inlay\Support\SectionRenderer;
 
 final class RenderPage extends Component
 {
-    private HtmlString $html;
+    private Htmlable $html;
 
-    public function __construct(Page $page, SectionRenderer $renderer)
+    /**
+     * @param  array<string, mixed>|null  $context
+     */
+    public function __construct(Page $page, InlayManager $inlay, ?array $context = null)
     {
-        $revision = $page->revisions()->first();
-
-        $sections = $revision ? $revision->snapshot : [];
-
-        $this->html = new HtmlString($renderer->render($sections));
+        $this->html = $inlay->renderPage($page, $context);
     }
 
     public function render(): Htmlable

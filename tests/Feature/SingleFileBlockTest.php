@@ -62,7 +62,7 @@ it('appears in the block picker grouped by its own category, identically to a cl
     config(['inlay.blocks' => ['test-hero' => TestHeroSection::class]]);
     Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->call('openPicker')
@@ -74,7 +74,7 @@ it('appears in the block picker grouped by its own category, identically to a cl
 it('supports draft editing through the ordinary PageEditor flow with no special-casing', function () {
     Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->call('addSection', 'single-file-hero')
@@ -88,13 +88,13 @@ it('supports draft editing through the ordinary PageEditor flow with no special-
 it('publishes a page composed of a single-file block', function () {
     Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'single-file-hero', 'order' => 0, 'settings' => ['heading' => 'Published heading']]);
 
     $revision = app(PublishPage::class)->execute($page);
 
     expect($page->fresh()->status)->toBe(PageStatus::Published)
-        ->and($revision->snapshot[0]['settings'])->toBe([
+        ->and($revision->snapshot['sections'][0]['settings'])->toBe([
             'heading' => 'Published heading',
             'showCta' => false,
             'ctaLabel' => 'Learn more',
@@ -105,7 +105,7 @@ it('publishes a page composed of a single-file block', function () {
 it('restores a revision that includes a single-file block', function () {
     Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'single-file-hero', 'order' => 0, 'settings' => ['heading' => 'Original']]);
     $original = app(PublishPage::class)->execute($page);
 
@@ -132,7 +132,7 @@ it('behaves no differently downstream than a class-based block with an equivalen
     config(['inlay.blocks' => ['test-hero' => TestHeroSection::class]]);
     Inlay::singleFileBlock("{$this->fixturesPath}/hero.blade.php");
 
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $classBased = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => ['heading' => 'Class-based']]);
     $singleFile = $page->sections()->create(['handle' => 'single-file-hero', 'order' => 1, 'settings' => ['heading' => 'Single-file']]);
 
@@ -150,8 +150,8 @@ it('behaves no differently downstream than a class-based block with an equivalen
 
     $revision = app(PublishPage::class)->execute($page);
 
-    expect($revision->snapshot)->toHaveCount(4)
-        ->and(collect($revision->snapshot)->pluck('handle')->all())->toBe([
+    expect($revision->snapshot['sections'])->toHaveCount(4)
+        ->and(collect($revision->snapshot['sections'])->pluck('handle')->all())->toBe([
             'test-hero', 'single-file-hero', 'test-hero', 'single-file-hero',
         ]);
 });

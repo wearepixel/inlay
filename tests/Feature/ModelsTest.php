@@ -6,7 +6,7 @@ use WeArePixel\Inlay\Enums\PageStatus;
 use WeArePixel\Inlay\Models\Page;
 
 it('relates pages to sections and revisions, and casts settings/snapshot as arrays', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     $section = $page->sections()->create([
         'handle' => 'test-hero',

@@ -16,7 +16,7 @@ beforeEach(function () {
 });
 
 it('stays closed until openPicker is called, and closes again on closePicker/addSection', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->assertSet('showingPicker', false)
@@ -30,7 +30,7 @@ it('stays closed until openPicker is called, and closes again on closePicker/add
 });
 
 it('groups registered blocks by their #[BlockMeta] category, defaulting to Uncategorised', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->call('openPicker')
@@ -41,7 +41,7 @@ it('groups registered blocks by their #[BlockMeta] category, defaulting to Uncat
 });
 
 it("surfaces each block's picker metadata (label, description, category, keywords) as a data-search attribute for client-side filtering", function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->call('openPicker')

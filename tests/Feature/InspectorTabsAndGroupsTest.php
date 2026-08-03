@@ -16,7 +16,7 @@ beforeEach(function () {
 });
 
 it('renders tab navigation only when a block declares more than one tab', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $tabbed = $page->sections()->create(['handle' => 'test-tabbed', 'order' => 0, 'settings' => []]);
     $plain = $page->sections()->create(['handle' => 'test-hero', 'order' => 1, 'settings' => []]);
 
@@ -33,7 +33,7 @@ it('renders tab navigation only when a block declares more than one tab', functi
 });
 
 it('renders section() fields under a named, collapsible group heading', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-tabbed', 'order' => 0, 'settings' => []]);
 
     Livewire::test(PageEditor::class, ['page' => $page])
@@ -43,7 +43,7 @@ it('renders section() fields under a named, collapsible group heading', function
 });
 
 it('shows a required indicator and a field badge in the inspector', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-tabbed', 'order' => 0, 'settings' => []]);
 
     Livewire::test(PageEditor::class, ['page' => $page])

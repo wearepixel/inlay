@@ -16,7 +16,7 @@ beforeEach(function () {
 });
 
 it('drops keys not declared in the block definition even if the client injects them via editingProps', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-hero',
         'order' => 0,
@@ -32,7 +32,7 @@ it('drops keys not declared in the block definition even if the client injects t
 });
 
 it('coerces a declared scalar field set to an array via editingProps rather than persisting the array', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-hero',
         'order' => 0,
@@ -51,7 +51,7 @@ it('coerces a declared scalar field set to an array via editingProps rather than
 });
 
 it('coerces a Link field set to a plain scalar via editingProps back to a safe structured default', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-cta',
         'order' => 0,
@@ -69,7 +69,7 @@ it('coerces a Link field set to a plain scalar via editingProps back to a safe s
 });
 
 it('preserves a legitimate Link field value through editingProps', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-cta',
         'order' => 0,
@@ -91,7 +91,7 @@ it('preserves a legitimate Link field value through editingProps', function () {
 });
 
 it('strips a javascript: URL from a Link field rather than persisting it', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-cta',
         'order' => 0,
@@ -112,7 +112,7 @@ it('strips a javascript: URL from a Link field rather than persisting it', funct
 });
 
 it('allows a relative URL through a Link field unchanged', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-cta',
         'order' => 0,
@@ -128,7 +128,7 @@ it('allows a relative URL through a Link field unchanged', function () {
 });
 
 it('coerces an invalid enum value set via editingProps back to the constructor default rather than persisting it', function () {
-    $page = Page::create(['title' => 'Home', 'slug' => 'home']);
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-hero',
         'order' => 0,
