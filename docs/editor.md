@@ -4,7 +4,7 @@ This documents the editor-facing workflow in plain language - what someone manag
 
 ## Page creation
 
-From the page index (`/inlay/pages`), click **New page**. Give it a title - the only required field. A public path is optional: leave it blank for a page your application renders itself through its own route (see the README's "[Embedded rendering](../README.md#embedded-rendering)"), or fill it in (e.g. `about/team`) to have Inlay serve it publicly once published. The field beneath it shows the exact URL the page will publish at, reflecting whatever prefix your application has configured. You can also set a meta title, a meta description, and mark the page as your site's homepage. Click **Create page** to open the new page's editor.
+From the page index (`/inlay/pages`), click **New page**. Give it a title - the only required field. A public path is optional: leave it blank for a page your application renders itself through its own route (see the README's "[Embedded rendering](../README.md#embedded-rendering)"), or fill it in (e.g. `about/team`) to have Inlay serve it publicly once published. The field beneath it shows the exact URL the page will publish at, reflecting whatever prefix your application has configured. You can also set a meta title, a meta description, and mark the page as your site's homepage. If your developer has registered more than one **Page type**, choose one - it controls which blocks this page may contain and can't be changed after creation (see [docs/page-definitions.md](page-definitions.md)); with only the default type available, this field doesn't appear at all. Click **Create page** to open the new page's editor.
 
 The page index itself lists every page, most recently updated first, with a search box that filters by title and a status badge (draft or published) next to each one.
 
@@ -17,7 +17,7 @@ The editor is two panes, not three:
 
 ## Page Settings
 
-Click **Page Settings** in the header to edit the page itself - title, public path, homepage status, meta title, and meta description - separately from any block's settings. This replaces the tree in the contextual sidebar exactly like selecting a block does; it is not a third, permanently-visible column, and the dominant preview pane is unaffected. It's organised into three sections: **General** (title, public path with its live effective-URL preview, and the homepage checkbox), **Search metadata** (meta title and description), and **Publishing** (the page's current status and when it was last published). Click **Save page settings** to persist changes - unlike block settings, which save automatically as you type, page settings save as one explicit action, since a title/path/homepage change is a more deliberate edit than tweaking a block's field. Click **&larr; Blocks** to return to the tree.
+Click **Page Settings** in the header to edit the page itself - title, public path, homepage status, meta title, and meta description - separately from any block's settings. This replaces the tree in the contextual sidebar exactly like selecting a block does; it is not a third, permanently-visible column, and the dominant preview pane is unaffected. It's organised into three sections: **General** (title, the page's type if one is set, public path with its live effective-URL preview, and the homepage checkbox), **Search metadata** (meta title and description), and **Publishing** (the page's current status and when it was last published). A page's type is shown here for reference only - it was fixed at creation and can't be changed. Click **Save page settings** to persist changes - unlike block settings, which save automatically as you type, page settings save as one explicit action, since a title/path/homepage change is a more deliberate edit than tweaking a block's field. Click **&larr; Blocks** to return to the tree.
 
 ## Block selection
 
@@ -25,7 +25,7 @@ Click any block in the tree to select it - the sidebar swaps from the tree to th
 
 ## Adding from categories
 
-Click **+ Add** to open the block picker - a drawer sliding in from the same edge as the sidebar, with a search box already focused and every registered block below it, grouped under the category its developer assigned (or "Uncategorised" if none was set). Type to filter by name or description instantly. Click a block's card to add it to the end of the page and select it immediately - the drawer closes and its settings appear in the sidebar, all showing the block's own defaults, since nothing has been edited yet.
+Click **+ Add** to open the block picker - a drawer sliding in from the same edge as the sidebar, with a search box already focused and every block this page's type allows below it, grouped under the category its developer assigned (or "Uncategorised" if none was set). If the page has no restrictions, that's every registered block; if it does, blocks the page's type doesn't allow simply don't appear, in the picker or in your recently-added row. Type to filter by name or description instantly. Click a block's card to add it to the end of the page and select it immediately - the drawer closes and its settings appear in the sidebar, all showing the block's own defaults, since nothing has been edited yet.
 
 ## Settings editing
 
@@ -37,13 +37,17 @@ Only fields the block's developer actually exposed can ever be edited or saved h
 
 Grab the handle (the `::` icon) on the left of any block row and drag it up or down to reorder the page. The reorder saves immediately; there's no separate confirmation step. Reordering is only available from the tree, so if you're currently editing a block's settings, go back first. If you'd rather not drag: focus a row (Tab, or the arrow keys below), then use the keyboard shortcuts below - reordering with the keyboard never opens the row's settings, so you can stay in the tree the whole time.
 
+A row marked **Locked** has no drag handle at all and can't be reordered by keyboard either - its position is fixed by the page's type (see [docs/page-definitions.md](page-definitions.md)).
+
 ## Duplicate
 
-Hover a block row to reveal its action icons, and click the duplicate icon to insert an exact copy - same block, same settings - directly after it. The copy is selected automatically, and its settings replace the tree in the sidebar, so you can start editing it right away.
+Hover a block row to reveal its action icons, and click the duplicate icon to insert an exact copy - same block, same settings - directly after it. The copy is selected automatically, and its settings replace the tree in the sidebar, so you can start editing it right away. Duplicating a **Locked** block is allowed - the copy is locked too.
 
 ## Delete
 
 Hover a block row and click the delete icon (or press the **Delete** key while it's focused). You'll be asked to confirm, since this can't be undone from the editor - deleting removes it from the page's current draft immediately. Deleting the block you're currently editing (or another browser tab/session deleting it out from under you) safely returns the sidebar to the tree rather than leaving a settings pane open for a block that no longer exists.
+
+A row marked **Locked** has no delete control at all. A row marked **Required** can still be deleted as long as another instance of the same block remains elsewhere on the page - deleting the last one is blocked, since the page's type requires at least one.
 
 ## Instance labels
 
@@ -73,6 +77,8 @@ Every change you make in the editor writes to the page's draft immediately. Noth
 
 Click **Publish** in the top bar. This takes a complete snapshot of the page's current draft - every block, in order, with every setting fully resolved - and makes it the page's new live, public version. The button shows "Publishing…" while the request is in flight, then a confirmation briefly appears. Publishing again later creates a new snapshot; it never overwrites or loses a previous one.
 
+If the page doesn't satisfy its type's rules - a required block is missing, or a block on the page isn't allowed - a calm banner explains exactly what's wrong, in plain language, before you even click Publish, and the click itself won't succeed until it's corrected.
+
 ## Keyboard shortcuts
 
 - **Block tree**: Up/Down moves focus between blocks; Enter opens the focused one's settings; Alt+Up/Alt+Down reorders it (the same reorder a drag would perform) without opening it; Delete removes it (with the same confirmation as clicking the delete icon).
@@ -81,4 +87,4 @@ Click **Publish** in the top bar. This takes a complete snapshot of the page's c
 
 ## Revision restore
 
-Click **History** in the top bar - the sidebar switches to a list of every past publish, most recent first, in place of whatever it was showing. Click **Restore** next to an older one to bring the page's live content back to exactly that state - this both updates the draft you're editing and publishes it immediately, creating a new revision labeled with which one it was restored from. Restoring is not a preview-only action: it takes effect on your live site right away, the same as clicking Publish. The sidebar returns to the block tree afterwards, since a restore replaces every block on the page.
+Click **History** in the top bar - the sidebar switches to a list of every past publish, most recent first, in place of whatever it was showing. Click **Restore** next to an older one to bring the page's content back to exactly that state. If it still satisfies the page's current type, restoring both updates the draft and publishes it immediately, creating a new revision labeled with which one it was restored from - restoring is not a preview-only action, it takes effect on your live site right away, the same as clicking Publish. If the page's type has changed since that revision was published and the restored content no longer satisfies it, the content still lands in your draft, but nothing is published - the same standing violation banner as above explains what needs fixing before you can publish it. The sidebar returns to the block tree afterwards, since a restore replaces every block on the page.

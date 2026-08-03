@@ -6,6 +6,10 @@ use Livewire\Livewire;
 use WeArePixel\Inlay\Enums\PageStatus;
 use WeArePixel\Inlay\Livewire\PageCreate;
 use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
+use WeArePixel\Inlay\Tests\Fixtures\TestCollectionPageDefinition;
+use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
+use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 it('creates a draft page with no public path by default', function () {
     $component = Livewire::test(PageCreate::class)
@@ -116,4 +120,32 @@ it('leaves meta title and meta description null when left blank', function () {
 
     expect($page->meta_title)->toBeNull()
         ->and($page->meta_description)->toBeNull();
+});
+
+it('assigns the built-in default definition and hides the selector when nothing else is registered', function () {
+    Livewire::test(PageCreate::class)
+        ->assertDontSeeHtml('page-definition')
+        ->set('title', 'About Us')
+        ->call('save');
+
+    expect(Page::sole()->definition)->toBe('default');
+});
+
+it('shows the Page type selector once a second definition is registered, and seeds its default blocks in order', function () {
+    config(['inlay.blocks' => [
+        'test-hero' => TestHeroSection::class,
+        'test-faq' => TestFaqSection::class,
+    ]]);
+    app(PageDefinitionRegistry::class)->register(TestCollectionPageDefinition::class);
+
+    Livewire::test(PageCreate::class)
+        ->assertSeeHtml('page-definition')
+        ->set('title', 'Landing Page')
+        ->set('definitionHandle', 'test-collection-page-definition')
+        ->call('save');
+
+    $page = Page::sole();
+
+    expect($page->definition)->toBe('test-collection-page-definition')
+        ->and($page->sections()->orderBy('order')->pluck('handle')->all())->toBe(['test-hero']);
 });

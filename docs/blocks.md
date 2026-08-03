@@ -205,6 +205,8 @@ final class Hero extends Component implements InlayBlock
 
 Every field is optional. With no `#[BlockMeta]` at all, the picker falls back to a label derived from the block's registered handle (`Str::headline()`) and groups it under "Uncategorised". `keywords` are matched by the picker's search alongside the label, description, and category - useful for a name an editor might search for that doesn't appear in the label itself (e.g. "banner" for a block called "Hero").
 
+`category` is presentational only - it groups cards in the picker, and is never a permission boundary. If you need to actually restrict which blocks a kind of page may contain (or require/lock specific ones), that's a **Page Definition**, a separate concept - see [docs/page-definitions.md](page-definitions.md). A Page Definition references a block either by its class (`Hero::class`) or, for a single-file block, by `BlockHandle::make('its-handle')` - see [Referencing a single-file block without a class](#referencing-a-single-file-block-without-a-class) below.
+
 ## Constructor defaults
 
 For every **top-level** setting, the constructor parameter's own default value and nullability are the exclusive source of truth:
@@ -414,10 +416,9 @@ Cannot register single-file block [hero] - a class-based block is already regist
 
 ### Referencing a single-file block without a class
 
-A future Page Definition's block allow-list needs to name blocks, but a single-file block has no PHP class to put in a list of `::class` references. `WeArePixel\Inlay\Support\BlockHandle` is a small typed value object for exactly this case, decided now so that whenever Page Definitions ship, there's already a safe, IDE-discoverable way to reference a handle-only block rather than a raw string:
+A Page Definition's block allow-list needs to name blocks, but a single-file block has no PHP class to put in a list of `::class` references. `WeArePixel\Inlay\Support\BlockHandle` is a small typed value object for exactly this case - a safe, IDE-discoverable way to reference a handle-only block rather than a raw string, which a Page Definition's public API never accepts:
 
 ```php
-// Illustrative - Page Definitions are not implemented yet.
 public function allowedBlocks(): array
 {
     return [
@@ -426,6 +427,8 @@ public function allowedBlocks(): array
     ];
 }
 ```
+
+See [docs/page-definitions.md](page-definitions.md) for the full Page Definition reference.
 
 ## Common registration errors and their messages
 

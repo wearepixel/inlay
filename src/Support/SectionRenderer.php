@@ -8,6 +8,7 @@ use BackedEnum;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
+use RuntimeException;
 use Throwable;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
@@ -38,29 +39,61 @@ final class SectionRenderer
      *
      * `$context` is host-supplied, request-specific data with no schema
      * Inlay understands (the collection currently being viewed, the
-     * authenticated customer) - it is merged underneath each block's own
-     * resolved settings before binding, so a block's own field names always
-     * win on a collision, and a block whose Blade view declares a matching
-     * property picks up the context value the same way it already picks up
-     * an ordinary container-resolvable dependency (docs/v1-implementation-
-     * specification.md §9). Inlay itself never inspects or validates it.
+     * authenticated customer) - a block whose Blade view declares a
+     * matching property picks it up the same way it already picks up an
+     * ordinary container-resolvable dependency (docs/v1-implementation-
+     * specification.md §9). Inlay itself never inspects or validates its
+     * values, never persists it, and never includes it in a revision
+     * snapshot - PublishPage resolves and freezes $settings alone.
+     *
+     * $settings and $context are kept as two explicit, never-merged-blind
+     * concepts rather than one combined array: if a block declares a
+     * setting with the same name as a $context key, that's a genuine
+     * developer naming conflict with no correct silent resolution (does
+     * the persisted setting win, or the live context - a wrong guess
+     * either way is a real bug that would only surface once someone
+     * actually supplies that context), so it fails loudly here instead -
+     * see assertNoSettingsContextCollision(). This check runs outside the
+     * per-block try/catch below on purpose: it is a configuration error,
+     * not a malformed-content problem the renderer should quietly work
+     * around and log.
      *
      * @param  iterable<array{handle?: string, settings?: array<string, mixed>}>  $sections
      * @param  array<string, mixed>|null  $context
      */
     public function render(iterable $sections, ?array $context = null): string
     {
+        $context ??= [];
         $html = '';
 
         foreach ($sections as $section) {
+            $definition = null;
+            $settings = null;
+
             try {
                 $definition = $this->registry->definition($section['handle'] ?? '');
                 $settings = $this->resolveEffectiveSettings($definition, $section['settings'] ?? []);
-
-                $html .= $this->renderBlock($definition, array_merge($context ?? [], $settings));
             } catch (Throwable $exception) {
                 // A malformed or unresolvable block must not take down
                 // every other block on the page.
+                Log::warning('inlay: skipped a block that failed to render', [
+                    'handle' => $section['handle'] ?? null,
+                    'exception' => $exception->getMessage(),
+                ]);
+
+                continue;
+            }
+
+            $this->assertNoSettingsContextCollision($definition, $settings, $context);
+
+            try {
+                $html .= $this->renderBlock($definition, array_merge($context, $settings));
+            } catch (Throwable $exception) {
+                // Actual Blade construction/rendering can still fail here
+                // even with a schema-valid settings array (e.g. settings
+                // that resolve fine but don't satisfy a stricter native
+                // type Blade's own component instantiation enforces) -
+                // isolated exactly like a resolution failure above.
                 Log::warning('inlay: skipped a block that failed to render', [
                     'handle' => $section['handle'] ?? null,
                     'exception' => $exception->getMessage(),
@@ -69,6 +102,25 @@ final class SectionRenderer
         }
 
         return $html;
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @param  array<string, mixed>  $context
+     */
+    private function assertNoSettingsContextCollision(BlockDefinition $definition, array $settings, array $context): void
+    {
+        $colliding = array_intersect(array_keys($settings), array_keys($context));
+
+        if ($colliding !== []) {
+            throw new RuntimeException(sprintf(
+                'Inlay: block [%s] declares setting(s) [%s] that collide with runtime $context key(s) of the same '
+                .'name. Persisted settings and host-supplied context must never share a name - rename one side '
+                .'rather than relying on either silently winning.',
+                $definition->handle,
+                implode(', ', $colliding),
+            ));
+        }
     }
 
     /**

@@ -111,6 +111,33 @@ final class BlockRegistry
         return [...array_keys($this->blocks), ...array_keys($this->singleFileDefinitions)];
     }
 
+    public function hasHandle(string $handle): bool
+    {
+        return isset($this->blocks[$handle]) || isset($this->singleFileDefinitions[$handle]);
+    }
+
+    /**
+     * Reverse lookup: the handle a class-based block is registered under -
+     * used to normalise a Page Definition's `Hero::class`-style references
+     * into the stable handle actually stored on a PageSection
+     * (docs/page-definitions.md). A single-file block has no class to look
+     * up this way; reference it via BlockHandle::make() instead.
+     *
+     * @param  class-string<InlayBlock>  $class
+     */
+    public function handleForClass(string $class): string
+    {
+        $handle = array_search($class, $this->blocks, strict: true);
+
+        if ($handle === false) {
+            throw new InvalidArgumentException(
+                "No handle is registered for block class [{$class}] in config('inlay.blocks')."
+            );
+        }
+
+        return $handle;
+    }
+
     /**
      * The resolved, always-complete metadata for one registered block,
      * for the admin's block picker.

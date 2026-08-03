@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $page_id
- * @property array{sections: array<int, array{id: int, handle: string, order: int, settings: array<string, mixed>}>, title: string, meta_title: string|null, meta_description: string|null} $snapshot
+ * @property array{sections: array<int, array{id: int, handle: string, order: int, settings: array<string, mixed>}>, title: string, meta_title: string|null, meta_description: string|null, definition: string|null} $snapshot
  * @property int|null $created_by
  * @property string|null $label
  * @property Carbon $created_at

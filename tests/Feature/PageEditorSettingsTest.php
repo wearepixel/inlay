@@ -7,6 +7,13 @@ use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Livewire\PageEditor;
 use WeArePixel\Inlay\Models\Page;
 
+it('explains that public path and homepage changes take effect immediately, not on publish', function () {
+    $page = Page::create(['title' => 'Home']);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->assertSeeHtml('page-settings-live-notice');
+});
+
 it('initialises the Page Settings fields from the page', function () {
     $page = Page::create([
         'title' => 'Home',

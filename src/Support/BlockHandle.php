@@ -11,11 +11,12 @@ namespace WeArePixel\Inlay\Support;
  * by its class-string wherever that's more natural - this exists
  * specifically for the case where there isn't one.
  *
- * Intended for a future Page Definition's allowedBlocks()-style API,
- * e.g. `[Hero::class, BlockHandle::make('promo-banner')]` - Page
- * Definitions themselves are not implemented yet, so nothing currently
- * consumes this, but the handle-vs-raw-string safety/IDE-discoverability
- * decision is made now rather than left for that feature to invent later.
+ * Used by a Page Definition's allowedBlocks()/requiredBlocks()/
+ * lockedBlocks()/defaultBlocks(), e.g. `[Hero::class,
+ * BlockHandle::make('promo-banner')]` - see
+ * WeArePixel\Inlay\Pages\PageDefinitionRegistry, which normalises every
+ * such reference into the block's own stable registered handle and
+ * rejects a bare, untyped string instead of silently accepting one.
  */
 final readonly class BlockHandle
 {

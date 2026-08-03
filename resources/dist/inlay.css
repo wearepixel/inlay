@@ -508,6 +508,39 @@
   margin: 0 0 4px;
 }
 
+/* Page Definition violations */
+
+.inlay-violation-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 20px;
+  background: color-mix(in srgb, var(--inlay-draft) 10%, white);
+  border-bottom: 1px solid var(--inlay-border);
+  font-size: 13px;
+}
+
+.inlay-violation-banner__title {
+  font-weight: 600;
+  color: var(--inlay-draft);
+}
+
+.inlay-violation-banner__list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--inlay-text-muted);
+}
+
+.inlay-tree__indicator {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--inlay-text-faint);
+  margin-left: 6px;
+}
+
 /* Preview */
 
 .inlay-preview {

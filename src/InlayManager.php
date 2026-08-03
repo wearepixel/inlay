@@ -10,6 +10,8 @@ use Illuminate\Support\HtmlString;
 use Livewire\Livewire;
 use RuntimeException;
 use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Pages\PageDefinition;
+use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\SingleFile\BlockLoader;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
@@ -272,6 +274,31 @@ final class InlayManager
         $sections = $revision?->snapshot['sections'] ?? [];
 
         return new HtmlString(app(SectionRenderer::class)->render($sections, $context));
+    }
+
+    /**
+     * Registers a Page Definition - developer-owned composition policy for
+     * a kind of Page (which Blocks it may contain, which are required or
+     * locked, what a new Page of this kind starts with). See
+     * docs/page-definitions.md. Every Block reference inside it is
+     * validated immediately against the currently-registered Blocks, so
+     * register Page Definitions after registering Blocks.
+     *
+     * @param  class-string<PageDefinition>  $definitionClass
+     */
+    public function pageDefinition(string $definitionClass): void
+    {
+        app(PageDefinitionRegistry::class)->register($definitionClass);
+    }
+
+    /**
+     * @param  array<int, class-string<PageDefinition>>  $definitionClasses
+     */
+    public function pageDefinitions(array $definitionClasses): void
+    {
+        foreach ($definitionClasses as $definitionClass) {
+            $this->pageDefinition($definitionClass);
+        }
     }
 
     /**

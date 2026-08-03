@@ -8,6 +8,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Facade;
 use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Pages\PageDefinition;
 
 /**
  * @method static void routes()
@@ -18,6 +19,8 @@ use WeArePixel\Inlay\Models\Page;
  * @method static ?string resolvePreviewView()
  * @method static string resolvePagesView()
  * @method static Htmlable renderPage(Page $page, ?array<string, mixed> $context = null)
+ * @method static void pageDefinition(class-string<PageDefinition> $definitionClass)
+ * @method static void pageDefinitions(array<int, class-string<PageDefinition>> $definitionClasses)
  *
  * @see InlayManager
  */

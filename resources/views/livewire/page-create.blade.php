@@ -17,6 +17,18 @@
             @error('title') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
         </div>
 
+        @if (count($this->definitions) > 1)
+            <div class="inlay-field">
+                <label class="inlay-field__label" for="page-definition">Page type</label>
+                <select id="page-definition" wire:model="definitionHandle" class="inlay-input" data-test="page-definition">
+                    @foreach ($this->definitions as $definition)
+                        <option value="{{ $definition->handle }}">{{ $definition->label }}</option>
+                    @endforeach
+                </select>
+                <p class="inlay-field__help">Controls which blocks this page may contain, and which structure it must retain. Cannot be changed after the page is created.</p>
+            </div>
+        @endif
+
         <div class="inlay-field">
             <label class="inlay-field__label" for="page-path">Public path</label>
             <input id="page-path" type="text" wire:model.live.debounce.300ms="path" class="inlay-input" placeholder="about/team" data-test="page-path">

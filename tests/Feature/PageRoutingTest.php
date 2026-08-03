@@ -70,6 +70,23 @@ it('resolves the prefix root and the prefix root with a trailing slash identical
     $this->get('/pages/')->assertOk();
 });
 
+it('resolves the same homepage deterministically when malformed data has more than one', function () {
+    Inlay::pageRoutes(prefix: 'pages', view: 'public-page-view');
+
+    // Bypasses SetPageAsHomepage on purpose - simulating already-malformed
+    // data (e.g. from a residual race SetPageAsHomepage's own docblock
+    // documents), not something that action would ever itself produce.
+    $older = Page::create(['title' => 'Older Home', 'status' => PageStatus::Published]);
+    $older->forceFill(['is_homepage' => true])->save();
+    $newer = Page::create(['title' => 'Newer Home', 'status' => PageStatus::Published]);
+    $newer->forceFill(['is_homepage' => true])->save();
+
+    expect(Page::query()->homepage()->count())->toBe(2);
+
+    $this->get('/pages')->assertOk()->assertSee('Older Home')->assertDontSee('Newer Home');
+    $this->get('/pages')->assertOk()->assertSee('Older Home');
+});
+
 it('404s for a draft homepage', function () {
     Inlay::pageRoutes(prefix: 'pages', view: 'public-page-view');
 

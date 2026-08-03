@@ -51,7 +51,13 @@ final class PagesController
         $normalized = Page::normalizePath($path);
 
         if ($normalized === null) {
-            return Page::query()->homepage()->published()->first();
+            // ->oldest('id') is a deliberate, deterministic tie-break: if
+            // the database ever ends up with more than one is_homepage=true
+            // row (SetPageAsHomepage's docblock explains the one residual
+            // race it can't fully close), public resolution must still
+            // consistently pick the *same* Page on every request rather
+            // than an arbitrary, storage-engine-dependent one.
+            return Page::query()->homepage()->published()->oldest('id')->first();
         }
 
         return Page::query()->published()->whereNotNull('path')->where('path', $normalized)->first();

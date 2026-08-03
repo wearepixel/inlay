@@ -19,6 +19,10 @@ use WeArePixel\Inlay\Actions\SetPageAsHomepage;
 use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Models\PageSection;
+use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
+use WeArePixel\Inlay\Pages\PageDefinitionValidator;
+use WeArePixel\Inlay\Pages\PageDefinitionViolationException;
+use WeArePixel\Inlay\Pages\ResolvedPageDefinition;
 use WeArePixel\Inlay\Rules\PagePath;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
@@ -128,11 +132,34 @@ final class PageEditor extends Component
     {
         // Every update is already scoped to this page's own rows, so a
         // crafted id can never touch another page's sections - but without
-        // this, an arbitrarily large client-supplied array would still
-        // issue one bounded-but-real UPDATE per element. Clamp to this
-        // page's actual section ids first.
-        $ownedIds = $this->page->sections()->pluck('id')->all();
-        $orderedIds = array_values(array_intersect(array_map('intval', $orderedIds), $ownedIds));
+        // de-duplicating first, a crafted array padded with a repeated id
+        // (e.g. [1, 3, 1, 2]) would survive array_intersect() (which
+        // filters by value, not multiplicity) and still issue one UPDATE
+        // per element, unbounded by this page's actual section count.
+        $ownedIds = $this->page->sections()->orderBy('order')->pluck('id')->all();
+        $orderedIds = array_values(array_unique(array_intersect(array_map('intval', $orderedIds), $ownedIds)));
+
+        // A legitimate reorder is always a complete permutation of this
+        // page's own sections, exactly what the tree's own drag/keyboard
+        // handlers always send (resources/dist/inlay.js's rowIds()) - a
+        // crafted subset would silently reassign every remaining section's
+        // `order` to a smaller, colliding range instead of leaving the
+        // untouched ones alone.
+        if (count($orderedIds) !== count($ownedIds)) {
+            return;
+        }
+
+        // A locked block's position is enforced here, not just hidden
+        // behind a disabled drag handle client-side - the whole reorder is
+        // rejected (never partially applied) if it would move any locked
+        // section at all, since there's no way to know which subset of a
+        // crafted request was "the part the UI actually allowed." An
+        // unresolved Page Definition also rejects outright - with no rules
+        // to check against, denying is the only safe default (matching
+        // addSection()'s own fail-closed behaviour for the same case).
+        if ($this->reorderWouldMoveALockedSection($ownedIds, $orderedIds)) {
+            return;
+        }
 
         DB::transaction(function () use ($orderedIds) {
             foreach ($orderedIds as $index => $id) {
@@ -143,6 +170,41 @@ final class PageEditor extends Component
         });
 
         $this->bumpPreview();
+    }
+
+    /**
+     * @param  array<int, int>  $currentOrderIds
+     * @param  array<int, int>  $proposedOrderIds
+     */
+    private function reorderWouldMoveALockedSection(array $currentOrderIds, array $proposedOrderIds): bool
+    {
+        $definition = $this->resolvedDefinition();
+
+        // An unresolved definition means there are no rules left to check a
+        // reorder against - denying it is the only safe default, the same
+        // choice addSection() already makes for this case. Failing open
+        // here would let a page whose definition stopped resolving reorder
+        // (and, before this fix, even delete) a Block that used to be
+        // locked with nothing left to say so.
+        if ($definition === null) {
+            return true;
+        }
+
+        if ($definition->lockedBlocks === []) {
+            return false;
+        }
+
+        $lockedIds = PageSection::whereKey($currentOrderIds)
+            ->whereIn('handle', $definition->lockedBlocks)
+            ->pluck('id');
+
+        foreach ($lockedIds as $lockedId) {
+            if (array_search($lockedId, $currentOrderIds, true) !== array_search($lockedId, $proposedOrderIds, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function openPicker(): void
@@ -157,6 +219,22 @@ final class PageEditor extends Component
 
     public function addSection(string $slug): void
     {
+        $pageDefinition = $this->resolvedDefinition();
+
+        // Rejected here regardless of what the picker shows client-side -
+        // the picker's own filtering (PageEditor::render()) is a courtesy,
+        // never the actual boundary. An unresolved Page Definition allows
+        // nothing, the same as the picker's own empty state for that case.
+        // hasHandle() matters even for the unrestricted default definition,
+        // whose allows() is true for any string - without it, a crafted
+        // slug that names no real block would reach BlockRegistry::
+        // definition() below and throw instead of being quietly rejected.
+        if ($pageDefinition === null
+            || ! $pageDefinition->allows($slug)
+            || ! app(BlockRegistry::class)->hasHandle($slug)) {
+            return;
+        }
+
         $definition = app(BlockRegistry::class)->definition($slug);
 
         $section = $this->page->sections()->create([
@@ -187,6 +265,22 @@ final class PageEditor extends Component
             ->where('page_id', $this->page->id)
             ->firstOrFail();
 
+        $pageDefinition = $this->resolvedDefinition();
+
+        // A locked block may still be duplicated - the copy is simply
+        // locked too, by the same type-level rule (docs/page-definitions.md
+        // #locked) - but a block the current definition no longer allows at
+        // all must not be extended by duplicating it. hasHandle() also
+        // guards against duplicating a section whose own block was
+        // deregistered since it was created (docs/page-definitions.md
+        // #unresolved-block) - checked before creating the duplicate row,
+        // not after, so a rejection never leaves a partial write behind.
+        if ($pageDefinition === null
+            || ! $pageDefinition->allows($section->handle)
+            || ! app(BlockRegistry::class)->hasHandle($section->handle)) {
+            return;
+        }
+
         $duplicate = $this->page->sections()->create([
             'handle' => $section->handle,
             'order' => (int) ($this->page->sections()->max('order') + 1),
@@ -206,9 +300,60 @@ final class PageEditor extends Component
 
     public function deleteSection(int $sectionId): void
     {
-        PageSection::whereKey($sectionId)
+        $section = PageSection::whereKey($sectionId)
             ->where('page_id', $this->page->id)
-            ->delete();
+            ->first();
+
+        if ($section === null) {
+            return;
+        }
+
+        $pageDefinition = $this->resolvedDefinition();
+
+        // An unresolved definition leaves no rules to check a delete
+        // against - denying it outright (rather than defaulting to
+        // "allowed", which would let a page whose definition stopped
+        // resolving lose a Block that used to be locked or required with
+        // nothing left to say so) is the same fail-closed choice
+        // addSection() and reorderWouldMoveALockedSection() already make.
+        if ($pageDefinition === null) {
+            return;
+        }
+
+        if ($pageDefinition->isLocked($section->handle)) {
+            return;
+        }
+
+        // The *final* remaining instance of a required block can't be
+        // deleted - v0.1's chosen rule (docs/page-definitions.md #required)
+        // is to prevent that outright rather than let the page go invalid
+        // and rely solely on the publish gate to catch it, while still
+        // allowing deletion when another instance of the same block
+        // remains. Wrapped in a transaction with a row lock on the
+        // sibling instances so two concurrent deletes of the last two
+        // instances can't both observe count() === 2 and both proceed.
+        if ($pageDefinition->isRequired($section->handle)) {
+            $deleted = DB::transaction(function () use ($section, $sectionId) {
+                $remaining = $this->page->sections()
+                    ->where('handle', $section->handle)
+                    ->lockForUpdate()
+                    ->count();
+
+                if ($remaining <= 1) {
+                    return false;
+                }
+
+                PageSection::whereKey($sectionId)->delete();
+
+                return true;
+            });
+
+            if (! $deleted) {
+                return;
+            }
+        } else {
+            $section->delete();
+        }
 
         if ($this->selectedSectionId === $sectionId) {
             $this->selectedSectionId = null;
@@ -224,6 +369,15 @@ final class PageEditor extends Component
         $section = PageSection::whereKey($sectionId)
             ->where('page_id', $this->page->id)
             ->firstOrFail();
+
+        // A section whose block was deregistered since it was created has
+        // no schema left to show settings for - selecting it is a no-op
+        // rather than a crash, matching render()'s own placeholder
+        // treatment for the same row in the tree. Deleting it is still
+        // possible without selecting it first.
+        if (! app(BlockRegistry::class)->hasHandle($section->handle)) {
+            return;
+        }
 
         $definition = app(BlockRegistry::class)->definition($section->handle);
 
@@ -276,7 +430,18 @@ final class PageEditor extends Component
 
     public function publish(): void
     {
-        app(PublishPage::class)->execute($this->page, auth()->id());
+        try {
+            app(PublishPage::class)->execute($this->page, auth()->id());
+        } catch (PageDefinitionViolationException) {
+            // The violations themselves are already shown as a standing,
+            // proactive banner computed in render() below - this dispatch
+            // exists only to give immediate "that didn't work" feedback for
+            // the click itself, not to carry the violation details again.
+            $this->dispatch('publish-blocked');
+
+            return;
+        }
+
         $this->dispatch('page-published');
     }
 
@@ -295,13 +460,18 @@ final class PageEditor extends Component
     {
         $revision = $this->page->revisions()->findOrFail($revisionId);
 
-        app(RestorePageRevision::class)->execute($revision, auth()->id());
+        $result = app(RestorePageRevision::class)->execute($revision, auth()->id());
 
         $this->selectedSectionId = null;
         $this->editingProps = [];
         $this->showingHistory = false;
         $this->bumpPreview();
-        $this->dispatch('revision-restored');
+
+        // $result is null when the restored content violates the Page's
+        // *current* Page Definition - it's still in the draft (bumpPreview()
+        // above already reflects it), but nothing was published. The
+        // standing violation banner (see render()) shows what needs fixing.
+        $this->dispatch($result === null ? 'revision-restored-with-violations' : 'revision-restored');
         $this->dispatch('selection-cleared');
     }
 
@@ -323,7 +493,7 @@ final class PageEditor extends Component
             $this->dispatch('selection-cleared');
         }
 
-        $selectedDefinition = $selectedSection
+        $selectedDefinition = $selectedSection && app(BlockRegistry::class)->hasHandle($selectedSection->handle)
             ? app(BlockRegistry::class)->definition($selectedSection->handle)
             : null;
 
@@ -331,35 +501,67 @@ final class PageEditor extends Component
         $blocks = collect(app(BlockRegistry::class)->all());
         $revisions = $this->page->revisions()->get();
 
+        $pageDefinition = $this->resolvedDefinition();
+        $requiredBlockHandles = $pageDefinition !== null ? $pageDefinition->requiredBlocks : [];
+        $lockedBlockHandles = $pageDefinition !== null ? $pageDefinition->lockedBlocks : [];
+
+        // An unresolved Page Definition (its handle no longer matches
+        // anything registered) leaves no rules to filter by - the picker
+        // shows nothing rather than guessing, and the view surfaces a
+        // developer-facing explanation instead of an editor-facing empty
+        // state (docs/page-definitions.md#picker-filtering).
+        $allowedBlocks = match (true) {
+            $pageDefinition === null => $blocks->filter(fn () => false),
+            $pageDefinition->isUnrestricted() => $blocks,
+            default => $blocks->filter(fn ($block) => $pageDefinition->allows($block->slug))->values(),
+        };
+
         return view('inlay::livewire.page-editor', [
             'title' => "{$this->page->title} · Inlay",
             'sections' => $sections,
             // Display name + a best-guess instance detail (e.g. "Hero" /
             // "Welcome") for every section in the tree - see
             // SectionInstanceLabel. Keyed by section id so the view doesn't
-            // need to re-resolve each block's definition itself.
+            // need to re-resolve each block's definition itself. A handle
+            // no longer registered (the exact case PageDefinitionValidator's
+            // unresolved_block violation exists for) falls back to a plain
+            // placeholder instead of resolving BlockRegistry::definition()
+            // directly, which throws for an unknown handle - the editor
+            // must still render so the standing violation banner (and a
+            // path to delete the offending section) is reachable at all.
             'sectionLabels' => $sections->mapWithKeys(fn (PageSection $section) => [
-                $section->id => $this->instanceLabel(
-                    app(BlockRegistry::class)->definition($section->handle),
-                    $section->settings ?? [],
-                ),
+                $section->id => app(BlockRegistry::class)->hasHandle($section->handle)
+                    ? $this->instanceLabel(
+                        app(BlockRegistry::class)->definition($section->handle),
+                        $section->settings ?? [],
+                    )
+                    : ['name' => $section->handle, 'detail' => 'No longer registered'],
             ]),
             'selectedInstance' => $selectedDefinition
                 ? $this->instanceLabel($selectedDefinition, $selectedSection->settings ?? [])
                 : null,
-            'availableBlocks' => $blocks->groupBy(fn ($block) => $block->category),
+            'availableBlocks' => $allowedBlocks->groupBy(fn ($block) => $block->category),
             // A slug => {label, icon} lookup for the block picker's
             // "recent" row, which tracks recently-added handles client-side
             // (localStorage) and needs enough metadata to render a compact
-            // chip for one without a further round trip.
-            'blockLookup' => $blocks->mapWithKeys(fn ($block) => [
+            // chip for one without a further round trip. Built from the
+            // already-filtered list, so a recently-added handle no longer
+            // allowed on this Page type simply has no lookup entry - the
+            // client-side recentBlocks() filter already skips those.
+            'blockLookup' => $allowedBlocks->mapWithKeys(fn ($block) => [
                 $block->slug => ['label' => $block->label, 'icon' => $block->icon],
             ]),
+            'blocksExistButNoneAllowed' => $blocks->isNotEmpty() && $allowedBlocks->isEmpty(),
+            'pageDefinitionUnresolved' => $pageDefinition === null,
             'selectedSchema' => $schema,
             'inspectorTabs' => $this->inspectorTabs($schema),
             'previewUrl' => $this->previewUrl(),
             'revisions' => $revisions,
             'latestRevision' => $revisions->first(),
+            'pageDefinition' => $pageDefinition,
+            'requiredBlockHandles' => $requiredBlockHandles,
+            'lockedBlockHandles' => $lockedBlockHandles,
+            'violations' => app(PageDefinitionValidator::class)->validate($this->page),
         ]);
     }
 
@@ -429,6 +631,11 @@ final class PageEditor extends Component
     private function bumpPreview(): void
     {
         $this->previewVersion++;
+    }
+
+    private function resolvedDefinition(): ?ResolvedPageDefinition
+    {
+        return app(PageDefinitionRegistry::class)->resolveForPage($this->page);
     }
 
     /**

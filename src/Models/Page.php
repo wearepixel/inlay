@@ -19,6 +19,7 @@ use WeArePixel\Inlay\Enums\PageStatus;
  * @property string|null $meta_title
  * @property string|null $meta_description
  * @property bool $is_homepage
+ * @property string|null $definition
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read Collection<int, PageSection> $sections
@@ -26,7 +27,7 @@ use WeArePixel\Inlay\Enums\PageStatus;
  */
 final class Page extends Model
 {
-    protected $fillable = ['title', 'path', 'status', 'meta_title', 'meta_description', 'is_homepage'];
+    protected $fillable = ['title', 'path', 'status', 'meta_title', 'meta_description', 'is_homepage', 'definition'];
 
     protected $casts = [
         'status' => PageStatus::class,

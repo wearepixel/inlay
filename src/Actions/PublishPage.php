@@ -9,6 +9,8 @@ use WeArePixel\Inlay\Enums\PageStatus;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Models\PageRevision;
 use WeArePixel\Inlay\Models\PageSection;
+use WeArePixel\Inlay\Pages\PageDefinitionValidator;
+use WeArePixel\Inlay\Pages\PageDefinitionViolationException;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 
@@ -17,10 +19,28 @@ final class PublishPage
     public function __construct(
         private readonly BlockRegistry $registry,
         private readonly SectionRenderer $renderer,
+        private readonly PageDefinitionValidator $validator,
     ) {}
 
+    /**
+     * The authoritative publish gate: this runs whether Publish was clicked
+     * in the editor, called from a queued job, or invoked from a console
+     * command someone builds later - a Page that doesn't satisfy its own
+     * Page Definition is never published, full stop
+     * (docs/page-definitions.md#publishing-validation). The editor shows
+     * these same violations before a click even reaches here purely as a
+     * courtesy; this check is what actually enforces it.
+     *
+     * @throws PageDefinitionViolationException
+     */
     public function execute(Page $page, ?int $createdBy = null, ?string $label = null): PageRevision
     {
+        $violations = $this->validator->validate($page);
+
+        if ($violations !== []) {
+            throw new PageDefinitionViolationException($violations);
+        }
+
         return DB::transaction(function () use ($page, $createdBy, $label) {
             $sections = $page->sections()
                 ->orderBy('order')
@@ -59,6 +79,12 @@ final class PublishPage
                     'title' => $page->title,
                     'meta_title' => $page->meta_title,
                     'meta_description' => $page->meta_description,
+                    // Recorded for historical/audit context only - restoring
+                    // this revision later never switches the Page's own
+                    // `definition` back to whatever this was (see
+                    // RestorePageRevision), the same live/never-revisioned
+                    // treatment `path` and `is_homepage` already get above.
+                    'definition' => $page->definition,
                 ],
                 'created_by' => $createdBy,
                 'label' => $label,

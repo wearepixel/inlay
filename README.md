@@ -409,15 +409,19 @@ The nested `<livewire:contact-form />` mounts and hydrates exactly as it would a
 
 ### Adding and editing a page
 
-From `/inlay/pages`, create a page (title, and optionally a public path, meta title/description, and homepage status), then compose it in the editor: open the block picker, search or browse by category, add a block, select it in the tree to edit its settings in the inspector, and watch the preview iframe reload. Page-level fields (title, path, metadata, homepage) are edited separately from block settings, via **Page Settings** in the editor's header - see [docs/editor.md](docs/editor.md) for the full editor-facing workflow.
+From `/inlay/pages`, create a page (title, and optionally a public path, meta title/description, homepage status, and - if you've registered more than one - a Page type), then compose it in the editor: open the block picker, search or browse by category, add a block, select it in the tree to edit its settings in the inspector, and watch the preview iframe reload. Page-level fields (title, path, metadata, homepage) are edited separately from block settings, via **Page Settings** in the editor's header - see [docs/editor.md](docs/editor.md) for the full editor-facing workflow.
+
+### Page Definitions
+
+By default any Page may contain any registered block, in any order. If you need to guarantee a page's structure - a Collection Page that must always start with a hero and a product grid it can't remove, say - register a **Page Definition**: a developer-authored policy object that restricts which blocks a kind of page may contain, which are required or locked, and what a new page of that kind starts with. Enforced both in the editor (picker filtering, tree indicators, guarded add/delete/reorder) and at publish time (blocking a page that violates it). See [docs/page-definitions.md](docs/page-definitions.md) for the full reference and a worked ecommerce example.
 
 ### Draft and publish behaviour
 
-Every edit writes immediately to the page's **draft** state - there is no separate save step. Draft edits never affect what's publicly rendered until you explicitly publish. Publishing resolves every block's fully-resolved effective settings (defaults merged with your overrides) and snapshots them into a new revision; a later change to a block's own constructor default can never silently alter an already-published revision, because the snapshot is self-contained.
+Every edit writes immediately to the page's **draft** state - there is no separate save step. Draft edits never affect what's publicly rendered until you explicitly publish. Publishing resolves every block's fully-resolved effective settings (defaults merged with your overrides) and snapshots them into a new revision; a later change to a block's own constructor default can never silently alter an already-published revision, because the snapshot is self-contained. Publishing is blocked while a page violates its Page Definition (see above).
 
 ### Revisions and restore
 
-Every publish creates a new, immutable revision. The editor's version history lists them; restoring one replaces the page's live draft sections with that revision's snapshot and immediately publishes a new revision from it (labeled `Restored from revision #N`) - restoring is itself a publish, not a draft-only operation.
+Every publish creates a new, immutable revision. The editor's version history lists them. Restoring one always replaces the page's live draft sections with that revision's snapshot; whether that's _also_ an immediate publish depends on whether the restored content satisfies the page's **current** Page Definition (which can have changed since that revision was published) - if it does, restoring publishes a new revision from it (labeled `Restored from revision #N`), exactly as before; if it doesn't, the content lands in the draft only, and publishing stays blocked until it's corrected.
 
 ## Rendering on your site
 
@@ -489,7 +493,7 @@ This release deliberately does not include:
 - A media library (the `image` field type is a single file upload; there's no asset browser).
 - Rich-text editing - `richtext` is presently a plain textarea. The package does not sanitize this field's HTML: if your block renders it with `{!! !!}`, whatever an editor enters is output as-is. Only give editor access to people you'd trust with that.
 - Nested blocks, slots/regions, or reusable "global" blocks. Composition is a flat, ordered list rendered inside a layout your own route or controller already provides.
-- Page Definitions (per-page-type block allow-lists/requirements) - not yet implemented.
+- Maximum/minimum block instance counts, locking or requiring one specific instance rather than every instance of a block, conditional allow-lists, role-specific Page Definitions, editor-built Page Definitions, and reassigning a Page's type after creation - see [docs/page-definitions.md#scope](docs/page-definitions.md#scope).
 - Additional rendering adapters. There is exactly one renderer: a real Blade component tag, resolved through a registered alias. A "directly registered Livewire/Vue/React outer component" is not, and will not be, supported the same way a Blade component is.
 - A distinct, more visible admin-facing warning for an orphaned enum value, and a publish-time block for it. It currently falls back to the constructor default and logs a warning, the same as public rendering.
 - Settings versioning/migration for a block whose settings shape has changed since content was authored against it.

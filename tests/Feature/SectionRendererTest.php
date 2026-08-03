@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
+use WeArePixel\Inlay\Tests\Fixtures\TestContextAwareSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 it('renders each section through its own Blade view with resolved effective settings', function () {
@@ -79,6 +80,38 @@ it('leaves a nullable Image field genuinely null when no photo is set, not an al
 
     expect($html)->not->toContain('data-test="photo"');
 });
+
+it('passes host-supplied context into a block property the schema does not declare as a setting', function () {
+    $renderer = new SectionRenderer(new BlockRegistry(['context-aware' => TestContextAwareSection::class]));
+
+    $html = $renderer->render(
+        [['handle' => 'context-aware', 'settings' => ['heading' => 'Welcome']]],
+        context: ['viewerName' => 'Alex'],
+    );
+
+    expect($html)
+        ->toContain('Welcome')
+        ->toContain('Alex');
+});
+
+it('renders identically with no context supplied, since context is always optional', function () {
+    $renderer = new SectionRenderer(new BlockRegistry(['context-aware' => TestContextAwareSection::class]));
+
+    $html = $renderer->render([['handle' => 'context-aware', 'settings' => ['heading' => 'Welcome']]]);
+
+    expect($html)
+        ->toContain('Welcome')
+        ->not->toContain('data-test="viewer-name"');
+});
+
+it('throws a clear exception when a context key collides with a declared setting name, rather than silently picking one', function () {
+    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
+
+    $renderer->render(
+        [['handle' => 'test-hero', 'settings' => ['heading' => 'From settings']]],
+        context: ['heading' => 'From context'],
+    );
+})->throws(RuntimeException::class, 'collide with runtime $context key');
 
 it('falls back to the constructor default and keeps rendering when a stored enum value no longer matches a real case', function () {
     Log::spy();

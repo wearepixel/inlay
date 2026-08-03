@@ -22,6 +22,8 @@
             x-on:setting-saved.window="announce('Saved', 1200)"
             x-on:page-published.window="announce('Published successfully', 2500)"
             x-on:revision-restored.window="announce('Revision restored', 2500)"
+            x-on:revision-restored-with-violations.window="announce('Restored to draft - not published', 3500)"
+            x-on:publish-blocked.window="announce('Publish blocked - see the notice below', 3500)"
         >
             <span class="inlay-badge inlay-badge--{{ $page->status->value }}">{{ $page->status->value }}</span>
 
@@ -36,6 +38,17 @@
             </button>
         </div>
     </div>
+
+    @if ($violations !== [])
+        <div class="inlay-violation-banner" data-test="violation-banner">
+            <span class="inlay-violation-banner__title">This page can't be published yet</span>
+            <ul class="inlay-violation-banner__list">
+                @foreach ($violations as $violation)
+                    <li data-test="violation-{{ $violation->type }}">{{ $violation->message }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     <div class="inlay-editor">
         <div class="inlay-mobile-tabs" role="tablist" aria-label="Editor panel">
@@ -55,46 +68,71 @@
                 </div>
 
                 <ul class="inlay-tree" x-ref="list" role="listbox" aria-label="Page blocks">
+                    @php $sectionHandleCounts = $sections->countBy('handle'); @endphp
                     @forelse ($sections as $section)
+                        @php
+                            $isLocked = in_array($section->handle, $lockedBlockHandles, true);
+                            $isRequired = in_array($section->handle, $requiredBlockHandles, true);
+                            $isFinalRequiredInstance = $isRequired && $sectionHandleCounts[$section->handle] <= 1;
+                            $canDelete = ! $isLocked && ! $isFinalRequiredInstance;
+                        @endphp
                         <li
                             data-section-id="{{ $section->id }}"
                             data-test="tree-item-{{ $section->id }}"
                             wire:key="section-{{ $section->id }}"
                             wire:click="selectSection({{ $section->id }})"
                             x-on:click="showSettings({{ $section->id }})"
-                            draggable="true"
+                            draggable="{{ $isLocked ? 'false' : 'true' }}"
                             tabindex="0"
                             role="option"
                             aria-selected="{{ $selectedSectionId === $section->id ? 'true' : 'false' }}"
-                            x-on:dragstart="dragStart({{ $section->id }})"
-                            x-on:dragover="dragOver($event)"
-                            x-on:drop="drop({{ $section->id }})"
+                            @unless ($isLocked)
+                                x-on:dragstart="dragStart({{ $section->id }})"
+                                x-on:dragover="dragOver($event)"
+                                x-on:drop="drop({{ $section->id }})"
+                                x-on:keydown.alt.down.prevent.stop="moveRow({{ $section->id }}, 1)"
+                                x-on:keydown.alt.up.prevent.stop="moveRow({{ $section->id }}, -1)"
+                            @endunless
                             x-on:keydown.enter.prevent="$el.click()"
                             x-on:keydown.down.prevent.stop="focusAdjacentRow({{ $section->id }}, 1)"
                             x-on:keydown.up.prevent.stop="focusAdjacentRow({{ $section->id }}, -1)"
-                            x-on:keydown.alt.down.prevent.stop="moveRow({{ $section->id }}, 1)"
-                            x-on:keydown.alt.up.prevent.stop="moveRow({{ $section->id }}, -1)"
                             x-on:keydown.delete.prevent="$el.querySelector('[data-test^=delete-]')?.click()"
                             class="inlay-tree__item {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}"
                         >
-                            <span class="inlay-tree__handle" data-test="drag-handle-{{ $section->id }}" aria-hidden="true">::</span>
+                            <span class="inlay-tree__handle" data-test="drag-handle-{{ $section->id }}" aria-hidden="true">{{ $isLocked ? '' : '::' }}</span>
                             <span class="inlay-tree__label">
                                 <span class="inlay-tree__label-name">{{ $sectionLabels[$section->id]['name'] }}</span>
                                 @if ($sectionLabels[$section->id]['detail'])
                                     <span class="inlay-tree__label-detail">- &ldquo;{{ $sectionLabels[$section->id]['detail'] }}&rdquo;</span>
                                 @endif
+                                @if ($isLocked)
+                                    <span class="inlay-tree__indicator" data-test="locked-{{ $section->id }}" title="Locked by {{ $pageDefinition?->label }} - can't be moved or removed">Locked</span>
+                                @elseif ($isRequired)
+                                    <span class="inlay-tree__indicator" data-test="required-{{ $section->id }}" title="Required by {{ $pageDefinition?->label }}">Required</span>
+                                @endif
                             </span>
                             <span class="inlay-tree__actions">
                                 <button type="button" wire:click.stop="duplicateSection({{ $section->id }})" data-test="duplicate-{{ $section->id }}" class="inlay-tree__icon-button" title="Duplicate" aria-label="Duplicate {{ $sectionLabels[$section->id]['name'] }}">&#10697;</button>
-                                <button
-                                    type="button"
-                                    wire:click.stop="deleteSection({{ $section->id }})"
-                                    wire:confirm="Remove this block from the page?"
-                                    data-test="delete-{{ $section->id }}"
-                                    class="inlay-tree__icon-button inlay-tree__icon-button--danger"
-                                    title="Delete"
-                                    aria-label="Delete {{ $sectionLabels[$section->id]['name'] }}"
-                                >&times;</button>
+                                @if ($canDelete)
+                                    <button
+                                        type="button"
+                                        wire:click.stop="deleteSection({{ $section->id }})"
+                                        wire:confirm="Remove this block from the page?"
+                                        data-test="delete-{{ $section->id }}"
+                                        class="inlay-tree__icon-button inlay-tree__icon-button--danger"
+                                        title="Delete"
+                                        aria-label="Delete {{ $sectionLabels[$section->id]['name'] }}"
+                                    >&times;</button>
+                                @else
+                                    <button
+                                        type="button"
+                                        disabled
+                                        data-test="delete-disabled-{{ $section->id }}"
+                                        class="inlay-tree__icon-button inlay-tree__icon-button--danger"
+                                        title="{{ $isLocked ? "Locked by {$pageDefinition?->label} - can't be removed" : "Required by {$pageDefinition?->label} - remove another instance first" }}"
+                                        aria-label="{{ $sectionLabels[$section->id]['name'] }} cannot be removed"
+                                    >&times;</button>
+                                @endif
                             </span>
                         </li>
                     @empty
@@ -199,6 +237,18 @@
                     @error('pageTitle') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
                 </div>
                 <div class="inlay-field">
+                    <label class="inlay-field__label">Page type</label>
+                    @if ($pageDefinition)
+                        <p data-test="page-settings-definition">{{ $pageDefinition->label }}</p>
+                        @if ($pageDefinition->description)
+                            <p class="inlay-field__help">{{ $pageDefinition->description }}</p>
+                        @endif
+                    @else
+                        <p class="inlay-field__help" style="color: var(--inlay-danger);" data-test="page-settings-definition-unresolved">This page's type is no longer registered. A developer needs to resolve this before publishing.</p>
+                    @endif
+                    <p class="inlay-field__help">Controls which blocks this page may contain. Cannot be changed after creation.</p>
+                </div>
+                <div class="inlay-field">
                     <label class="inlay-field__label" for="page-settings-path">Public path</label>
                     <input id="page-settings-path" type="text" wire:model.live.debounce.300ms="pagePath" class="inlay-input" placeholder="about/team" data-test="page-settings-path">
                     <p class="inlay-field__help">
@@ -237,6 +287,8 @@
                 @else
                     <p class="inlay-field__help" data-test="page-settings-last-published">Never published.</p>
                 @endif
+
+                <p class="inlay-field__help" data-test="page-settings-live-notice">Public path and homepage status take effect as soon as you save - they aren't part of this page's unpublished block content, so they don't wait for Publish.</p>
 
                 <button type="button" wire:click="savePageSettings" class="inlay-button inlay-button--primary" data-test="save-page-settings">Save page settings</button>
             </div>
@@ -374,8 +426,14 @@
                             </div>
                         </div>
                     @empty
-                        <p class="inlay-empty-state" style="padding: 24px 20px; text-align: center;">
-                            No blocks have been registered yet. Add one to <code>config('inlay.blocks')</code> or via <code>Inlay::singleFileBlock()</code>.
+                        <p class="inlay-empty-state" style="padding: 24px 20px; text-align: center;" data-test="picker-empty-state">
+                            @if ($pageDefinitionUnresolved)
+                                This page's type is no longer registered, so Inlay cannot tell which blocks it allows. A developer needs to resolve this before blocks can be added.
+                            @elseif ($blocksExistButNoneAllowed)
+                                No more blocks are available for this page type.
+                            @else
+                                No blocks have been registered yet. Add one to <code>config('inlay.blocks')</code> or via <code>Inlay::singleFileBlock()</code>.
+                            @endif
                         </p>
                     @endforelse
 

@@ -34,6 +34,17 @@ return new class extends Migration
             // index. A homepage's own `path` is irrelevant to resolving it -
             // see docs/routing.md.
             $table->boolean('is_homepage')->default(false);
+            // The registered Page Definition handle this Page follows
+            // (docs/page-definitions.md) - never the PHP class itself,
+            // matching how a PageSection stores a Block's handle rather
+            // than its class. Nullable, and treated everywhere as "use the
+            // built-in, unrestricted default definition" - existing Pages
+            // from before this column existed get that same default rather
+            // than needing a backfill. A handle that no longer matches
+            // anything registered (PageDefinitionRegistry::resolveForPage()
+            // returns null) is surfaced as an admin warning, not silently
+            // reinterpreted as the default.
+            $table->string('definition')->nullable();
             $table->timestamps();
         });
     }
