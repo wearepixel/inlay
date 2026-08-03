@@ -14,6 +14,7 @@ use WeArePixel\Inlay\Pages\PageDefinition;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\SingleFile\BlockLoader;
 use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\LivewireRequirement;
 use WeArePixel\Inlay\Support\SectionRenderer;
 
 /**
@@ -59,6 +60,8 @@ final class InlayManager
      */
     public function adminRoutes(): void
     {
+        LivewireRequirement::ensureInstalled();
+
         $middleware = (array) config('inlay.admin.middleware', ['web']);
 
         // Every admin action after the first page load (add/reorder/delete a

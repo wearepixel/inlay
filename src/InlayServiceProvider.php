@@ -34,7 +34,9 @@ final class InlayServiceProvider extends ServiceProvider
 
         Blade::component('inlay::render', RenderPage::class);
 
-        Livewire::addNamespace('inlay', classNamespace: 'WeArePixel\\Inlay\\Livewire');
+        if (class_exists(Livewire::class)) {
+            Livewire::addNamespace('inlay', classNamespace: 'WeArePixel\\Inlay\\Livewire');
+        }
 
         if ($this->app->runningInConsole()) {
             $this->commands([InstallCommand::class]);
