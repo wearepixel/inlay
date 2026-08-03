@@ -4,7 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? 'Inlay' }}</title>
-    <link rel="stylesheet" href="{{ route('inlay.admin.assets.css') }}">
+    {{--
+        A "?v=" query string keyed to the file's own last-modified time -
+        InlayAssetController caches these responses for an hour
+        (Cache-Control: max-age=3600), which is fine for a given version but
+        meant a change to inlay.css/inlay.js could sit invisible in an
+        already-open browser tab for up to an hour with no way to tell.
+        Changing the file changes the URL, so a stale cached response for
+        the *old* URL is simply never requested again - no separate
+        cache-clearing step needed after updating the package.
+    --}}
+    <link rel="stylesheet" href="{{ route('inlay.admin.assets.css') }}?v={{ \WeArePixel\Inlay\InlayManager::assetVersion('inlay.css') }}">
 </head>
 <body class="inlay">
     <div class="inlay-shell">
@@ -29,7 +39,7 @@
         </div>
     </div>
 
-    <script src="{{ route('inlay.admin.assets.js') }}" defer></script>
+    <script src="{{ route('inlay.admin.assets.js') }}?v={{ \WeArePixel\Inlay\InlayManager::assetVersion('inlay.js') }}" defer></script>
     @livewireScripts
 </body>
 </html>
