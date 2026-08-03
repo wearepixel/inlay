@@ -159,6 +159,25 @@
   min-height: 0;
 }
 
+/*
+ * A Livewire component always renders behind a single root element - for
+ * page-editor.blade.php, that's this div, sitting between .inlay-main's
+ * flex column and .inlay-topbar/.inlay-editor beneath it. Without its own
+ * flex/height passthrough it defaults to a plain block box sized to its
+ * content, which breaks the chain: .inlay-main's own height was already
+ * correct at any viewport size, but .inlay-editor's "flex: 1" had no real
+ * flex context to grow into one level up, so it silently fell back to its
+ * content height instead - only ever looking correct by coincidence, when
+ * a short-enough viewport happened to roughly match that content height.
+ * Confirmed on a 2200px-tall viewport, where the gap becomes obvious.
+ */
+.inlay-editor-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .inlay-topbar {
   display: flex;
   align-items: center;

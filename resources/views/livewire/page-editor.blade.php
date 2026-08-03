@@ -1,4 +1,5 @@
 <div
+    class="inlay-editor-page"
     x-data="inlayEditorSidebar(@js($showingHistory ? 'history' : ($selectedSchema ? 'settings' : 'tree')), @js($selectedSectionId))"
     x-on:section-selected.window="showSettings($event.detail.id)"
     x-on:selection-cleared.window="toTree()"
