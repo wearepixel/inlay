@@ -181,6 +181,14 @@ final class SectionRenderer
             return $setting->default->path;
         }
 
+        if ($raw && $setting->default instanceof LinkValue) {
+            return [
+                'label' => $setting->default->label,
+                'url' => $setting->default->url,
+                'openInNewTab' => $setting->default->openInNewTab,
+            ];
+        }
+
         return $setting->default;
     }
 
