@@ -9,6 +9,12 @@ use WeArePixel\Inlay\Livewire\PageCreate;
 use WeArePixel\Inlay\Livewire\PageEditor;
 use WeArePixel\Inlay\Livewire\PageIndex;
 
+// A bare visit to the admin's own prefix root (e.g. /inlay) has nowhere
+// else obvious to go - redirect to the page index rather than 404ing.
+// Named absolutely (not relatively) since it targets a route outside this
+// file's own "pages." namespace.
+Route::get('/', fn () => redirect()->route('inlay.admin.pages.index'))->name('index');
+
 Route::get('/assets/inlay.css', [InlayAssetController::class, 'css'])->name('assets.css');
 Route::get('/assets/inlay.js', [InlayAssetController::class, 'js'])->name('assets.js');
 

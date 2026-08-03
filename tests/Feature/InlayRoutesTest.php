@@ -13,6 +13,10 @@ it('serves the page index over HTTP', function () {
     $this->get(route('inlay.admin.pages.index'))->assertOk()->assertSee('Pages');
 });
 
+it('redirects a bare visit to the admin prefix root to the page index, rather than 404ing', function () {
+    $this->get('/inlay')->assertRedirect(route('inlay.admin.pages.index'));
+});
+
 it('serves the create-page form over HTTP', function () {
     $this->get(route('inlay.admin.pages.create'))->assertOk()->assertSee('New page');
 });

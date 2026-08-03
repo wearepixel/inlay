@@ -52,7 +52,7 @@ Inlay::pageRoutes();           // published Pages, served publicly by Inlay itse
 Inlay::routes();               // both of the above, as a convenience
 ```
 
-`adminRoutes()` registers the admin under `config('inlay.admin.prefix')` (`inlay` by default, so `/inlay/pages`, `/inlay/pages/create`, and so on) with route names prefixed `inlay.admin.`. `pageRoutes()` is what makes a published Page reachable at a real public URL with no controller of your own - see [Public routing](#public-routing) below and [docs/routing.md](docs/routing.md) for the full reference (prefixes, nested paths, the homepage, route ordering). Most applications only need `adminRoutes()` plus either `pageRoutes()` **or** their own routes calling `Inlay::renderPage()` - rarely both, and never neither.
+`adminRoutes()` registers the admin under `config('inlay.admin.prefix')` (`inlay` by default, so `/inlay/pages`, `/inlay/pages/create`, and so on) with route names prefixed `inlay.admin.`. A bare visit to the prefix root itself (e.g. `/inlay`) redirects to the page index rather than 404ing. `pageRoutes()` is what makes a published Page reachable at a real public URL with no controller of your own - see [Public routing](#public-routing) below and [docs/routing.md](docs/routing.md) for the full reference (prefixes, nested paths, the homepage, route ordering). Most applications only need `adminRoutes()` plus either `pageRoutes()` **or** their own routes calling `Inlay::renderPage()` - rarely both, and never neither.
 
 ### Configuring admin middleware
 
