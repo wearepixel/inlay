@@ -43,7 +43,18 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.inlay a {
+/*
+ * :where() keeps this reset from out-specificity-ing a single-class rule
+ * like .inlay-button--primary or .inlay-eyebrow on an <a> - a plain ".inlay
+ * a" selector's class+tag specificity beats a single class every time
+ * regardless of source order, silently winning back the ambient text
+ * color on any anchor styled as something else (a real bug: it made the
+ * "New page" button render white-on-white... near enough that its text
+ * was effectively invisible). :where(a) contributes no specificity of its
+ * own, so this reset and a later same-specificity override resolve by
+ * source order, as originally intended.
+ */
+.inlay :where(a) {
   color: inherit;
 }
 
