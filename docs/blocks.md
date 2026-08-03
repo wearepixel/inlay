@@ -205,6 +205,8 @@ final class Hero extends Component implements InlayBlock
 
 Every field is optional. With no `#[BlockMeta]` at all, the picker falls back to a label derived from the block's registered handle (`Str::headline()`) and groups it under "Uncategorised". `keywords` are matched by the picker's search alongside the label, description, and category - useful for a name an editor might search for that doesn't appear in the label itself (e.g. "banner" for a block called "Hero").
 
+`icon` and `thumbnail` both control the picker card's visual, in order of preference: a `thumbnail` (a public URL to a real image, e.g. `asset('images/blocks/hero.png')`) is shown first if set; otherwise `icon` is shown as a short label; with neither set, the picker falls back to the first letter of the block's label. A `thumbnail` is worth the extra asset for a block whose visual identity matters (a hero, a gallery layout) - it's what makes the picker feel like a real design tool rather than a list of names.
+
 `category` is presentational only - it groups cards in the picker, and is never a permission boundary. If you need to actually restrict which blocks a kind of page may contain (or require/lock specific ones), that's a **Page Definition**, a separate concept - see [docs/page-definitions.md](page-definitions.md). A Page Definition references a block either by its class (`Hero::class`) or, for a single-file block, by `BlockHandle::make('its-handle')` - see [Referencing a single-file block without a class](#referencing-a-single-file-block-without-a-class) below.
 
 ## Constructor defaults

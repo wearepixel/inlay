@@ -2,6 +2,61 @@
 
 A Laravel-native visual composition layer for existing applications. A developer registers ordinary Blade components as blocks; Inlay gives the people who work with content a packaged admin to compose pages from them, edit their settings, preview against the real frontend, and publish - without the developer building any admin UI of their own.
 
+## Quick start
+
+```bash
+composer require wearepixel/inlay
+php artisan inlay:install
+```
+
+```php
+// routes/web.php
+use WeArePixel\Inlay\Facades\Inlay;
+
+Inlay::adminRoutes(); // -> /inlay/pages
+```
+
+```php
+// app/Inlay/Blocks/Hero.php
+namespace App\Inlay\Blocks;
+
+use Illuminate\View\Component;
+use Illuminate\View\View;
+use WeArePixel\Inlay\Contracts\InlayBlock;
+
+final class Hero extends Component implements InlayBlock
+{
+    public function __construct(
+        public string $heading = 'Welcome',
+    ) {}
+
+    public function render(): View
+    {
+        return view('blocks.hero'); // resources/views/blocks/hero.blade.php
+    }
+}
+```
+
+```php
+// config/inlay.php
+'blocks' => [
+    'hero' => \App\Inlay\Blocks\Hero::class,
+],
+```
+
+Visit `/inlay/pages`, create a page, add your Hero block from the picker, and edit its heading - the preview pane reloads against your own `blocks.hero` view as you type. Everything below covers registering settings, page routing, and Page Definitions in full; see [docs/installation.md](docs/installation.md) for the complete setup including middleware and a `previewView()`.
+
+## Core concepts
+
+Four things compose together, each covered in its own section below:
+
+| Concept             | What it is                                                                                                                                |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Block**           | A reusable Blade component you register once (`Hero`, `ImageWithText`) - see [Registering blocks](#registering-blocks).                   |
+| **Page Section**    | One placed instance of a Block on a specific Page, with its own settings overrides - created when an editor adds a Block from the picker. |
+| **Page**            | An ordered list of Page Sections, plus its own title, public path, and metadata - see [Working with pages](#working-with-pages).          |
+| **Page Definition** | An optional developer-authored policy restricting which Blocks a kind of Page may contain - see [Page Definitions](#page-definitions).    |
+
 ## What Inlay is
 
 - A package you install into an **existing** Laravel application, not a standalone CMS or a new application you build on top of.
@@ -18,6 +73,8 @@ A Laravel-native visual composition layer for existing applications. A developer
 - **Not Livewire Volt**, even where the ergonomics rhyme (see [single-file blocks](docs/blocks.md#single-file-blocks) for the authoring style Inlay uses instead).
 
 ## Installation
+
+This section is the reference for what each step configures and why. For a guided, numbered walkthrough from a fresh install through your first published page, see [docs/installation.md](docs/installation.md) instead - the Quick start above is the fastest path if you just want to confirm the package works.
 
 ```bash
 composer require wearepixel/inlay
@@ -160,6 +217,20 @@ final class Hero extends Component implements InlayBlock
 ```
 
 A block with no `#[BlockMeta]` still registers and renders normally - the picker falls back to a label derived from its handle and an "Uncategorised" group.
+
+### Picker thumbnails
+
+`icon` (above) is a short string shown as a letter-tile fallback; for a real visual preview in the block picker, set `thumbnail` to a public URL instead:
+
+```php
+#[BlockMeta(
+    label: 'Hero',
+    category: 'Headers',
+    thumbnail: asset('images/blocks/hero.png'),
+)]
+```
+
+A block with a `thumbnail` shows that image in its picker card; one with neither `thumbnail` nor `icon` falls back to the first letter of its label. There's no required size or aspect ratio - a small screenshot of the block's own rendered output works well.
 
 ### Single-file blocks
 

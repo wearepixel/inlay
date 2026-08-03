@@ -8,15 +8,21 @@
 </head>
 <body class="inlay">
     <div class="inlay-shell">
-        <aside class="inlay-sidebar">
-            <div class="inlay-sidebar__brand">Inlay</div>
-            <nav class="inlay-nav">
+        {{--
+            A slim top nav, not a permanent side rail - see the comment atop
+            .inlay-topnav in resources/dist/inlay.css for why. Each
+            destination is one more <a> here; Media/Navigation/Settings slot
+            in the same way once they exist, with no structural change.
+        --}}
+        <header class="inlay-topnav">
+            <span class="inlay-topnav__brand">Inlay</span>
+            <nav class="inlay-topnav__links">
                 <a
                     href="{{ route('inlay.admin.pages.index') }}"
-                    class="inlay-nav__link {{ request()->routeIs('inlay.admin.pages.*') ? 'is-active' : '' }}"
+                    class="inlay-topnav__link {{ request()->routeIs('inlay.admin.pages.*') ? 'is-active' : '' }}"
                 >Pages</a>
             </nav>
-        </aside>
+        </header>
 
         <div class="inlay-main">
             {{ $slot }}

@@ -19,6 +19,12 @@
   --inlay-draft: #a8792a;
   --inlay-published: #2f6b4f;
   --inlay-radius: 6px;
+  /* Reserved for a container surface (preview frame, drawers, cards) - a
+     distinct step up from --inlay-radius, which is for controls (buttons,
+     inputs, badges). Never mix the two on the same category of element. */
+  --inlay-radius-lg: 14px;
+  --inlay-shadow-sm: 0 1px 2px rgba(20, 18, 14, 0.06);
+  --inlay-shadow-md: 0 8px 24px -8px rgba(20, 18, 14, 0.18);
   --inlay-font:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --inlay-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -59,55 +65,79 @@
   margin-bottom: 4px;
 }
 
+/* One inline SVG icon set for the whole admin, replacing what used to be a
+   mix of HTML entities (&times;, &#10697;) and literal glyphs (::) - see
+   resources/views/components/icon.blade.php. */
+.inlay-icon {
+  flex-shrink: 0;
+  vertical-align: -2px;
+}
+
 /* Shell */
 
+/*
+ * A slim horizontal top nav, not a permanent side rail - Beta 0.1 has
+ * exactly one admin destination ("Pages"), and a 220px side rail earning
+ * its keep needs several. The nav items live in a flex row precisely so
+ * Media/Navigation/Settings can be appended later as more <a> siblings
+ * with zero structural change - see resources/views/layout.blade.php.
+ */
 .inlay-shell {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
 }
 
-.inlay-sidebar {
-  width: 220px;
+.inlay-topnav {
   flex-shrink: 0;
-  background: var(--inlay-surface);
-  border-right: 1px solid var(--inlay-border);
-  padding: 24px 16px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 28px;
+  padding: 0 24px;
+  height: 52px;
+  background: var(--inlay-surface);
+  border-bottom: 1px solid var(--inlay-border);
 }
 
-.inlay-sidebar__brand {
-  font-size: 17px;
+.inlay-topnav__brand {
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  padding: 0 8px;
+  flex-shrink: 0;
 }
 
-.inlay-nav {
+.inlay-topnav__links {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
 }
 
-.inlay-nav__link {
-  display: block;
-  padding: 8px 8px;
-  border-radius: var(--inlay-radius);
+.inlay-topnav__link {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 4px;
   color: var(--inlay-text-muted);
   text-decoration: none;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
+  border-bottom: 2px solid transparent;
 }
 
-.inlay-nav__link:hover {
-  background: var(--inlay-bg);
+.inlay-topnav__link:hover {
   color: var(--inlay-text);
 }
 
-.inlay-nav__link.is-active {
-  background: var(--inlay-accent);
-  color: var(--inlay-accent-contrast);
+.inlay-topnav__link.is-active {
+  color: var(--inlay-text);
+  border-bottom-color: var(--inlay-accent);
+}
+
+.inlay-topnav__link:focus-visible {
+  outline: 2px solid var(--inlay-focus);
+  outline-offset: -2px;
+  border-radius: 4px;
 }
 
 .inlay-main {
@@ -115,7 +145,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: 0;
 }
 
 .inlay-topbar {
@@ -160,6 +190,11 @@
 
 .inlay-button:hover {
   border-color: var(--inlay-text-muted);
+}
+
+.inlay-button:focus-visible {
+  outline: 2px solid var(--inlay-focus);
+  outline-offset: 2px;
 }
 
 .inlay-button--primary {
@@ -232,6 +267,63 @@
   font-size: 12px;
 }
 
+.inlay-table__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/*
+ * Edit/Delete stay in the DOM and keep their normal tab order (never
+ * display:none, which would skip a keyboard user past them entirely) -
+ * only their opacity is gated on :hover/:focus-within, so tabbing into a
+ * row reveals them exactly when a mouse hover would.
+ */
+.inlay-table__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+.inlay-table tr:hover .inlay-table__actions,
+.inlay-table tr:focus-within .inlay-table__actions {
+  opacity: 1;
+}
+
+.inlay-filter-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.inlay-filter-tabs__tab {
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--inlay-text-muted);
+  cursor: pointer;
+}
+
+.inlay-filter-tabs__tab:hover {
+  color: var(--inlay-text);
+}
+
+.inlay-filter-tabs__tab.is-active {
+  background: var(--inlay-bg);
+  color: var(--inlay-text);
+  font-weight: 600;
+}
+
+.inlay-filter-tabs__tab:focus-visible {
+  outline: 2px solid var(--inlay-focus);
+  outline-offset: 1px;
+}
+
 /* Badges */
 
 .inlay-badge {
@@ -254,15 +346,20 @@
   color: var(--inlay-published);
 }
 
+.inlay-badge--homepage {
+  background: color-mix(in srgb, var(--inlay-focus) 12%, white);
+  color: var(--inlay-focus);
+}
+
 /* Forms */
 
 .inlay-field {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .inlay-field__label {
   display: block;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   margin-bottom: 5px;
 }
@@ -283,7 +380,7 @@
   background: var(--inlay-surface);
   color: var(--inlay-text);
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
 }
 
 .inlay-input:focus,
@@ -307,44 +404,197 @@
   color: var(--inlay-text-muted);
 }
 
+/* Image field: an empty upload used to be a bare, unstyled <input
+   type="file"> with no visual cue - this dropzone teaches what to do next
+   even before anything's been uploaded. The underlying input stays a real,
+   keyboard-focusable element (see .inlay-sr-only) - only its box is
+   visually replaced by the label wrapping it. */
+.inlay-image-field__dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 96px;
+  border: 1px dashed var(--inlay-border-strong);
+  border-radius: var(--inlay-radius);
+  color: var(--inlay-text-faint);
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.inlay-image-field__dropzone:hover {
+  border-color: var(--inlay-text-muted);
+  color: var(--inlay-text-muted);
+  background: var(--inlay-bg);
+}
+
+.inlay-image-field__input:focus-visible + .inlay-image-field__dropzone {
+  outline: 2px solid var(--inlay-focus);
+  outline-offset: 2px;
+  border-color: var(--inlay-focus);
+}
+
+.inlay-image-field__preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.inlay-image-field__thumb {
+  display: block;
+  height: 56px;
+  width: 56px;
+  border-radius: var(--inlay-radius);
+  object-fit: cover;
+  border: 1px solid var(--inlay-border);
+}
+
 /* Editor layout */
 
 /*
  * A contextual sidebar (structure OR settings, never both) plus a dominant
  * preview - the preview is the point of a visual composition tool, not the
- * settings form. 360px keeps the sidebar a stable width appropriate for
- * forms regardless of how many settings a block declares (its own
- * content scrolls internally - see .inlay-editor__sidebar overflow-y -
- * rather than ever changing the column width); at common desktop widths
- * that leaves the preview at roughly 70-75% of the editor's width, per the
- * brief for the editor's own layout redesign.
+ * settings form. 360px is only the starting width: it's user-resizable and
+ * remembered per browser (see inlayEditorSidebar in inlay.js), with its own
+ * content scrolling internally (.inlay-editor__sidebar overflow-y) rather
+ * than the column ever growing to fit a long settings form. At common
+ * desktop widths the default leaves the preview at roughly 70-75% of the
+ * editor's width, per the brief for the editor's own layout redesign.
  */
 .inlay-editor {
   display: grid;
-  grid-template-columns: 360px 1fr;
+  grid-template-columns: var(--inlay-sidebar-width, 360px) 1fr;
+  /* A grid with columns but no explicit rows sizes its single implicit row
+     to auto (content height) rather than the container's own height - the
+     bug that silently capped the preview iframe below to its content's
+     intrinsic height instead of filling the pane. minmax(0, 1fr) forces
+     the row to fill whatever height flex:1/min-height:0 below resolves to. */
+  grid-template-rows: minmax(0, 1fr);
   /* Fills whatever height the topbar leaves behind (see .inlay-main's own
      flex-column layout) rather than assuming a fixed topbar height - the
      topbar wraps onto a second line at narrow widths, so a hardcoded
      calc(100vh - Npx) would either clip content or leave a gap. */
   flex: 1;
   min-height: 0;
+  position: relative;
+  transition: grid-template-columns 160ms ease;
+}
+
+.inlay-editor.is-resizing {
+  transition: none;
 }
 
 .inlay-editor__sidebar {
   border-right: 1px solid var(--inlay-border);
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 20px;
+  min-height: 0;
+}
+
+/*
+ * Padding alone would keep the box at least 40px wide even with the grid
+ * column driven to 0 (border-box still can't shrink content below 0,
+ * forcing the padding to win) - collapsing to a true 0px means dropping
+ * the padding and border too, not just the grid track.
+ */
+.inlay-editor__sidebar.is-collapsed {
+  padding: 0;
+  border-right: none;
 }
 
 .inlay-editor__preview-column {
   padding: 0;
+  min-height: 0;
+}
+
+/*
+ * The boundary between the contextual panel and the preview - a 6px
+ * hit-target straddling the grid column edge, positioned absolutely so it
+ * never participates in the column math above (dragging it only ever
+ * changes --inlay-sidebar-width, never the grid's own column count). The
+ * collapse toggle is a small circle centered on the same line, hidden
+ * until the boundary is hovered or focused so it never reads as visual
+ * noise while composing a page.
+ */
+.inlay-editor__resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--inlay-sidebar-width, 360px) - 3px);
+  width: 6px;
+  cursor: col-resize;
+  z-index: 5;
+  overflow: visible;
+}
+
+.inlay-editor__resize-handle:hover,
+.inlay-editor__resize-handle:focus-visible {
+  background: color-mix(in srgb, var(--inlay-focus) 30%, transparent);
+}
+
+.inlay-editor__resize-handle:focus-visible {
+  outline: none;
+}
+
+.inlay-editor__collapse-toggle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--inlay-border-strong);
+  border-radius: 999px;
+  background: var(--inlay-surface);
+  color: var(--inlay-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  box-shadow: var(--inlay-shadow-sm);
+}
+
+.inlay-editor__resize-handle:hover .inlay-editor__collapse-toggle,
+.inlay-editor__resize-handle:focus-within .inlay-editor__collapse-toggle {
+  opacity: 1;
+}
+
+.inlay-editor__collapse-toggle:hover {
+  color: var(--inlay-text);
+  border-color: var(--inlay-text-muted);
+}
+
+.inlay-editor__collapse-toggle:focus-visible {
+  outline: 2px solid var(--inlay-focus);
+  outline-offset: 1px;
+}
+
+.inlay-editor__collapse-toggle .inlay-icon {
+  transition: transform 120ms ease;
+}
+
+.inlay-editor__resize-handle.is-collapsed
+  .inlay-editor__collapse-toggle
+  .inlay-icon {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 1024px) {
+  .inlay-editor__resize-handle {
+    display: none;
+  }
 }
 
 .inlay-editor__heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .inlay-back-link {
@@ -355,7 +605,7 @@
   background: transparent;
   padding: 0;
   color: var(--inlay-text-muted);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -423,6 +673,7 @@
 
 .inlay-tree__item:hover {
   border-color: var(--inlay-border-strong);
+  background: var(--inlay-bg);
 }
 
 .inlay-tree__item:focus-visible {
@@ -438,7 +689,13 @@
 .inlay-tree__handle {
   cursor: grab;
   color: var(--inlay-text-faint);
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.inlay-tree__handle--lock {
+  cursor: default;
 }
 
 .inlay-tree__label {
@@ -470,14 +727,31 @@
 }
 
 .inlay-tree__icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: transparent;
   color: var(--inlay-text-muted);
   cursor: pointer;
-  padding: 3px 5px;
+  padding: 4px;
   border-radius: 4px;
-  font-size: 12px;
   line-height: 1;
+}
+
+.inlay-tree__icon-button:focus-visible {
+  outline: 2px solid var(--inlay-focus);
+  outline-offset: 1px;
+}
+
+.inlay-tree__icon-button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.inlay-tree__icon-button:disabled:hover {
+  background: transparent;
+  color: var(--inlay-text-muted);
 }
 
 .inlay-tree__icon-button:hover {
@@ -532,7 +806,9 @@
 }
 
 .inlay-tree__indicator {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -553,12 +829,51 @@
 .inlay-preview__toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
+  gap: 12px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--inlay-border);
   background: var(--inlay-surface);
   font-size: 12px;
   color: var(--inlay-text-muted);
+}
+
+/*
+ * A quiet nod to a real browser's own address bar - not literal window
+ * chrome (traffic-light dots read as a macOS skeuomorphism this admin's
+ * calm, editorial language doesn't otherwise reach for), just a resolved,
+ * read-only URL sitting where one would. Reinforces that the pane on the
+ * right is a real page, not a form preview - see docs/editor.md#preview.
+ */
+.inlay-preview__url-bar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--inlay-bg);
+  color: var(--inlay-text-muted);
+}
+
+.inlay-preview__url-bar .inlay-icon {
+  flex-shrink: 0;
+  color: var(--inlay-text-faint);
+}
+
+.inlay-preview__url-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--inlay-font-mono);
+  font-size: 11px;
+}
+
+.inlay-preview__toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .inlay-preview__frame {
@@ -566,6 +881,35 @@
   width: 100%;
   border: none;
   background: white;
+}
+
+/*
+ * A pending update (any Livewire round trip - a setting change, a reorder,
+ * a publish) dims the iframe briefly rather than letting its own full page
+ * reload flash to white and back - a softer, "still here" cue instead of a
+ * jarring blink. wire:loading.delay only applies the class after a short
+ * delay, so a fast local response never dims at all.
+ */
+.inlay-preview__viewport.is-loading .inlay-preview__frame {
+  opacity: 0.55;
+}
+
+.inlay-preview__empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--inlay-text-faint);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.inlay-preview__empty strong {
+  display: block;
+  color: var(--inlay-text-muted);
+  font-weight: 600;
+  margin-bottom: 2px;
 }
 
 /*
@@ -667,8 +1011,13 @@
 .inlay-picker__card {
   text-align: left;
   display: flex;
+  align-items: center;
   gap: 10px;
-  padding: 10px;
+  /* A fixed height (rather than letting a two-line description grow the
+     card) keeps every row in the grid the same size regardless of which
+     blocks happen to be visible - a ragged grid reads as unfinished. */
+  height: 58px;
+  padding: 8px 10px;
   border: 1px solid var(--inlay-border);
   border-radius: var(--inlay-radius);
   background: var(--inlay-surface);
@@ -699,15 +1048,33 @@
   object-fit: cover;
 }
 
+.inlay-picker__card-body {
+  min-width: 0;
+  flex: 1;
+}
+
 .inlay-picker__card-title {
+  display: block;
   font-size: 13px;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inlay-picker__card-title mark {
+  background: color-mix(in srgb, var(--inlay-focus) 22%, transparent);
+  color: inherit;
+  border-radius: 3px;
 }
 
 .inlay-picker__card-description {
   font-size: 12px;
   color: var(--inlay-text-muted);
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .inlay-picker__card.is-highlighted,
@@ -728,7 +1095,7 @@
 .inlay-picker__hint {
   padding: 10px 18px;
   border-bottom: 1px solid var(--inlay-border);
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--inlay-text-faint);
   display: flex;
   gap: 12px;
@@ -741,6 +1108,72 @@
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 11px;
+}
+
+/*
+ * The "?" shortcuts overlay - a centered dialog (unlike the picker's own
+ * left drawer) since this is a reference sheet an editor glances at and
+ * dismisses, not something anchored to a particular edge of the editor.
+ */
+.inlay-shortcuts__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 14, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.inlay-shortcuts__panel {
+  width: 360px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--inlay-surface);
+  border-radius: var(--inlay-radius-lg);
+  box-shadow: var(--inlay-shadow-md);
+  padding: 20px 22px;
+}
+
+.inlay-shortcuts__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.inlay-shortcuts__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inlay-shortcuts__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--inlay-text-muted);
+}
+
+.inlay-shortcuts__keys {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.inlay-shortcuts__keys kbd {
+  font-family: var(--inlay-font-mono);
+  background: var(--inlay-bg);
+  border: 1px solid var(--inlay-border-strong);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: var(--inlay-text);
 }
 
 /* Repeater / group nesting */
@@ -789,7 +1222,7 @@
   padding: 8px 10px;
   border: 1px solid var(--inlay-border);
   border-radius: var(--inlay-radius);
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
 /* Pagination */
@@ -814,7 +1247,7 @@
   border-radius: var(--inlay-radius);
   color: var(--inlay-text);
   text-decoration: none;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -846,7 +1279,7 @@
   min-width: 32px;
   height: 32px;
   color: var(--inlay-text-faint);
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
 /* Inspector tabs */
@@ -865,7 +1298,7 @@
   padding: 7px 4px;
   margin-bottom: -1px;
   border-bottom: 2px solid transparent;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--inlay-text-muted);
   cursor: pointer;
@@ -894,7 +1327,7 @@
 .inlay-group-section {
   border: 1px solid var(--inlay-border);
   border-radius: var(--inlay-radius);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   overflow: hidden;
 }
 
@@ -930,7 +1363,7 @@
 }
 
 .inlay-group-section__body {
-  padding: 14px 12px 2px;
+  padding: 12px 12px 2px;
 }
 
 /* Field presentation: badges, required indicators, inline hints */
@@ -953,7 +1386,7 @@
 .inlay-badge--field {
   background: color-mix(in srgb, var(--inlay-focus) 12%, white);
   color: var(--inlay-focus);
-  font-size: 9.5px;
+  font-size: 10px;
   padding: 1px 6px;
 }
 
@@ -1019,12 +1452,6 @@
 
 /* Preview toolbar: viewport selector + refresh */
 
-.inlay-preview__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .inlay-viewport-selector {
   display: flex;
   gap: 2px;
@@ -1038,7 +1465,7 @@
   background: transparent;
   padding: 4px 9px;
   border-radius: 4px;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--inlay-text-muted);
   cursor: pointer;
@@ -1047,7 +1474,7 @@
 .inlay-viewport-selector__button.is-active {
   background: var(--inlay-surface);
   color: var(--inlay-text);
-  box-shadow: 0 1px 2px rgba(20, 18, 14, 0.08);
+  box-shadow: var(--inlay-shadow-sm);
 }
 
 .inlay-viewport-selector__button:focus-visible,
@@ -1057,12 +1484,14 @@
 }
 
 .inlay-preview__refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: transparent;
   color: var(--inlay-text-muted);
   cursor: pointer;
-  font-size: 13px;
-  padding: 4px 6px;
+  padding: 5px;
   border-radius: 4px;
 }
 
@@ -1072,6 +1501,7 @@
 }
 
 .inlay-preview__viewport {
+  position: relative;
   flex: 1;
   display: flex;
   justify-content: center;
@@ -1088,9 +1518,12 @@
   flex: none;
   height: 100%;
   border: 1px solid var(--inlay-border);
-  border-radius: 8px;
+  border-radius: var(--inlay-radius-lg);
   background: white;
-  transition: width 160ms ease;
+  transition:
+    width 160ms ease,
+    box-shadow 160ms ease,
+    opacity 150ms ease;
 }
 
 .inlay-preview__viewport--desktop .inlay-preview__frame {
@@ -1100,17 +1533,19 @@
 .inlay-preview__viewport--tablet .inlay-preview__frame {
   width: 768px;
   max-width: 100%;
+  box-shadow: var(--inlay-shadow-md);
 }
 
 .inlay-preview__viewport--mobile .inlay-preview__frame {
   width: 390px;
   max-width: 100%;
+  box-shadow: var(--inlay-shadow-md);
 }
 
 /* Status feedback */
 
 .inlay-status {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -1172,7 +1607,7 @@
   .inlay-mobile-tabs__tab.is-active {
     background: var(--inlay-surface);
     color: var(--inlay-text);
-    box-shadow: 0 1px 2px rgba(20, 18, 14, 0.08);
+    box-shadow: var(--inlay-shadow-sm);
   }
 
   .inlay-mobile-tabs__tab:focus-visible {

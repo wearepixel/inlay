@@ -7,7 +7,7 @@
 >
     <div class="inlay-topbar">
         <div>
-            <a href="{{ route('inlay.admin.pages.index') }}" class="inlay-eyebrow" style="text-decoration: none;">&larr; All pages</a>
+            <a href="{{ route('inlay.admin.pages.index') }}" class="inlay-eyebrow" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"><x-inlay::icon name="arrow-left" :size="11" /> All pages</a>
             <h1>{{ $page->title }}</h1>
         </div>
         <div
@@ -32,6 +32,9 @@
 
             <button type="button" x-on:click="showPageSettings()" data-test="open-page-settings" class="inlay-button inlay-button--ghost">Page Settings</button>
             <button type="button" wire:click="toggleHistory" data-test="toggle-history" class="inlay-button inlay-button--ghost" aria-expanded="{{ $showingHistory ? 'true' : 'false' }}">History</button>
+            <button type="button" x-on:click="$dispatch('open-shortcuts')" data-test="open-shortcuts" class="inlay-button inlay-button--ghost" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
+                <x-inlay::icon name="keyboard" :size="14" />
+            </button>
             <button type="button" wire:click="publish" wire:loading.attr="disabled" wire:target="publish" data-test="publish" class="inlay-button inlay-button--primary">
                 <span wire:loading.remove wire:target="publish">Publish</span>
                 <span wire:loading wire:target="publish">Publishing&hellip;</span>
@@ -50,7 +53,7 @@
         </div>
     @endif
 
-    <div class="inlay-editor">
+    <div class="inlay-editor" :class="resizing ? 'is-resizing' : ''" :style="'--inlay-sidebar-width: ' + (collapsed ? '0px' : width + 'px')">
         <div class="inlay-mobile-tabs" role="tablist" aria-label="Editor panel">
             <button type="button" role="tab" data-test="mobile-panel-edit" class="inlay-mobile-tabs__tab" :class="mobilePanel === 'edit' ? 'is-active' : ''" :aria-selected="(mobilePanel === 'edit').toString()" x-on:click="mobilePanel = 'edit'">Edit</button>
             <button type="button" role="tab" data-test="mobile-panel-preview" class="inlay-mobile-tabs__tab" :class="mobilePanel === 'preview' ? 'is-active' : ''" :aria-selected="(mobilePanel === 'preview').toString()" x-on:click="mobilePanel = 'preview'">Preview</button>
@@ -58,10 +61,10 @@
 
         <p class="inlay-sr-only" role="status" aria-live="polite" x-text="announcement()"></p>
 
-        <div class="inlay-editor__sidebar" :class="mobilePanel === 'preview' ? 'inlay-mobile-hide' : ''">
+        <div class="inlay-editor__sidebar" :class="(mobilePanel === 'preview' ? 'inlay-mobile-hide ' : '') + (collapsed ? 'is-collapsed' : '')" :inert="collapsed">
 
             {{-- Block tree (default sidebar state) --}}
-            <div x-show="view === 'tree'" x-cloak>
+            <div x-show="view === 'tree'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
                     <span class="inlay-eyebrow">Blocks</span>
                     <button type="button" wire:click="openPicker" data-test="open-picker" class="inlay-button inlay-button--small inlay-button--primary">+ Add</button>
@@ -99,20 +102,22 @@
                             x-on:keydown.delete.prevent="$el.querySelector('[data-test^=delete-]')?.click()"
                             class="inlay-tree__item {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}"
                         >
-                            <span class="inlay-tree__handle" data-test="drag-handle-{{ $section->id }}" aria-hidden="true">{{ $isLocked ? '' : '::' }}</span>
+                            <span class="inlay-tree__handle {{ $isLocked ? 'inlay-tree__handle--lock' : '' }}" data-test="drag-handle-{{ $section->id }}" aria-hidden="true">
+                                <x-inlay::icon :name="$isLocked ? 'lock' : 'grip'" :size="13" />
+                            </span>
                             <span class="inlay-tree__label">
                                 <span class="inlay-tree__label-name">{{ $sectionLabels[$section->id]['name'] }}</span>
                                 @if ($sectionLabels[$section->id]['detail'])
                                     <span class="inlay-tree__label-detail">- &ldquo;{{ $sectionLabels[$section->id]['detail'] }}&rdquo;</span>
                                 @endif
                                 @if ($isLocked)
-                                    <span class="inlay-tree__indicator" data-test="locked-{{ $section->id }}" title="Locked by {{ $pageDefinition?->label }} - can't be moved or removed">Locked</span>
+                                    <span class="inlay-tree__indicator" data-test="locked-{{ $section->id }}" title="Locked by {{ $pageDefinition?->label }} - can't be moved or removed"><x-inlay::icon name="lock" :size="9" /> Locked</span>
                                 @elseif ($isRequired)
                                     <span class="inlay-tree__indicator" data-test="required-{{ $section->id }}" title="Required by {{ $pageDefinition?->label }}">Required</span>
                                 @endif
                             </span>
                             <span class="inlay-tree__actions">
-                                <button type="button" wire:click.stop="duplicateSection({{ $section->id }})" data-test="duplicate-{{ $section->id }}" class="inlay-tree__icon-button" title="Duplicate" aria-label="Duplicate {{ $sectionLabels[$section->id]['name'] }}">&#10697;</button>
+                                <button type="button" wire:click.stop="duplicateSection({{ $section->id }})" data-test="duplicate-{{ $section->id }}" class="inlay-tree__icon-button" title="Duplicate" aria-label="Duplicate {{ $sectionLabels[$section->id]['name'] }}"><x-inlay::icon name="duplicate" :size="14" /></button>
                                 @if ($canDelete)
                                     <button
                                         type="button"
@@ -122,7 +127,7 @@
                                         class="inlay-tree__icon-button inlay-tree__icon-button--danger"
                                         title="Delete"
                                         aria-label="Delete {{ $sectionLabels[$section->id]['name'] }}"
-                                    >&times;</button>
+                                    ><x-inlay::icon name="trash" :size="14" /></button>
                                 @else
                                     <button
                                         type="button"
@@ -131,7 +136,7 @@
                                         class="inlay-tree__icon-button inlay-tree__icon-button--danger"
                                         title="{{ $isLocked ? "Locked by {$pageDefinition?->label} - can't be removed" : "Required by {$pageDefinition?->label} - remove another instance first" }}"
                                         aria-label="{{ $sectionLabels[$section->id]['name'] }} cannot be removed"
-                                    >&times;</button>
+                                    ><x-inlay::icon name="trash" :size="14" /></button>
                                 @endif
                             </span>
                         </li>
@@ -145,10 +150,10 @@
             </div>
 
             {{-- Settings inspector (shown while a block is selected) --}}
-            <div x-show="view === 'settings'" x-cloak>
+            <div x-show="view === 'settings'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
                     <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-to-blocks">
-                        <span aria-hidden="true">&larr;</span> Blocks
+                        <x-inlay::icon name="arrow-left" :size="12" /> Blocks
                     </button>
                 </div>
 
@@ -190,7 +195,7 @@
                                                 :aria-expanded="(!collapsed).toString()"
                                             >
                                                 {{ $group['label'] }}
-                                                <span class="inlay-group-section__chevron" :class="collapsed ? 'is-collapsed' : ''" aria-hidden="true">&#9662;</span>
+                                                <span class="inlay-group-section__chevron" :class="collapsed ? 'is-collapsed' : ''" aria-hidden="true"><x-inlay::icon name="chevron-down" :size="12" /></span>
                                             </button>
                                             <div class="inlay-group-section__body" x-show="!collapsed" x-transition>
                                                 @foreach ($group['fields'] as $field)
@@ -223,10 +228,10 @@
             </div>
 
             {{-- Page settings (title, public path, metadata, homepage, publishing info) --}}
-            <div x-show="view === 'page-settings'" x-cloak>
+            <div x-show="view === 'page-settings'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
                     <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-from-page-settings">
-                        <span aria-hidden="true">&larr;</span> Blocks
+                        <x-inlay::icon name="arrow-left" :size="12" /> Blocks
                     </button>
                 </div>
 
@@ -295,10 +300,10 @@
 
             {{-- Version history --}}
             @if ($showingHistory)
-                <div x-show="view === 'history'" x-cloak>
+                <div x-show="view === 'history'" x-cloak x-transition.opacity.duration.120ms>
                     <div class="inlay-editor__heading">
                         <button type="button" class="inlay-back-link" wire:click="toggleHistory" data-test="close-history">
-                            <span aria-hidden="true">&larr;</span> Blocks
+                            <x-inlay::icon name="arrow-left" :size="12" /> Blocks
                         </button>
                     </div>
                     <p class="inlay-eyebrow">Version history</p>
@@ -316,21 +321,58 @@
             @endif
         </div>
 
+        <div
+            class="inlay-editor__resize-handle"
+            :class="collapsed ? 'is-collapsed' : ''"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize the blocks panel"
+            tabindex="0"
+            data-test="panel-resize-handle"
+            x-on:mousedown="startResize($event)"
+            x-on:dblclick="toggleCollapsed()"
+            x-on:keydown.left.prevent="nudgeWidth(-16)"
+            x-on:keydown.right.prevent="nudgeWidth(16)"
+        >
+            <button
+                type="button"
+                class="inlay-editor__collapse-toggle"
+                data-test="collapse-panel"
+                x-on:click.stop="toggleCollapsed()"
+                :aria-expanded="(!collapsed).toString()"
+                :aria-label="collapsed ? 'Expand panel' : 'Collapse panel'"
+                :title="collapsed ? 'Expand panel' : 'Collapse panel'"
+            >
+                <x-inlay::icon name="chevron-left" :size="12" />
+            </button>
+        </div>
+
         <div class="inlay-editor__preview-column" :class="mobilePanel === 'edit' ? 'inlay-mobile-hide' : ''">
             <div class="inlay-preview" x-data="inlayViewportSelector">
                 <div class="inlay-preview__toolbar">
-                    <span>Preview</span>
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="inlay-preview__url-bar" title="{{ $this->pageEffectiveUrl ?? "This page has no public path - it isn't reachable at a URL of its own" }}">
+                        <x-inlay::icon name="globe" :size="12" />
+                        <span class="inlay-preview__url-text">{{ $this->pageEffectiveUrl ?? 'Not published' }}</span>
+                    </div>
+                    <div class="inlay-preview__toolbar-actions">
                         <div class="inlay-viewport-selector" role="group" aria-label="Preview viewport">
                             <button type="button" class="inlay-viewport-selector__button" :class="viewport === 'desktop' ? 'is-active' : ''" x-on:click="select('desktop')" aria-label="Desktop viewport">Desktop</button>
                             <button type="button" class="inlay-viewport-selector__button" :class="viewport === 'tablet' ? 'is-active' : ''" x-on:click="select('tablet')" aria-label="Tablet viewport">Tablet</button>
                             <button type="button" class="inlay-viewport-selector__button" :class="viewport === 'mobile' ? 'is-active' : ''" x-on:click="select('mobile')" aria-label="Mobile viewport">Mobile</button>
                         </div>
-                        <button type="button" class="inlay-preview__refresh" wire:click="$refresh" title="Refresh preview" aria-label="Refresh preview">&#8635;</button>
+                        <button type="button" class="inlay-preview__refresh" wire:click="$refresh" title="Refresh preview" aria-label="Refresh preview">
+                            <x-inlay::icon name="refresh" :size="14" />
+                        </button>
                     </div>
                 </div>
-                <div class="inlay-preview__viewport" :class="'inlay-preview__viewport--' + viewport">
+                <div class="inlay-preview__viewport" :class="'inlay-preview__viewport--' + viewport" wire:loading.class.delay="is-loading">
                     <iframe wire:key="preview-{{ $previewVersion }}" src="{{ $previewUrl }}" class="inlay-preview__frame" data-test="preview-frame" title="Page preview"></iframe>
+                    @if ($sections->isEmpty())
+                        <div class="inlay-preview__empty" data-test="preview-empty-state">
+                            <strong>Nothing here yet</strong>
+                            Add a block to see it appear here.
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -386,7 +428,9 @@
                                         x-on:click="recordRecent(block.slug); $wire.addSection(block.slug)"
                                     >
                                         <span class="inlay-picker__card-icon" x-text="block.icon || block.label.charAt(0)"></span>
-                                        <span class="inlay-picker__card-title" x-text="block.label"></span>
+                                        <span class="inlay-picker__card-body">
+                                            <span class="inlay-picker__card-title" x-text="block.label"></span>
+                                        </span>
                                     </button>
                                 </template>
                             </div>
@@ -415,8 +459,8 @@
                                                 {{ $block->icon ?? \Illuminate\Support\Str::substr($block->label, 0, 1) }}
                                             @endif
                                         </span>
-                                        <span>
-                                            <span class="inlay-picker__card-title" style="display: block;">{{ $block->label }}</span>
+                                        <span class="inlay-picker__card-body">
+                                            <span class="inlay-picker__card-title" x-html="highlight(@js($block->label))">{{ $block->label }}</span>
                                             @if ($block->description)
                                                 <span class="inlay-picker__card-description">{{ $block->description }}</span>
                                             @endif
@@ -444,4 +488,56 @@
             </div>
         </div>
     @endif
+
+    <div x-data="inlayShortcutsHelp" x-on:keydown.window="onKeydown($event)" x-on:open-shortcuts.window="open = true">
+        <div
+            x-show="open"
+            x-cloak
+            class="inlay-shortcuts__overlay"
+            x-on:keydown.escape.window="close()"
+            x-on:click="close()"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Keyboard shortcuts"
+            data-test="shortcuts-overlay"
+        >
+            <div class="inlay-shortcuts__panel" x-on:click.stop>
+                <p class="inlay-shortcuts__title">Keyboard shortcuts</p>
+                <ul class="inlay-shortcuts__list">
+                    <li class="inlay-shortcuts__row">
+                        <span>Move focus between blocks</span>
+                        <span class="inlay-shortcuts__keys"><kbd>&uarr;</kbd><kbd>&darr;</kbd></span>
+                    </li>
+                    <li class="inlay-shortcuts__row">
+                        <span>Open the focused block's settings</span>
+                        <span class="inlay-shortcuts__keys"><kbd>&crarr;</kbd></span>
+                    </li>
+                    <li class="inlay-shortcuts__row">
+                        <span>Reorder the focused block</span>
+                        <span class="inlay-shortcuts__keys"><kbd>Alt</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd></span>
+                    </li>
+                    <li class="inlay-shortcuts__row">
+                        <span>Delete the focused block</span>
+                        <span class="inlay-shortcuts__keys"><kbd>Delete</kbd></span>
+                    </li>
+                    <li class="inlay-shortcuts__row">
+                        <span>Back to the block tree</span>
+                        <span class="inlay-shortcuts__keys"><kbd>Esc</kbd></span>
+                    </li>
+                    <li class="inlay-shortcuts__row">
+                        <span>Resize the blocks panel</span>
+                        <span class="inlay-shortcuts__keys"><kbd>&larr;</kbd><kbd>&rarr;</kbd></span>
+                    </li>
+                    <li class="inlay-shortcuts__row">
+                        <span>In the block picker: navigate / add</span>
+                        <span class="inlay-shortcuts__keys"><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&crarr;</kbd></span>
+                    </li>
+                    <li class="inlay-shortcuts__row">
+                        <span>Show this panel</span>
+                        <span class="inlay-shortcuts__keys"><kbd>?</kbd></span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </div>

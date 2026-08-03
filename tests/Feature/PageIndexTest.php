@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
+use WeArePixel\Inlay\Actions\SetPageAsHomepage;
+use WeArePixel\Inlay\Enums\PageStatus;
 use WeArePixel\Inlay\Livewire\PageIndex;
 use WeArePixel\Inlay\Models\Page;
 
@@ -48,4 +50,47 @@ it('paginates with its own inlay-owned view, never Laravel\'s default Tailwind p
         ->not->toContain('inline-flex items-center px-4 py-2') // Laravel's bundled Tailwind pagination view
         ->not->toContain('bg-blue-500')
         ->not->toContain('btn-primary'); // a Bootstrap-flavoured pagination view would use this instead
+});
+
+it('filters pages by status via the All/Draft/Published tabs, defaulting to all', function () {
+    Page::create(['title' => 'Draft Page', 'path' => 'draft-page']);
+    $published = Page::create(['title' => 'Published Page', 'path' => 'published-page']);
+    $published->update(['status' => PageStatus::Published]);
+
+    Livewire::test(PageIndex::class)
+        ->assertSee('Draft Page')
+        ->assertSee('Published Page')
+        ->call('filterByStatus', 'draft')
+        ->assertSee('Draft Page')
+        ->assertDontSee('Published Page')
+        ->call('filterByStatus', 'published')
+        ->assertDontSee('Draft Page')
+        ->assertSee('Published Page')
+        ->call('filterByStatus', 'all')
+        ->assertSee('Draft Page')
+        ->assertSee('Published Page');
+});
+
+it('resets pagination when the status filter changes', function () {
+    for ($i = 1; $i <= 25; $i++) {
+        Page::create(['title' => "Page {$i}", 'path' => "page-{$i}"]);
+    }
+
+    Livewire::test(PageIndex::class)
+        ->call('nextPage')
+        ->assertSet('paginators.page', 2)
+        ->call('filterByStatus', 'draft')
+        ->assertSet('paginators.page', 1);
+});
+
+it('shows a distinct Homepage badge alongside the status badge, without hiding the public path', function () {
+    $homepage = Page::create(['title' => 'Home', 'path' => 'home']);
+    app(SetPageAsHomepage::class)->execute($homepage);
+
+    $html = Livewire::test(PageIndex::class)->html();
+
+    expect($html)
+        ->toContain('inlay-badge--homepage')
+        ->toContain('Homepage')
+        ->toContain('home'); // the public path is still shown, not replaced by the badge
 });

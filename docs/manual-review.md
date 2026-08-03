@@ -6,23 +6,29 @@ Test with at least two registered blocks (one with several settings including a 
 
 ## Desktop layout
 
-- [ ] Page index: table columns align, status badges are legible, search box and "New page" button don't collide at common widths (1280px, 1440px, 1920px).
-- [ ] Editor: the two-pane layout (contextual sidebar / preview) keeps sensible proportions; the preview stays dominant (~70-75% of the width) regardless of how many settings the selected block has.
+- [ ] Top nav: brand and "Pages" link don't collide with the page's own topbar actions at common widths (1280px, 1440px, 1920px).
+- [ ] Page index: table columns align, status/Homepage badges are legible, the All/Draft/Published tabs reflect which filter is active, search box and "New page" button don't collide.
+- [ ] Editor: the two-pane layout (contextual panel / preview) keeps sensible proportions; the preview stays dominant (~70-75% of the width) regardless of how many settings the selected block has.
+- [ ] Dragging the divider between the contextual panel and the preview resizes it smoothly, clamps at sensible min/max widths, and the chosen width survives a page reload.
+- [ ] The collapse toggle (hover the divider) hides the contextual panel to a true 0px - not just visually, check there's no residual padding/border - and the preview claims the freed width.
+- [ ] Preview toolbar shows the page's resolved public URL (or "Not published"), and the refresh icon actually reloads the iframe.
 - [ ] Block picker drawer doesn't exceed the viewport, and its own internal scroll (not the page's) activates when there are many blocks.
 
 ## Narrow viewport layout
 
 - [ ] Page index remains usable down to a typical tablet width; the table doesn't overflow the viewport uncontrollably.
-- [ ] Editor's sidebar becomes proportionally wider at tablet widths, and switches to one full-width panel at a time (via the Edit/Preview segmented control) at phone widths, with no horizontal overflow.
+- [ ] Editor's contextual panel becomes proportionally wider at tablet widths (the resize handle is hidden here, by design) and switches to one full-width panel at a time (via the Edit/Preview segmented control) at phone widths, with no horizontal overflow.
 - [ ] Block picker drawer doesn't exceed the viewport width/height on a narrow screen.
 
 ## Empty states
 
 - [ ] Page index with zero pages: message is clear, "New page" is still reachable.
-- [ ] Editor with zero blocks: message is clear, "+ Add" is still reachable, preview pane doesn't error.
+- [ ] Page index with a status/search filter matching nothing: distinguishes "no pages match this filter" from "no pages exist yet."
+- [ ] Editor with zero blocks: tree message is clear, "+ Add" is still reachable, and the preview pane itself shows a quiet "Nothing here yet" mark rather than looking broken or blank.
 - [ ] Settings inspector with nothing selected: defaults to the block tree rather than showing an empty panel.
 - [ ] Block picker with zero registered blocks: message is clear rather than a blank panel.
 - [ ] Version history with zero revisions: message is clear rather than a blank list.
+- [ ] Image field with nothing uploaded: shows the dashed dropzone (not a bare unstyled file input), and it's clickable and keyboard-reachable.
 
 ## Loading states
 
@@ -98,7 +104,8 @@ Test with at least two registered blocks (one with several settings including a 
 
 - [ ] Opening the block picker moves focus into its search field.
 - [ ] Closing the picker (via the close/overlay click or after adding a block) returns focus somewhere sensible, not to `<body>`.
-- [ ] Every actionable icon-only button (duplicate, delete) is reachable and operable via keyboard, not just mouse hover + click.
+- [ ] Every actionable icon-only button (duplicate, delete, refresh, collapse toggle) is reachable and operable via keyboard, not just mouse hover + click.
+- [ ] Pressing **?** while focus is in a text field types a literal "?" rather than opening the shortcuts overlay; pressing it anywhere else in the editor opens it, and Escape or an outside click closes it.
 
 ## Tab order
 
@@ -111,7 +118,7 @@ Test with at least two registered blocks (one with several settings including a 
 - [ ] Body text, labels, and the "Uncategorised"/eyebrow small-caps text meet reasonable contrast against their background.
 - [ ] Disabled/placeholder states (e.g. a disabled pagination link) are visually distinguishable from active ones without relying on color alone.
 - [ ] Status badges (draft/published) are distinguishable without relying on color alone (e.g. also differ in text).
-- [ ] Icon-only buttons (duplicate, delete, drag handle) have an accessible name (`title`/`aria-label`), not just a visual glyph.
+- [ ] Icon-only buttons (duplicate, delete, drag handle, refresh, collapse toggle) have an accessible name (`title`/`aria-label`), not just a visual glyph - every icon in the admin is now an inline SVG (`resources/views/components/icon.blade.php`), so check none of them regressed to a raw HTML entity.
 
 ## Recording findings
 

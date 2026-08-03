@@ -18,8 +18,20 @@
     </div>
 
     <div class="inlay-page">
+        <div class="inlay-filter-tabs" role="tablist" aria-label="Filter pages by status">
+            <button type="button" role="tab" wire:click="filterByStatus('all')" @class(['inlay-filter-tabs__tab' => true, 'is-active' => $statusFilter === 'all']) aria-selected="{{ $statusFilter === 'all' ? 'true' : 'false' }}">All</button>
+            <button type="button" role="tab" wire:click="filterByStatus('draft')" @class(['inlay-filter-tabs__tab' => true, 'is-active' => $statusFilter === 'draft']) aria-selected="{{ $statusFilter === 'draft' ? 'true' : 'false' }}">Draft</button>
+            <button type="button" role="tab" wire:click="filterByStatus('published')" @class(['inlay-filter-tabs__tab' => true, 'is-active' => $statusFilter === 'published']) aria-selected="{{ $statusFilter === 'published' ? 'true' : 'false' }}">Published</button>
+        </div>
+
         @if ($pages->isEmpty())
-            <p class="inlay-empty-state">No pages yet. Create the first one to get started.</p>
+            <p class="inlay-empty-state">
+                @if ($search !== '' || $statusFilter !== 'all')
+                    No pages match this filter.
+                @else
+                    No pages yet. Create the first one to get started.
+                @endif
+            </p>
         @else
             <table class="inlay-table">
                 <thead>
@@ -36,9 +48,7 @@
                             <td>
                                 <a href="{{ route('inlay.admin.pages.edit', $page) }}" class="inlay-table__title">{{ $page->title }}</a>
                                 <div class="inlay-table__slug">
-                                    @if ($page->is_homepage)
-                                        <span class="inlay-badge">Homepage</span>
-                                    @elseif ($page->path !== null)
+                                    @if ($page->path !== null)
                                         {{ $this->url($page) }}
                                     @else
                                         <span style="opacity: 0.6;">No public path</span>
@@ -46,17 +56,24 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="inlay-badge inlay-badge--{{ $page->status->value }}">{{ $page->status->value }}</span>
+                                <div class="inlay-table__status">
+                                    <span class="inlay-badge inlay-badge--{{ $page->status->value }}">{{ $page->status->value }}</span>
+                                    @if ($page->is_homepage)
+                                        <span class="inlay-badge inlay-badge--homepage">Homepage</span>
+                                    @endif
+                                </div>
                             </td>
-                            <td>{{ $page->updated_at?->diffForHumans() }}</td>
-                            <td style="text-align: right;">
-                                <a href="{{ route('inlay.admin.pages.edit', $page) }}" class="inlay-button inlay-button--small">Edit</a>
-                                <button
-                                    type="button"
-                                    wire:click="delete({{ $page->id }})"
-                                    wire:confirm="Delete this page? This cannot be undone."
-                                    class="inlay-button inlay-button--small inlay-button--danger"
-                                >Delete</button>
+                            <td title="{{ $page->updated_at?->toDayDateTimeString() }}">{{ $page->updated_at?->diffForHumans() }}</td>
+                            <td>
+                                <div class="inlay-table__actions">
+                                    <a href="{{ route('inlay.admin.pages.edit', $page) }}" class="inlay-button inlay-button--small">Edit</a>
+                                    <button
+                                        type="button"
+                                        wire:click="delete({{ $page->id }})"
+                                        wire:confirm="Delete this page? This cannot be undone."
+                                        class="inlay-button inlay-button--small inlay-button--danger"
+                                    >Delete</button>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

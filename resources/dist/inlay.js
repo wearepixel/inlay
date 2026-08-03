@@ -29,6 +29,77 @@ document.addEventListener("alpine:init", () => {
       mobilePanel: "edit",
       lastSelectedId: initialSelectedId,
       dragging: null,
+      width: 360,
+      collapsed: false,
+      resizing: false,
+
+      init() {
+        const storedWidth = parseInt(
+          localStorage.getItem("inlay-sidebar-width"),
+          10,
+        );
+
+        if (!Number.isNaN(storedWidth)) {
+          this.width = this.clampWidth(storedWidth);
+        }
+
+        this.collapsed =
+          localStorage.getItem("inlay-sidebar-collapsed") === "1";
+      },
+
+      clampWidth(width) {
+        const max = Math.min(560, Math.round(window.innerWidth * 0.45));
+
+        return Math.max(280, Math.min(max, width));
+      },
+
+      /**
+       * Dragging the boundary between the contextual panel and the preview.
+       * Listens on window (not the handle itself) for move/up so the drag
+       * keeps tracking even if the pointer outruns the thin 6px handle.
+       */
+      startResize(event) {
+        event.preventDefault();
+        this.resizing = true;
+        this.collapsed = false;
+
+        const startX = event.clientX;
+        const startWidth = this.width;
+
+        const onMove = (moveEvent) => {
+          this.width = this.clampWidth(
+            startWidth + (moveEvent.clientX - startX),
+          );
+        };
+
+        const onUp = () => {
+          this.resizing = false;
+          localStorage.setItem("inlay-sidebar-width", this.width);
+          localStorage.setItem(
+            "inlay-sidebar-collapsed",
+            this.collapsed ? "1" : "0",
+          );
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+        };
+
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+      },
+
+      nudgeWidth(delta) {
+        this.collapsed = false;
+        this.width = this.clampWidth(this.width + delta);
+        localStorage.setItem("inlay-sidebar-width", this.width);
+      },
+
+      toggleCollapsed() {
+        this.collapsed = !this.collapsed;
+        localStorage.setItem(
+          "inlay-sidebar-collapsed",
+          this.collapsed ? "1" : "0",
+        );
+      },
 
       /**
        * Called both optimistically (a tree row's own click handler, the
@@ -216,6 +287,40 @@ document.addEventListener("alpine:init", () => {
       return this.query === "" || searchText.includes(this.query.toLowerCase());
     },
 
+    /**
+     * Wraps the first match of the current query in <mark> so a card
+     * visibly shows *why* it survived the filter, not just that it did.
+     * text is always a block's own developer-supplied label (never
+     * user/editor input), but it's still escaped before the <mark> tags are
+     * spliced in, since x-html renders whatever this returns as real markup.
+     */
+    highlight(text) {
+      if (this.query === "") {
+        return this.escapeHtml(text);
+      }
+
+      const index = text.toLowerCase().indexOf(this.query.toLowerCase());
+
+      if (index === -1) {
+        return this.escapeHtml(text);
+      }
+
+      return (
+        this.escapeHtml(text.slice(0, index)) +
+        "<mark>" +
+        this.escapeHtml(text.slice(index, index + this.query.length)) +
+        "</mark>" +
+        this.escapeHtml(text.slice(index + this.query.length))
+      );
+    },
+
+    escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+
+      return div.innerHTML;
+    },
+
     categoryHasMatches(categoryEl) {
       return Array.from(categoryEl.querySelectorAll("[data-search]")).some(
         (el) => this.matches(el.dataset.search),
@@ -327,6 +432,37 @@ document.addEventListener("alpine:init", () => {
     select(viewport) {
       this.viewport = viewport;
       localStorage.setItem("inlay-preview-viewport", viewport);
+    },
+  }));
+
+  /**
+   * The "?" keyboard-shortcuts reference overlay. Global so it works from
+   * anywhere in the editor, but ignores "?" while focus is inside a text
+   * input/textarea/select or a contenteditable region - those need to type
+   * a literal "?" far more often than an editor wants the overlay.
+   */
+  Alpine.data("inlayShortcutsHelp", () => ({
+    open: false,
+
+    onKeydown(event) {
+      if (event.key !== "?" || this.isTypingTarget(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      this.open = true;
+    },
+
+    isTypingTarget(target) {
+      if (target.isContentEditable) {
+        return true;
+      }
+
+      return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+    },
+
+    close() {
+      this.open = false;
     },
   }));
 });
