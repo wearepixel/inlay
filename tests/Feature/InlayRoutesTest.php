@@ -40,15 +40,6 @@ it('serves the self-hosted admin JS with no CDN dependency', function () {
         ->assertHeader('Content-Type', 'application/javascript');
 });
 
-/**
- * Regression coverage: the CSS/JS routes are cached for an hour
- * (Cache-Control: max-age=3600 - see InlayAssetController), so a real
- * change to either file could sit invisible in an already-open browser
- * tab for up to an hour with no visible sign anything was wrong. The
- * layout stamps a "?v=" query string derived from each file's own
- * filemtime(), so a change to the file is a change to the URL - never a
- * stale cached response for a URL nobody requests anymore.
- */
 it('cache-busts the admin CSS and JS with a version derived from each file\'s own modification time', function () {
     $html = $this->get(route('inlay.admin.pages.index'))->getContent();
 
@@ -58,4 +49,15 @@ it('cache-busts the admin CSS and JS with a version derived from each file\'s ow
     expect($html)
         ->toContain(route('inlay.admin.assets.css').'?v='.$cssVersion)
         ->toContain(route('inlay.admin.assets.js').'?v='.$jsVersion);
+});
+
+// Regression: wire:loading elements (Saving.../Publishing...) render permanently visible, not just while
+// loading, when a host sets inject_assets=false (Nourishd's own convention) and the layout only calls
+// @livewireScripts - the CSS that hides them by default only ships via @livewireStyles.
+it('emits @livewireStyles even when the host has disabled Livewire\'s automatic asset injection', function () {
+    config(['livewire.inject_assets' => false]);
+
+    $html = $this->get(route('inlay.admin.pages.index'))->getContent();
+
+    expect($html)->toContain('[wire\:loading]');
 });

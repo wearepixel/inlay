@@ -331,13 +331,7 @@ final class InlayManager
         }
     }
 
-    /**
-     * A cache-busting token for one of the admin's own static assets
-     * (resources/dist/inlay.css or inlay.js), appended as a "?v=" query
-     * string in layout.blade.php - see the comment there for why. Static
-     * and stateless (a plain filemtime() lookup), so the layout can call it
-     * without resolving the manager through the container.
-     */
+    /** Cache-busting token for a resources/dist asset, keyed to its own mtime. */
     public static function assetVersion(string $filename): string
     {
         $path = __DIR__.'/../resources/dist/'.$filename;

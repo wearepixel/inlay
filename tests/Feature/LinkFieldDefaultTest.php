@@ -9,19 +9,6 @@ use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Tests\Fixtures\TestCtaWithDefaultSection;
 
-/**
- * Regression test for a real bug: a Link field with a non-nullable,
- * real-object default (`LinkValue $cta = new LinkValue(...)`) crashed the
- * editor the moment a block using it was added or selected. Livewire has
- * to serialise editingProps between requests, and SectionRenderer's raw
- * (editor-facing) settings resolution knew how to flatten a BackedEnum or
- * ImageValue default back to a plain scalar, but not a LinkValue one - so
- * the raw LinkValue object landed in editingProps unchanged, and Livewire
- * has no synthesizer for it: "Property type not supported in Livewire".
- * ?LinkValue $cta = null (the only pattern the existing TestCtaSection
- * fixture covered) never exercised this path, since null passes through
- * untouched regardless.
- */
 beforeEach(function () {
     config(['inlay.blocks' => [
         'test-cta-with-default' => TestCtaWithDefaultSection::class,
