@@ -95,6 +95,7 @@ return [
         'abilities' => [
             'manage' => 'inlay.manage-pages',
             'publish' => 'inlay.publish-pages',
+            'author' => 'inlay.author-blocks',
         ],
         'allow_publish' => false,
         'writes_per_minute' => 60,
@@ -113,5 +114,34 @@ return [
                 'quality' => 70,
             ],
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Styling and agent-authored blocks
+    |--------------------------------------------------------------------------
+    |
+    | 'framework' - the CSS approach this site uses (tailwind, bootstrap or
+    | plain). Agents are told to use it, and the starter kit defaults to it.
+    |
+    | Agent-authored blocks may only use classes the site's compiled CSS
+    | actually defines - read from the Vite manifest ('vite_manifest', null
+    | for public/build/manifest.json) plus any 'stylesheets'. Rebuild your
+    | assets to make new classes available; 'extra_classes' allows classes
+    | that exist only for JavaScript hooks.
+    |
+    | 'agent_blocks.enabled' - lets MCP users with the 'author' ability create
+    | blocks (run the migrations first). Off by default.
+    |
+    */
+    'styling' => [
+        'framework' => env('INLAY_CSS_FRAMEWORK', 'tailwind'),
+        'vite_manifest' => null,
+        'stylesheets' => [],
+        'extra_classes' => [],
+    ],
+
+    'agent_blocks' => [
+        'enabled' => (bool) env('INLAY_AGENT_BLOCKS', false),
     ],
 ];

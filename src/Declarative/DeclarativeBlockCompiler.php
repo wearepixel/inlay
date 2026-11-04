@@ -117,6 +117,32 @@ final class DeclarativeBlockCompiler
         );
     }
 
+    /**
+     * Builds a stored, previously validated definition without re-validating it.
+     *
+     * @param  array<string, mixed>  $definition
+     */
+    public function hydrate(array $definition): BlockDefinition
+    {
+        $pending = $this->errors;
+        $handle = (string) ($definition['handle'] ?? '');
+        $settings = $this->buildSettings($definition['settings'] ?? [], 'settings', nested: false);
+        $this->errors = $pending;
+
+        return new BlockDefinition(
+            handle: $handle,
+            name: is_string($definition['name'] ?? null) ? $definition['name'] : $handle,
+            description: is_string($definition['description'] ?? null) ? $definition['description'] : '',
+            category: is_string($definition['category'] ?? null) ? $definition['category'] : 'Generated',
+            icon: null,
+            thumbnail: null,
+            sourceType: BlockSourceType::Declarative,
+            sourceIdentifier: $handle,
+            settings: $settings,
+            template: is_array($definition['template'] ?? null) ? $definition['template'] : [],
+        );
+    }
+
     private function validateHandle(mixed $handle): ?string
     {
         if (! is_string($handle) || preg_match('/^[a-z][a-z0-9-]{1,59}$/', $handle) !== 1) {

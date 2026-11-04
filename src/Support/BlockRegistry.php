@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeArePixel\Inlay\Support;
 
+use Closure;
 use InvalidArgumentException;
 use ReflectionClass;
 use WeArePixel\Inlay\Attributes\BlockMeta;
@@ -24,6 +25,16 @@ final class BlockRegistry
      * @var array<string, BlockDefinition>
      */
     private array $singleFileDefinitions = [];
+
+    /**
+     * @var (Closure(): array<string, BlockDefinition>)|null
+     */
+    private ?Closure $declarativeLoader = null;
+
+    /**
+     * @var array<string, BlockDefinition>|null
+     */
+    private ?array $declarativeDefinitions = null;
 
     /**
      * @param  array<string, class-string<InlayBlock>>  $blocks
@@ -75,10 +86,44 @@ final class BlockRegistry
      * The single unified lookup - resolves a handle to its
      * BlockDefinition regardless of authoring style.
      */
+    /**
+     * Agent-authored blocks, loaded on first use. A developer-registered block
+     * with the same handle always wins.
+     *
+     * @param  Closure(): array<string, BlockDefinition>  $loader
+     */
+    public function useDeclarativeLoader(Closure $loader): void
+    {
+        $this->declarativeLoader = $loader;
+        $this->declarativeDefinitions = null;
+    }
+
+    /**
+     * Makes an unsaved agent-authored block resolvable for the rest of this
+     * request, so it can be previewed before it is saved.
+     */
+    public function registerDraft(BlockDefinition $definition): void
+    {
+        if (isset($this->blocks[$definition->handle]) || isset($this->singleFileDefinitions[$definition->handle])) {
+            return;
+        }
+
+        $this->declarativeDefinitions = [...$this->declarative(), $definition->handle => $definition];
+    }
+
+    public function forgetDeclarative(): void
+    {
+        $this->declarativeDefinitions = null;
+    }
+
     public function definition(string $slug): BlockDefinition
     {
         if (isset($this->singleFileDefinitions[$slug])) {
             return $this->singleFileDefinitions[$slug];
+        }
+
+        if (! isset($this->blocks[$slug]) && isset($this->declarative()[$slug])) {
+            return $this->declarative()[$slug];
         }
 
         $blockClass = $this->resolve($slug);
@@ -108,12 +153,14 @@ final class BlockRegistry
      */
     public function slugs(): array
     {
-        return [...array_keys($this->blocks), ...array_keys($this->singleFileDefinitions)];
+        $codeHandles = [...array_keys($this->blocks), ...array_keys($this->singleFileDefinitions)];
+
+        return [...$codeHandles, ...array_values(array_diff(array_keys($this->declarative()), $codeHandles))];
     }
 
     public function hasHandle(string $handle): bool
     {
-        return isset($this->blocks[$handle]) || isset($this->singleFileDefinitions[$handle]);
+        return isset($this->blocks[$handle]) || isset($this->singleFileDefinitions[$handle]) || isset($this->declarative()[$handle]);
     }
 
     /**
@@ -153,5 +200,17 @@ final class BlockRegistry
     public function all(): array
     {
         return array_map($this->metadata(...), $this->slugs());
+    }
+
+    /**
+     * @return array<string, BlockDefinition>
+     */
+    private function declarative(): array
+    {
+        if ($this->declarativeLoader === null) {
+            return [];
+        }
+
+        return $this->declarativeDefinitions ??= ($this->declarativeLoader)();
     }
 }

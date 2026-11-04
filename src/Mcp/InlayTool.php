@@ -11,6 +11,7 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use WeArePixel\Inlay\Composition\CompositionError;
 use WeArePixel\Inlay\Composition\InvalidCompositionException;
+use WeArePixel\Inlay\Declarative\DeclarativeBlocks;
 use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
@@ -34,6 +35,25 @@ abstract class InlayTool extends Tool
         }
 
         return Response::error("You are not allowed to manage Inlay pages. This requires the \"{$ability}\" ability - ask a developer to grant it.");
+    }
+
+    /**
+     * Creating blocks changes what every editor can put on a page, so it needs
+     * its own ability and is off unless the host enables it.
+     */
+    protected function denyAuthoring(Request $request): ?Response
+    {
+        if (! DeclarativeBlocks::enabled()) {
+            return Response::error('Creating blocks over MCP is switched off for this site. Compose pages from the existing blocks, or ask a developer to set inlay.agent_blocks.enabled.');
+        }
+
+        $ability = (string) config('inlay.mcp.abilities.author', 'inlay.author-blocks');
+
+        if (! $this->allows($request, $ability)) {
+            return Response::error("You are not allowed to create Inlay blocks. This requires the \"{$ability}\" ability.");
+        }
+
+        return null;
     }
 
     protected function allows(Request $request, string $ability, ?Page $page = null): bool

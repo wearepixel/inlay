@@ -9,6 +9,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use WeArePixel\Inlay\Console\InstallCommand;
 use WeArePixel\Inlay\Contracts\Screenshotter;
+use WeArePixel\Inlay\Declarative\DeclarativeBlocks;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Screenshots\BrowsershotScreenshotter;
 use WeArePixel\Inlay\Support\BlockRegistry;
@@ -21,7 +22,12 @@ final class InlayServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/inlay.php', 'inlay');
 
-        $this->app->singleton(BlockRegistry::class, fn () => BlockRegistry::fromConfig());
+        $this->app->singleton(BlockRegistry::class, function () {
+            $registry = BlockRegistry::fromConfig();
+            $registry->useDeclarativeLoader(fn () => app(DeclarativeBlocks::class)->definitions());
+
+            return $registry;
+        });
         $this->app->singleton(PageDefinitionRegistry::class);
         $this->app->singleton(InlayManager::class);
     }

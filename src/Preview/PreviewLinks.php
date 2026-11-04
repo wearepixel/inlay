@@ -38,14 +38,15 @@ final class PreviewLinks
 
     /**
      * @param  array<int, array{handle: string, settings?: array<string, mixed>}>  $sections
+     * @param  array<int, array<string, mixed>>  $draftBlocks  already-validated declarative block definitions the sections may use
      */
-    public function forComposition(Page $page, array $sections): string
+    public function forComposition(?Page $page, array $sections, array $draftBlocks = []): string
     {
-        return $this->issue(['page_id' => $page->getKey(), 'sections' => array_values($sections)]);
+        return $this->issue(['page_id' => $page?->getKey(), 'sections' => array_values($sections), 'blocks' => $draftBlocks]);
     }
 
     /**
-     * @return array{page_id: int, sections: array<int, array{handle: string, settings?: array<string, mixed>}>|null}|null
+     * @return array{page_id: int|null, sections: array<int, array{handle: string, settings?: array<string, mixed>}>|null, blocks?: array<int, array<string, mixed>>}|null
      */
     public function resolve(string $token): ?array
     {
@@ -55,7 +56,7 @@ final class PreviewLinks
     }
 
     /**
-     * @param  array{page_id: mixed, sections: array<int, mixed>|null}  $entry
+     * @param  array{page_id: mixed, sections: array<int, mixed>|null, blocks?: array<int, mixed>}  $entry
      */
     private function issue(array $entry): string
     {

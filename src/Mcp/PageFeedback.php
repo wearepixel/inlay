@@ -57,7 +57,7 @@ final class PageFeedback
      * @param  string|null  $url  the signed preview link returned by describe()
      * @return array<int, Response>
      */
-    public function screenshots(Page $page, ?string $url): array
+    public function screenshots(?Page $page, ?string $url): array
     {
         if ($url === null || ! app()->bound(Screenshotter::class)) {
             return [];
@@ -76,7 +76,7 @@ final class PageFeedback
             try {
                 $shot = $screenshotter->capture($url, (int) $width);
             } catch (Throwable $exception) {
-                Log::warning('inlay: preview screenshot failed', ['page_id' => $page->id, 'width' => $width, 'exception' => $exception->getMessage()]);
+                Log::warning('inlay: preview screenshot failed', ['page_id' => $page?->id, 'width' => $width, 'exception' => $exception->getMessage()]);
                 $responses[] = Response::text("The {$label} screenshot failed. The error has been logged for a developer.");
 
                 continue;

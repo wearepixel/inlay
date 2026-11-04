@@ -11,6 +11,7 @@ use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
 use WeArePixel\Inlay\Support\BlockDefinition;
 use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\BlockSourceType;
 use WeArePixel\Inlay\Support\ImageValue;
 use WeArePixel\Inlay\Support\LinkValue;
 
@@ -63,6 +64,7 @@ final class BlockCatalogue
             'handle' => $block->handle,
             'name' => $block->name,
             'category' => $block->category,
+            'source' => $block->sourceType === BlockSourceType::Declarative ? 'agent' : 'developer',
             'description' => $block->description,
             'keywords' => $block->keywords,
             'thumbnail' => $this->thumbnailUrl($block->thumbnail),
