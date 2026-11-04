@@ -143,3 +143,10 @@ it('hydrates repeater items that come from the block default the same way as sto
     expect($fromDefault)->toContain('From default|/more|no-photo')
         ->and($fromDefault)->toBe($fromStored);
 });
+
+it('hydrates an image or link default declared as a plain value', function () {
+    Inlay::singleFileBlock(__DIR__.'/../Fixtures/single-file/defaults/default-image.blade.php');
+
+    expect(app(SectionRenderer::class)->renderSection(['handle' => 'default-image', 'settings' => []]))
+        ->toContain('no-photo|/go');
+});

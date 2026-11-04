@@ -178,12 +178,26 @@ final class SectionRenderer
         foreach ($definition->settings->fields() as $setting) {
             $effective[$setting->name] = match (true) {
                 array_key_exists($setting->name, $stored) => $this->resolveValue($definition, $setting, $stored[$setting->name], $raw),
-                ! $raw && $setting->itemSchema !== null && is_array($setting->default) =>$this->resolveValue($definition, $setting, $setting->default, false),
+                ! $raw && $this->hasPlainDefault($setting) => $this->resolveValue($definition, $setting, $setting->default, false),
                 default => $this->normaliseDefault($setting, $raw),
             };
         }
 
         return $effective;
+    }
+
+    /**
+     * A default declared as a plain value (a single-file block's '' image, a
+     * repeater's array of items) rather than the value object a stored
+     * setting hydrates to.
+     */
+    private function hasPlainDefault(Setting $setting): bool
+    {
+        return match ($setting->type) {
+            FieldType::Image => is_string($setting->default),
+            FieldType::Link, FieldType::Repeater, FieldType::Group => is_array($setting->default),
+            default => false,
+        };
     }
 
     private function normaliseDefault(Setting $setting, bool $raw): mixed
