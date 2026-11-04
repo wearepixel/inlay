@@ -20,6 +20,49 @@ php artisan inlay:install
 
 Livewire is required by the packaged admin only - rendering a composed page never touches it, so a host application that only renders can install Inlay with no Livewire at all. Then register a block, point `Inlay::adminRoutes()` at your own `routes/web.php`, and visit `/inlay/pages`. See [Installation](https://wearepixel.com.au/docs/inlay/v1/installation) for the full walkthrough, including admin middleware and the preview view.
 
+## Landing page starter kit
+
+```bash
+php artisan inlay:install --starter=landing
+```
+
+Copies ten Tailwind blocks (hero, logo cloud, feature grid, text and image, stats, testimonials, pricing, FAQ, call to action, rich text) into `resources/views/inlay/blocks` and a `LandingPage` page type into `app/Inlay`. Existing files are kept unless you pass `--force`. Register them in a service provider:
+
+```php
+Inlay::singleFileBlocks(resource_path('views/inlay/blocks'));
+Inlay::pageDefinition(\App\Inlay\LandingPage::class);
+```
+
+The blocks are yours from then on - restyle them to the client's brand.
+
+## MCP server
+
+With `laravel/mcp` installed (Laravel 12+), AI agents can list blocks, compose pages, preview them and, if allowed, publish. Either give Inlay its own endpoint:
+
+```php
+// routes/ai.php
+Mcp::web('/mcp/pages', \WeArePixel\Inlay\Mcp\InlayServer::class)
+    ->middleware(['auth:sanctum']);
+```
+
+or add its tools to an MCP server you already run, alongside your own:
+
+```php
+use WeArePixel\Inlay\Mcp\InlayTools;
+
+protected array $tools = [MyTool::class, ...InlayTools::TOOLS];
+protected array $resources = [...InlayTools::RESOURCES];
+```
+
+Every tool name starts with `inlay-`, and every tool authorises the request itself, so mounting them in a server with a wider audience does not widen who can edit pages:
+
+- `inlay.manage-pages` (Gate ability, receives the `Page` where there is one) for everything.
+- `inlay.publish-pages` plus `config('inlay.mcp.allow_publish') === true` to publish. Publishing is off by default.
+
+Spatie permissions with those names work as they are. Agents get feedback after every change: what each section renders (headings, links, images, text), content still on block defaults, publish blockers and a signed preview link. To enable preview links, call `Inlay::previewLinkRoutes()` from `routes/web.php`.
+
+For desktop and mobile screenshots in `inlay-preview-page`, install `spatie/browsershot` (with Puppeteer) and set `INLAY_SCREENSHOT_DRIVER=browsershot`, or bind your own `WeArePixel\Inlay\Contracts\Screenshotter`. The renderer must be able to reach `APP_URL`. Clients that support MCP Apps also show the preview inline.
+
 ## Documentation
 
 Full documentation - registering blocks, authoring settings, Page Definitions, public routing, the editor workflow, and the current limitations - is available at [wearepixel.com.au/docs/inlay](https://wearepixel.com.au/docs/inlay/v1/introduction).
