@@ -169,3 +169,17 @@ it('stores repeater and group values in their coerced shape', function () {
         'badge' => ['visible' => true],
     ]);
 });
+
+it('strips script, event handlers and dangerous links from rich text before storing it', function () {
+    $page = Page::create(['title' => 'Landing']);
+
+    replaceComposition($page, [[
+        'block' => 'promo',
+        'settings' => ['body' => '<p onclick="steal()">Hello <strong>there</strong> <a href="javascript:alert(1)">bad</a> <a href="/menu">menu</a></p><script>alert(1)</script><img src=x onerror="alert(1)">'],
+    ]]);
+
+    $body = storedComposition($page)[0][1]['body'];
+
+    expect($body)->not->toContain('<script', 'onclick', 'onerror', 'javascript:')
+        ->and($body)->toContain('<strong>there</strong>', 'href="/menu"');
+});

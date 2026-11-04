@@ -40,3 +40,18 @@ it('cannot update a section that belongs to another page', function () {
 
     expect($section->fresh()->settings)->toBe(['heading' => 'Theirs']);
 });
+
+it('sanitises rich text in a patch, including inside nested items', function () {
+    $page = Page::create(['title' => 'Landing']);
+    $section = $page->sections()->create(['handle' => 'promo', 'order' => 0, 'settings' => []]);
+
+    app(UpdatePageSection::class)->execute($page, $section->id, [
+        'body' => '<p>Ok</p><script>alert(1)</script>',
+        'items' => [['title' => 'One', 'detail' => '<em>Fine</em><img src=x onerror="alert(1)">']],
+    ]);
+
+    $settings = $section->fresh()->settings;
+
+    expect($settings['body'])->toBe('<p>Ok</p>')
+        ->and($settings['items'][0]['detail'])->toBe('<em>Fine</em>');
+});

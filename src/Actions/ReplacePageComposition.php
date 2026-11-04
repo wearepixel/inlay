@@ -13,6 +13,7 @@ use WeArePixel\Inlay\Models\PageSection;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Pages\ResolvedPageDefinition;
 use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\RichTextSanitizer;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Support\SettingsCoercer;
 
@@ -32,6 +33,7 @@ final class ReplacePageComposition
         private readonly SettingsValidator $validator,
         private readonly SettingsCoercer $coercer,
         private readonly SectionRenderer $renderer,
+        private readonly RichTextSanitizer $richText,
     ) {}
 
     /**
@@ -212,7 +214,7 @@ final class ReplacePageComposition
                 continue;
             }
 
-            $stored[$name] = $this->coercer->coerce($setting, $value);
+            $stored[$name] = $this->richText->sanitizeSetting($setting, $this->coercer->coerce($setting, $value));
         }
 
         return $stored;
