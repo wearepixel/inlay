@@ -99,9 +99,12 @@ return [
         'allow_publish' => false,
         'writes_per_minute' => 60,
         'max_image_kilobytes' => 5120,
+        'max_image_pixels' => 40_000_000,
         'screenshots' => [
             'driver' => env('INLAY_SCREENSHOT_DRIVER'),
             'widths' => ['desktop' => 1440, 'mobile' => 390],
+            'per_minute' => 6,
+            'max_height' => 7500,
             'browsershot' => [
                 'chrome_path' => env('INLAY_CHROME_PATH'),
                 'node_modules_path' => env('INLAY_NODE_MODULES_PATH'),

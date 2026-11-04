@@ -21,6 +21,7 @@ final class PreviewLinkController
 
         return response($preview->render($page, $entry['sections']))
             ->header('X-Robots-Tag', 'noindex, nofollow')
-            ->header('Cache-Control', 'no-store, private');
+            ->header('Cache-Control', 'no-store, private')
+            ->header('Referrer-Policy', 'no-referrer');
     }
 }

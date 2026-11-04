@@ -16,6 +16,9 @@ use WeArePixel\Inlay\Models\Page;
  * composition that was never saved - without an admin session. The
  * signature stops a link being forged or extended; the cached token is what
  * names the page and holds a proposal, and it expires with the link.
+ *
+ * Links are built from APP_URL, not the request's Host header: the screenshot
+ * browser loads them, so a forged Host would point it at any server.
  */
 final class PreviewLinks
 {
@@ -65,7 +68,9 @@ final class PreviewLinks
 
         Cache::put(self::CACHE_PREFIX.$token, $entry, $expiresAt);
 
-        return URL::temporarySignedRoute(self::ROUTE, $expiresAt, ['token' => $token]);
+        $relative = URL::temporarySignedRoute(self::ROUTE, $expiresAt, ['token' => $token], absolute: false);
+
+        return rtrim((string) config('app.url'), '/').$relative;
     }
 
     private function ttl(): int

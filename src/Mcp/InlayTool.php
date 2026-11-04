@@ -60,24 +60,23 @@ abstract class InlayTool extends Tool
     }
 
     /**
-     * Resolves the page named by `page_id`, then authorises against it.
+     * Resolves the page named by `page_id` and authorises against that page
+     * only, so a host gate may require the Page argument. A page the user may
+     * not manage is reported exactly like one that does not exist.
      *
      * @return Page|Response the page, or the error to return
      */
     protected function authorizedPage(Request $request): Page|Response
     {
-        if ($denied = $this->deny($request)) {
-            return $denied;
-        }
-
         $pageId = $request->get('page_id');
         $page = is_numeric($pageId) ? Page::query()->find((int) $pageId) : null;
+        $ability = (string) config('inlay.mcp.abilities.manage', 'inlay.manage-pages');
 
-        if ($page === null) {
-            return Response::error('No page exists with that page_id. Call inlay-list-pages for valid ids.');
+        if ($page === null || ! $this->allows($request, $ability, $page)) {
+            return Response::error('No page you can manage has page_id '.(is_scalar($pageId) ? $pageId : '?').'. Call inlay-list-pages for valid ids.');
         }
 
-        return $this->deny($request, $page) ?? $page;
+        return $page;
     }
 
     protected function invalid(InvalidCompositionException $exception, string $hint = ''): Response

@@ -30,13 +30,17 @@ final class StoreImage
     public function fromBase64(string $data): string
     {
         $encoded = (string) preg_replace('#^data:[\w/+.-]+;base64,#', '', trim($data));
+        $maxKilobytes = (int) config('inlay.mcp.max_image_kilobytes', 5120);
+
+        if (strlen($encoded) > (int) ceil($maxKilobytes * 1024 * 4 / 3) + 4) {
+            $this->fail("Images must be at most {$maxKilobytes} KB.");
+        }
+
         $bytes = base64_decode($encoded, strict: true);
 
         if ($bytes === false || $bytes === '') {
             $this->fail('Must be base64-encoded image data (a data: URI prefix is allowed).');
         }
-
-        $maxKilobytes = (int) config('inlay.mcp.max_image_kilobytes', 5120);
 
         if (strlen($bytes) > $maxKilobytes * 1024) {
             $this->fail("Images must be at most {$maxKilobytes} KB.");
@@ -44,6 +48,11 @@ final class StoreImage
 
         $info = @getimagesizefromstring($bytes);
         $extension = $info !== false ? (self::EXTENSIONS[$info[2]] ?? null) : null;
+        $maxPixels = (int) config('inlay.mcp.max_image_pixels', 40_000_000);
+
+        if ($info !== false && $maxPixels < $info[0] * $info[1]) {
+            $this->fail("Images must be at most {$maxPixels} pixels in total. Export it at the size it is displayed.");
+        }
 
         if ($extension === null || ! $this->decodes($bytes)) {
             $this->fail('Must be a JPEG, PNG, WebP or GIF image.');

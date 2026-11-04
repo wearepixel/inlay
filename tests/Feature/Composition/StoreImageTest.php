@@ -45,3 +45,12 @@ it('rejects invalid base64 and oversized images', function () {
 
     expect(Storage::disk('public')->allFiles())->toBe([]);
 });
+
+it('rejects an image whose declared dimensions exceed the pixel limit before decoding it', function () {
+    config(['inlay.mcp.max_image_pixels' => 10]);
+
+    expect(fn () => app(StoreImage::class)->fromBase64(base64_encode(pngBytes())))
+        ->toThrow(InvalidCompositionException::class, 'pixels');
+
+    expect(Storage::disk('public')->allFiles())->toBe([]);
+});

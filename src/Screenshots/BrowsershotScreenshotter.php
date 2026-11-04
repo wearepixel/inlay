@@ -22,6 +22,7 @@ final class BrowsershotScreenshotter implements Screenshotter
             ->windowSize($width, self::VIEWPORT_HEIGHT)
             ->fullPage()
             ->waitUntilNetworkIdle()
+            ->disableRedirects()
             ->timeout($this->options['timeout'] ?? 60)
             ->setScreenshotType('jpeg', $this->options['quality'] ?? 70);
 

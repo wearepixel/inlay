@@ -32,7 +32,12 @@
                     previewUrl = data.preview_url ?? null;
 
                     if (! previewUrl) {
-                        document.getElementById('stage').innerHTML = '<p class="empty">Preview links are not enabled on this site.</p>';
+                        const message = document.createElement('p');
+                        message.className = 'empty';
+                        message.textContent = result?.isError
+                            ? 'The preview could not be produced - see the tool result for the problems.'
+                            : 'Preview links are not enabled on this site.';
+                        document.getElementById('stage').replaceChildren(message);
                         return;
                     }
 

@@ -36,10 +36,13 @@ final class ListPagesTool extends InlayTool
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
                 ->where('title', 'like', '%'.addcslashes($search, '%_\\').'%')
                 ->orWhere('path', 'like', '%'.addcslashes($search, '%_\\').'%')))
-            ->latest('updated_at');
+            ->latest('updated_at')
+            ->latest('id');
 
-        $total = (clone $query)->count();
-        $pages = $query->forPage($page, self::PER_PAGE)->get()
+        $results = $query->forPage($page, self::PER_PAGE + 1)->get();
+        $hasMore = $results->count() > self::PER_PAGE;
+
+        $pages = $results->take(self::PER_PAGE)
             ->filter(fn (Page $candidate) => $this->deny($request, $candidate) === null)
             ->map(fn (Page $candidate) => $this->pageSummary($candidate))
             ->values()
@@ -48,8 +51,7 @@ final class ListPagesTool extends InlayTool
         return Response::structured([
             'pages' => $pages,
             'page' => $page,
-            'total' => $total,
-            'has_more' => $page * self::PER_PAGE < $total,
+            'has_more' => $hasMore,
         ]);
     }
 

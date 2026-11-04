@@ -81,7 +81,7 @@ final class PreviewPageTool extends InlayTool
 
         return Response::make([
             Response::text((string) json_encode($described, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)),
-            ...$feedback->screenshots($page, $proposed),
+            ...$feedback->screenshots($page, $described['preview_url'] ?? null),
         ])->withStructuredContent($described);
     }
 

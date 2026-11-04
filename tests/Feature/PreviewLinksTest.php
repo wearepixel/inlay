@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\URL;
 use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Preview\PreviewLinks;
@@ -48,7 +49,7 @@ it('refuses a link whose signature has been tampered with', function () {
 });
 
 it('refuses a token that was never issued, even when correctly signed', function () {
-    $url = Illuminate\Support\Facades\URL::temporarySignedRoute('inlay.preview-link', now()->addMinutes(5), ['token' => str_repeat('a', 40)]);
+    $url = URL::temporarySignedRoute('inlay.preview-link', now()->addMinutes(5), ['token' => str_repeat('a', 40)], absolute: false);
 
     $this->get($url)->assertNotFound();
 });
@@ -62,4 +63,21 @@ it('stops working once the link expires', function () {
     $this->get($url)
         ->assertForbidden()
         ->assertDontSee('Stored draft');
+});
+
+it('builds links from APP_URL, never from the host the request arrived on', function () {
+    config(['app.url' => 'https://shop.example']);
+    app('url')->forceRootUrl('http://attacker.example');
+
+    $url = app(PreviewLinks::class)->forPage($this->page);
+
+    expect($url)->toStartWith('https://shop.example/inlay-preview/');
+
+    app('url')->forceRootUrl(null);
+    $this->get($url)->assertOk()->assertSee('Stored draft');
+});
+
+it('sends no referrer so the token cannot leak through a clicked link', function () {
+    $this->get(app(PreviewLinks::class)->forPage($this->page))
+        ->assertHeader('Referrer-Policy', 'no-referrer');
 });

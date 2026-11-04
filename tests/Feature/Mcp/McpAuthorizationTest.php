@@ -44,7 +44,7 @@ it('exposes every tool under an inlay- prefixed name', function () {
 it('denies every tool to a user without the manage ability, and changes nothing', function (string $tool, array $arguments) {
     InlayServer::actingAs($this->user)
         ->tool($tool, $arguments)
-        ->assertHasErrors(['inlay.manage-pages']);
+        ->assertHasErrors([isset($arguments['page_id']) ? 'No page you can manage' : 'inlay.manage-pages']);
 
     expect(Page::count())->toBe(1)
         ->and($this->section->fresh()->settings)->toBe(['heading' => 'Original'])
@@ -111,4 +111,24 @@ it('publishes when switched on and the user holds both abilities', function () {
 
     expect($this->page->fresh()->status)->toBe(PageStatus::Published)
         ->and($this->page->revisions()->count())->toBe(1);
+});
+
+it('works with a host gate that requires the page argument', function () {
+    Gate::define('inlay.manage-pages', fn (User $user, Page $page) => $page->path === 'spring');
+
+    InlayServer::actingAs($this->user)
+        ->tool(UpdateSectionTool::class, ['page_id' => $this->page->id, 'section_id' => $this->section->id, 'settings' => ['heading' => 'Changed']])
+        ->assertHasNoErrors();
+
+    expect($this->section->fresh()->settings)->toBe(['heading' => 'Changed']);
+});
+
+it('answers a forbidden page exactly like a missing one', function () {
+    Gate::define('inlay.manage-pages', fn (User $user, ?Page $page = null) => $page === null);
+
+    $forbidden = InlayServer::actingAs($this->user)->tool(GetPageTool::class, ['page_id' => $this->page->id]);
+    $missing = InlayServer::actingAs($this->user)->tool(GetPageTool::class, ['page_id' => 999]);
+
+    $forbidden->assertHasErrors(['No page you can manage has page_id '.$this->page->id.'.']);
+    $missing->assertHasErrors(['No page you can manage has page_id 999.']);
 });
