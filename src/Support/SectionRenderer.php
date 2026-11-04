@@ -176,9 +176,11 @@ final class SectionRenderer
         $effective = [];
 
         foreach ($definition->settings->fields() as $setting) {
-            $effective[$setting->name] = array_key_exists($setting->name, $stored)
-                ? $this->resolveValue($definition, $setting, $stored[$setting->name], $raw)
-                : $this->normaliseDefault($setting, $raw);
+            $effective[$setting->name] = match (true) {
+                array_key_exists($setting->name, $stored) => $this->resolveValue($definition, $setting, $stored[$setting->name], $raw),
+                ! $raw && $setting->itemSchema !== null && is_array($setting->default) =>$this->resolveValue($definition, $setting, $setting->default, false),
+                default => $this->normaliseDefault($setting, $raw),
+            };
         }
 
         return $effective;

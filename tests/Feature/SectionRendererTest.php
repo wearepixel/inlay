@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Tests\Fixtures\TestContextAwareSection;
@@ -129,4 +130,16 @@ it('falls back to the constructor default and keeps rendering when a stored enum
     Log::shouldHaveReceived('warning')->once()->withArgs(
         fn (string $message, array $context) => $context['setting'] === 'layout',
     );
+});
+
+it('hydrates repeater items that come from the block default the same way as stored items', function () {
+    Inlay::singleFileBlock(__DIR__.'/../Fixtures/single-file/defaults/default-items.blade.php');
+
+    $fromDefault = app(SectionRenderer::class)->renderSection(['handle' => 'default-items', 'settings' => []]);
+    $fromStored = app(SectionRenderer::class)->renderSection(['handle' => 'default-items', 'settings' => [
+        'items' => [['title' => 'From default', 'link' => ['label' => 'More', 'url' => '/more']]],
+    ]]);
+
+    expect($fromDefault)->toContain('From default|/more|no-photo')
+        ->and($fromDefault)->toBe($fromStored);
 });
