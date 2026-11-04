@@ -10,7 +10,7 @@ use WeArePixel\Inlay\Models\Page;
 /**
  * At most one Page may be the homepage at a time. There is no separate
  * site-settings record to point at it - `is_homepage` lives directly on the
- * Page row (docs/routing.md §homepage), which also means "delete the
+ * Page row (docs/inlay/v1/routing#the-homepage), which also means "delete the
  * homepage" needs no dedicated cleanup: the flag simply goes with the row.
  *
  * There is no Sites subsystem yet, so uniqueness is enforced globally.

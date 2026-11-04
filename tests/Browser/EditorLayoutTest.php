@@ -10,7 +10,7 @@ use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
  * selected block's settings, never both at once) beside a dominant
  * preview - replacing the old permanent three-column layout. See
  * InlayManager... no, see resources/dist/inlay.js's inlayEditorSidebar and
- * docs/editor.md for the interaction model this exercises.
+ * docs/inlay/v1/editor for the interaction model this exercises.
  */
 beforeEach(function () {
     config(['inlay.blocks' => ['hero' => BrowserHeroSection::class]]);

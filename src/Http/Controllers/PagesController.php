@@ -13,7 +13,7 @@ use WeArePixel\Inlay\Models\Page;
  * Resolves and renders a published Page for a real public visit, through
  * Inlay::pageRoutes() - the package-owned counterpart to a host rendering a
  * Page itself via Inlay::renderPage()/<x-inlay::render> from a route it
- * already owns (docs/routing.md). Draft Pages, and Pages with no public
+ * already owns (docs/inlay/v1/routing). Draft Pages, and Pages with no public
  * path that also aren't the homepage, are never resolved here - a normal
  * 404 either way, indistinguishable from "no route matched" to a visitor.
  */
@@ -35,7 +35,7 @@ final class PagesController
             throw new RuntimeException(
                 "Inlay could not find the public Page view [{$view}]. Create it (e.g. resources/views/".
                 str_replace('.', '/', $view).'.blade.php), or configure a different one via '.
-                "config('inlay.pages.view') or Inlay::pageRoutes(view: ...). See docs/routing.md."
+                "config('inlay.pages.view') or Inlay::pageRoutes(view: ...). See https://wearepixel.com.au/docs/inlay/v1/routing."
             );
         }
 

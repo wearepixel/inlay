@@ -8,3 +8,5 @@
 /node_modules
 /build
 /tests/Browser/Screenshots
+/fixtures/no-livewire/vendor
+/fixtures/no-livewire/composer.lock

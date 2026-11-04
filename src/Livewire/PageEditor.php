@@ -268,13 +268,13 @@ final class PageEditor extends Component
         $pageDefinition = $this->resolvedDefinition();
 
         // A locked block may still be duplicated - the copy is simply
-        // locked too, by the same type-level rule (docs/page-definitions.md
-        // #locked) - but a block the current definition no longer allows at
-        // all must not be extended by duplicating it. hasHandle() also
-        // guards against duplicating a section whose own block was
-        // deregistered since it was created (docs/page-definitions.md
-        // #unresolved-block) - checked before creating the duplicate row,
-        // not after, so a rejection never leaves a partial write behind.
+        // locked too, by the same type-level rule - but a block the current
+        // definition no longer allows at all must not be extended by
+        // duplicating it. hasHandle() also guards against duplicating a
+        // section whose own block was deregistered since it was created -
+        // checked before creating the duplicate row, not after, so a
+        // rejection never leaves a partial write behind.
+        // docs/inlay/v1/page-definitions#locked
         if ($pageDefinition === null
             || ! $pageDefinition->allows($section->handle)
             || ! app(BlockRegistry::class)->hasHandle($section->handle)) {
@@ -325,7 +325,7 @@ final class PageEditor extends Component
         }
 
         // The *final* remaining instance of a required block can't be
-        // deleted - v0.1's chosen rule (docs/page-definitions.md #required)
+        // deleted - v0.1's chosen rule (docs/inlay/v1/page-definitions#required)
         // is to prevent that outright rather than let the page go invalid
         // and rely solely on the publish gate to catch it, while still
         // allowing deletion when another instance of the same block
@@ -509,7 +509,7 @@ final class PageEditor extends Component
         // anything registered) leaves no rules to filter by - the picker
         // shows nothing rather than guessing, and the view surfaces a
         // developer-facing explanation instead of an editor-facing empty
-        // state (docs/page-definitions.md#picker-filtering).
+        // state (docs/inlay/v1/page-definitions#editor-guardrails).
         $allowedBlocks = match (true) {
             $pageDefinition === null => $blocks->filter(fn () => false),
             $pageDefinition->isUnrestricted() => $blocks,

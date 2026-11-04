@@ -1,0 +1,23 @@
+{
+    "name": "wearepixel/inlay-no-livewire-check",
+    "description": "Throwaway host application for composer test:no-livewire - see verify.php.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "laravel/framework": "^11.0|^12.0|^13.0",
+        "orchestra/testbench-core": "^9.0|^10.0|^11.0",
+        "wearepixel/inlay": "@dev"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../..",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

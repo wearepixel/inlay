@@ -12,7 +12,7 @@ use WeArePixel\Inlay\Support\BlockHandle;
  * may contain, which are required or locked, and what a new Page of this
  * kind starts with. A Page Definition renders nothing, is not itself a
  * Block, and is never persisted beyond a stable handle stored on the Page
- * row - see docs/page-definitions.md. Register a subclass with
+ * row - see docs/inlay/v1/page-definitions. Register a subclass with
  * Inlay::pageDefinition()/pageDefinitions().
  */
 abstract class PageDefinition
@@ -44,7 +44,7 @@ abstract class PageDefinition
 
     /**
      * Every placed instance of a Block whose handle appears here can be
-     * neither deleted nor reordered (docs/page-definitions.md#locked). A
+     * neither deleted nor reordered (docs/inlay/v1/page-definitions#locked). A
      * locked Block is always also required - PageDefinitionRegistry rejects
      * a definition that locks a Block without also requiring it, rather
      * than silently normalising the contradiction away.

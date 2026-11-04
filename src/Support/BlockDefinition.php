@@ -35,7 +35,7 @@ final readonly class BlockDefinition
         public Settings $settings,
         /**
          * Reserved for future settings-version migration (not yet
-         * implemented - see docs/blocks.md). Always 1 today for both
+         * implemented - see docs/inlay/v1/registering-blocks). Always 1 today for both
          * authoring styles.
          */
         public int $settingsVersion = 1,

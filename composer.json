@@ -17,6 +17,9 @@
     "larastan/larastan": "^3.10",
     "livewire/livewire": "^4.0"
   },
+  "conflict": {
+    "livewire/livewire": "<4.0"
+  },
   "suggest": {
     "livewire/livewire": "Required to use Inlay's packaged administration interface (^4.0)."
   },
@@ -43,6 +46,10 @@
   "scripts": {
     "test": "pest",
     "test:browser": "pest tests/Browser",
+    "test:no-livewire": [
+      "composer install --working-dir=fixtures/no-livewire --no-interaction --quiet",
+      "@php fixtures/no-livewire/verify.php"
+    ],
     "analyse": "phpstan analyse",
     "format": "pint"
   },

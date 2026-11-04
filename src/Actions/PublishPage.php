@@ -27,7 +27,7 @@ final class PublishPage
      * in the editor, called from a queued job, or invoked from a console
      * command someone builds later - a Page that doesn't satisfy its own
      * Page Definition is never published, full stop
-     * (docs/page-definitions.md#publishing-validation). The editor shows
+     * (docs/inlay/v1/page-definitions#publishing-validation). The editor shows
      * these same violations before a click even reaches here purely as a
      * courtesy; this check is what actually enforces it.
      *

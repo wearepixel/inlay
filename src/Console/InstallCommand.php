@@ -26,7 +26,7 @@ final class InstallCommand extends Command
             "Set config('inlay.admin.middleware') to guard it - the default ['web'] alone leaves it public.",
             "Register your first block in config('inlay.blocks').",
             'Call Inlay::previewView() so the preview iframe renders using your real frontend.',
-            'Call Inlay::pageRoutes() if you want Inlay to serve published Pages publicly - see docs/routing.md.',
+            'Call Inlay::pageRoutes() if you want Inlay to serve published Pages publicly - see https://wearepixel.com.au/docs/inlay/v1/routing.',
         ]);
 
         return self::SUCCESS;

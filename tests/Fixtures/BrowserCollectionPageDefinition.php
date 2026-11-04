@@ -9,7 +9,7 @@ use WeArePixel\Inlay\Pages\PageDefinition;
 
 /**
  * A constrained Page Definition for the browser test suite - mirrors the
- * ecommerce CollectionPage example in docs/page-definitions.md, using the
+ * ecommerce CollectionPage example in docs/inlay/v1/page-definitions, using the
  * existing browser fixture blocks so the workflow exercises a real,
  * end-to-end editor session under real guardrails.
  */

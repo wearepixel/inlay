@@ -120,7 +120,7 @@ final class BlockRegistry
      * Reverse lookup: the handle a class-based block is registered under -
      * used to normalise a Page Definition's `Hero::class`-style references
      * into the stable handle actually stored on a PageSection
-     * (docs/page-definitions.md). A single-file block has no class to look
+     * (docs/inlay/v1/page-definitions). A single-file block has no class to look
      * up this way; reference it via BlockHandle::make() instead.
      *
      * @param  class-string<InlayBlock>  $class

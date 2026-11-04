@@ -43,7 +43,7 @@ return [
     | A string prefix (e.g. 'pages') scopes every Page under that segment
     | instead, which is both safer against route collisions and doesn't
     | need to be registered last. Method arguments passed to
-    | Inlay::pageRoutes() override this value - see docs/installation.md.
+    | Inlay::pageRoutes() override this value - see docs/inlay/v1/installation.
     |
     | 'view' - the host-owned Blade view that renders a Page on a real
     | visit. Receives $page, $composition, and $context, exactly like

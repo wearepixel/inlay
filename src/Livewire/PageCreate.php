@@ -34,7 +34,7 @@ final class PageCreate extends Component
      * The URL this page will resolve to once published, shown live beneath
      * the path field so an editor sees the effect of the active
      * Inlay::pageRoutes() prefix without it ever being stored on the Page
-     * itself (docs/routing.md).
+     * itself (docs/inlay/v1/routing).
      */
     #[Computed]
     public function effectiveUrl(): ?string
@@ -51,7 +51,7 @@ final class PageCreate extends Component
      * Every registered Page Definition, for the "Page type" selector - the
      * view hides the selector entirely when only the built-in unrestricted
      * one exists, so a developer who never needs this feature sees no
-     * extra ceremony at all (docs/page-definitions.md#page-creation).
+     * extra ceremony at all (docs/inlay/v1/page-definitions#page-creation).
      *
      * @return array<int, ResolvedPageDefinition>
      */
@@ -83,7 +83,7 @@ final class PageCreate extends Component
             // simplification the spec explicitly sanctions rather than
             // building a "validate and confirm every existing block
             // against the new rules" migration flow
-            // (docs/page-definitions.md#changing-a-page-type).
+            // (docs/inlay/v1/page-definitions#page-creation).
             'definition' => $definition->handle,
         ]);
 

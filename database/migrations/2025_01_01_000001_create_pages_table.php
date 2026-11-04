@@ -32,10 +32,10 @@ return new class extends Migration
             // true" isn't expressible as a portable index across this
             // package's supported drivers without a driver-specific partial
             // index. A homepage's own `path` is irrelevant to resolving it -
-            // see docs/routing.md.
+            // see docs/inlay/v1/routing.
             $table->boolean('is_homepage')->default(false);
             // The registered Page Definition handle this Page follows
-            // (docs/page-definitions.md) - never the PHP class itself,
+            // (docs/inlay/v1/page-definitions) - never the PHP class itself,
             // matching how a PageSection stores a Block's handle rather
             // than its class. Nullable, and treated everywhere as "use the
             // built-in, unrestricted default definition" - existing Pages

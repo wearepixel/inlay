@@ -8,3 +8,10 @@ parameters:
     level: 6
 
     tmpDir: build/phpstan
+
+    ignoreErrors:
+        # Analysis always runs with Livewire 4 installed, so the runtime probe
+        # for it narrows to a constant true. Covered by composer test:no-livewire.
+        -
+            identifier: function.alreadyNarrowedType
+            path: src/Support/LivewireRequirement.php

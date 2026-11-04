@@ -43,7 +43,7 @@ final class InlayManager
      * routes - a convenience for a host that wants both with no
      * per-group configuration. Equivalent to calling adminRoutes() and
      * pageRoutes() separately, which is what most hosts documented in
-     * docs/routing.md actually want (pageRoutes() alone, or not at all,
+     * docs/inlay/v1/routing actually want (pageRoutes() alone, or not at all,
      * favouring their own application-owned routes instead).
      */
     public function routes(): void
@@ -110,7 +110,7 @@ final class InlayManager
      * Registers Inlay-owned public routing for published Pages - a single
      * route resolving any path against config('inlay.pages.view') (or the
      * $view argument), rendering it as a real Blade view your application
-     * owns entirely (docs/routing.md). Inlay never registers this
+     * owns entirely (docs/inlay/v1/routing). Inlay never registers this
      * automatically; a host must opt in explicitly, and a root-level
      * (unprefixed) registration is a genuine catch-all that must be
      * registered last, after the host's own routes.
@@ -207,7 +207,7 @@ final class InlayManager
      * than the database - a Page row never stores a route prefix, so
      * changing config('inlay.pages.prefix') (or the prefix argument to a
      * fresh pageRoutes() call) changes every Page's URL immediately,
-     * without touching a single Page row (docs/routing.md).
+     * without touching a single Page row (docs/inlay/v1/routing).
      *
      * Uses the real named route when pageRoutes() has been registered in
      * this process (so nested paths generate correctly through Laravel's
@@ -263,7 +263,7 @@ final class InlayManager
      * composition - the same primitive both the public PagesController and
      * <x-inlay::render> use internally, also directly usable by a host
      * application that wants to embed a Page inside a route it already
-     * owns (docs/routing.md). A Page with no revisions yet (never
+     * owns (docs/inlay/v1/routing). A Page with no revisions yet (never
      * published) renders as empty, exactly like an empty section list -
      * there is no "draft preview" meaning here, that's what
      * Inlay::previewView() is for.
@@ -283,7 +283,7 @@ final class InlayManager
      * Registers a Page Definition - developer-owned composition policy for
      * a kind of Page (which Blocks it may contain, which are required or
      * locked, what a new Page of this kind starts with). See
-     * docs/page-definitions.md. Every Block reference inside it is
+     * docs/inlay/v1/page-definitions. Every Block reference inside it is
      * validated immediately against the currently-registered Blocks, so
      * register Page Definitions after registering Blocks.
      *
@@ -308,7 +308,7 @@ final class InlayManager
      * Registers a single Blade file as an Inlay block - a second,
      * class-free authoring style compiling into the exact same
      * BlockDefinition a class + view block resolves to. See
-     * docs/blocks.md for the authoring syntax.
+     * docs/inlay/v1/single-file-blocks for the authoring syntax.
      *
      * @param  string  $path  absolute path to the block's Blade file
      */

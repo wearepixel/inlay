@@ -12,7 +12,7 @@ use WeArePixel\Inlay\Support\BlockRegistry;
  * The single authoritative check for whether a Page currently satisfies its
  * own Page Definition - used identically by the editor's own status
  * display, PublishPage's publish gate, and tests
- * (docs/page-definitions.md#publishing-validation). An empty return means
+ * (docs/inlay/v1/page-definitions#publishing-validation). An empty return means
  * the Page is valid; publishing must be blocked whenever this returns
  * anything.
  */

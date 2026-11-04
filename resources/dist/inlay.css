@@ -861,7 +861,7 @@
  * chrome (traffic-light dots read as a macOS skeuomorphism this admin's
  * calm, editorial language doesn't otherwise reach for), just a resolved,
  * read-only URL sitting where one would. Reinforces that the pane on the
- * right is a real page, not a form preview - see docs/editor.md#preview.
+ * right is a real page, not a form preview - see docs/inlay/v1/editor#preview.
  */
 .inlay-preview__url-bar {
   flex: 1;

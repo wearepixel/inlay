@@ -8,7 +8,7 @@ use RuntimeException;
 
 /**
  * Thrown by PublishPage when a Page does not satisfy its own Page
- * Definition - the authoritative boundary (docs/page-definitions.md), not
+ * Definition - the authoritative boundary (docs/inlay/v1/page-definitions), not
  * merely a UI convenience. Carries the full structured violation list so a
  * caller (the editor's publish handler, a test, a console command) can
  * display or assert on exactly what's wrong without re-deriving it.

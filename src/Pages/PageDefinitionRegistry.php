@@ -104,9 +104,10 @@ final class PageDefinitionRegistry
         $required = $this->normalizeHandles($definitionClass, 'requiredBlocks', $instance->requiredBlocks());
         $default = $this->normalizeHandles($definitionClass, 'defaultBlocks', $instance->defaultBlocks(), allowDuplicates: true);
 
-        // A locked Block is always also required (docs/page-definitions.md
-        // #locked) - rejecting the contradiction here is preferred over
-        // silently normalising it in either direction, per the same
+        // A locked Block is always also required
+        // (docs/inlay/v1/page-definitions#locked) - rejecting the
+        // contradiction here is preferred over silently normalising it in
+        // either direction, per the same
         // "fail loudly on a genuine developer mistake" philosophy as
         // SectionRenderer's settings/context collision check.
         $lockedNotRequired = array_diff($locked, $required);
@@ -149,7 +150,7 @@ final class PageDefinitionRegistry
     /**
      * Normalises a PageDefinition method's Block references into stable,
      * verified handles - never accepting a bare, untyped string, which
-     * BlockHandle exists specifically to rule out (docs/page-definitions.md).
+     * BlockHandle exists specifically to rule out (docs/inlay/v1/page-definitions).
      *
      * $references is intentionally typed as `mixed` element-wise, not the
      * `class-string<InlayBlock>|BlockHandle` the public API documents and

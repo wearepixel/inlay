@@ -22,8 +22,8 @@ final class RestorePageRevision
      * Restoring a revision's content into the live draft always succeeds,
      * even when that content no longer satisfies the Page's *current* Page
      * Definition (a definition can tighten after a revision was published -
-     * docs/page-definitions.md#revisions). What happens next depends on
-     * whether it does:
+     * docs/inlay/v1/page-definitions#revisions-and-restore). What happens
+     * next depends on whether it does:
      *
      * - Satisfies it: restoring is itself a publish, exactly as before this
      *   feature existed - a new revision is created immediately.

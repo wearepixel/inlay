@@ -10,7 +10,7 @@ use Attribute;
  * Optional class-level metadata for a PageDefinition, in the same spirit as
  * #[BlockMeta] for a Block - a definition with no #[PageDefinitionMeta]
  * still registers normally, falling back to a handle/label derived from its
- * class name (docs/page-definitions.md).
+ * class name (docs/inlay/v1/page-definitions).
  */
 #[Attribute(Attribute::TARGET_CLASS)]
 final class PageDefinitionMeta

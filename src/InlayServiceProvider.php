@@ -10,6 +10,7 @@ use Livewire\Livewire;
 use WeArePixel\Inlay\Console\InstallCommand;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\LivewireRequirement;
 use WeArePixel\Inlay\View\Components\RenderPage;
 
 final class InlayServiceProvider extends ServiceProvider
@@ -34,7 +35,9 @@ final class InlayServiceProvider extends ServiceProvider
 
         Blade::component('inlay::render', RenderPage::class);
 
-        if (class_exists(Livewire::class)) {
+        // Livewire is optional - only the admin needs it, and adminRoutes()
+        // fails loudly through this same check when it's missing.
+        if (LivewireRequirement::isSatisfied()) {
             Livewire::addNamespace('inlay', classNamespace: 'WeArePixel\\Inlay\\Livewire');
         }
 
