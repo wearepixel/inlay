@@ -55,4 +55,22 @@ return [
         'middleware' => ['web'],
         'view' => 'inlay.pages.show',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Preview links
+    |--------------------------------------------------------------------------
+    |
+    | Applied when the host calls Inlay::previewLinkRoutes(). A preview link
+    | is a signed, expiring URL that renders a draft (or a proposed, unsaved
+    | composition) through Inlay::previewView() without an admin session -
+    | the MCP tools hand them to agents, people and the screenshot driver.
+    | 'ttl' is in minutes.
+    |
+    */
+    'preview_links' => [
+        'prefix' => 'inlay-preview',
+        'middleware' => ['web'],
+        'ttl' => 30,
+    ],
 ];

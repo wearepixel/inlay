@@ -174,6 +174,26 @@ final class InlayManager
     }
 
     /**
+     * Registers the signed preview-link route (Inlay\Preview\PreviewLinks).
+     * It needs no admin session - the signature and an expiring token are
+     * the access control - so it must not sit behind the admin middleware.
+     */
+    public function previewLinkRoutes(): void
+    {
+        if (Route::has('inlay.preview-link')) {
+            return;
+        }
+
+        Route::group([
+            'prefix' => trim((string) config('inlay.preview_links.prefix', 'inlay-preview'), '/'),
+            'as' => 'inlay.',
+            'middleware' => (array) config('inlay.preview_links.middleware', ['web']),
+        ], __DIR__.'/../routes/preview-links.php');
+
+        Route::getRoutes()->refreshNameLookups();
+    }
+
+    /**
      * The host-owned Blade view PagesController renders a public Page
      * through - whatever pageRoutes() was actually registered with (which
      * may have overridden config('inlay.pages.view') via its own $view

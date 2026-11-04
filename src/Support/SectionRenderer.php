@@ -105,6 +105,19 @@ final class SectionRenderer
     }
 
     /**
+     * Renders one section and lets any failure propagate, for callers that
+     * need to report a broken block rather than skip it.
+     *
+     * @param  array{handle?: string, settings?: array<string, mixed>}  $section
+     */
+    public function renderSection(array $section): string
+    {
+        $definition = $this->registry->definition($section['handle'] ?? '');
+
+        return $this->renderBlock($definition, $this->resolveEffectiveSettings($definition, $section['settings'] ?? []));
+    }
+
+    /**
      * @param  array<string, mixed>  $settings
      * @param  array<string, mixed>  $context
      */
