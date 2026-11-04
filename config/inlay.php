@@ -73,4 +73,42 @@ return [
         'middleware' => ['web'],
         'ttl' => 30,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | MCP
+    |--------------------------------------------------------------------------
+    |
+    | Used by Inlay's MCP tools (requires laravel/mcp). Every tool checks
+    | 'abilities.manage' for the MCP request's user, passing the Page where
+    | there is one, so a Gate or policy can scope access per page. Publishing
+    | also needs 'abilities.publish' AND 'allow_publish' - it is off by
+    | default because a published page is immediately public.
+    |
+    | 'screenshots.driver' - null (no screenshots) or 'browsershot'
+    | (spatie/browsershot). Bind WeArePixel\Inlay\Contracts\Screenshotter
+    | yourself to use any other renderer. The renderer loads a signed
+    | preview link, so it must be able to reach this application's URL.
+    |
+    */
+    'mcp' => [
+        'abilities' => [
+            'manage' => 'inlay.manage-pages',
+            'publish' => 'inlay.publish-pages',
+        ],
+        'allow_publish' => false,
+        'writes_per_minute' => 60,
+        'max_image_kilobytes' => 5120,
+        'screenshots' => [
+            'driver' => env('INLAY_SCREENSHOT_DRIVER'),
+            'widths' => ['desktop' => 1440, 'mobile' => 390],
+            'browsershot' => [
+                'chrome_path' => env('INLAY_CHROME_PATH'),
+                'node_modules_path' => env('INLAY_NODE_MODULES_PATH'),
+                'no_sandbox' => (bool) env('INLAY_CHROME_NO_SANDBOX', false),
+                'timeout' => 60,
+                'quality' => 70,
+            ],
+        ],
+    ],
 ];

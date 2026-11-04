@@ -7,6 +7,7 @@ namespace WeArePixel\Inlay\Tests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Laravel\Mcp\Server\McpServiceProvider;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\Concerns\WithLaravelMigrations;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -26,6 +27,7 @@ abstract class TestCase extends Orchestra
         return [
             LivewireServiceProvider::class,
             InlayServiceProvider::class,
+            McpServiceProvider::class,
         ];
     }
 

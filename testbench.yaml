@@ -1,0 +1,2 @@
+providers:
+  - WeArePixel\Inlay\InlayServiceProvider

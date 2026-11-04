@@ -16,13 +16,16 @@
     "pestphp/pest-plugin-browser": "^5.0",
     "larastan/larastan": "^3.10",
     "livewire/livewire": "^4.0",
-    "laravel/mcp": "^1.1"
+    "laravel/mcp": "^1.1",
+    "spatie/browsershot": "^5.4"
   },
   "conflict": {
     "livewire/livewire": "<4.0"
   },
   "suggest": {
-    "livewire/livewire": "Required to use Inlay's packaged administration interface (^4.0)."
+    "livewire/livewire": "Required to use Inlay's packaged administration interface (^4.0).",
+    "laravel/mcp": "Required for Inlay's MCP tools, so AI agents can compose and preview pages (^1.1, Laravel 12+).",
+    "spatie/browsershot": "Enables desktop and mobile screenshots in the inlay-preview-page MCP tool (^5.0)."
   },
   "autoload": {
     "psr-4": {

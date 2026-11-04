@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use WeArePixel\Inlay\Console\InstallCommand;
+use WeArePixel\Inlay\Contracts\Screenshotter;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
+use WeArePixel\Inlay\Screenshots\BrowsershotScreenshotter;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\LivewireRequirement;
 use WeArePixel\Inlay\View\Components\RenderPage;
@@ -39,6 +41,12 @@ final class InlayServiceProvider extends ServiceProvider
         // fails loudly through this same check when it's missing.
         if (LivewireRequirement::isSatisfied()) {
             Livewire::addNamespace('inlay', classNamespace: 'WeArePixel\\Inlay\\Livewire');
+        }
+
+        if (config('inlay.mcp.screenshots.driver') === 'browsershot' && ! $this->app->bound(Screenshotter::class)) {
+            $this->app->singleton(Screenshotter::class, fn () => new BrowsershotScreenshotter(
+                (array) config('inlay.mcp.screenshots.browsershot', []),
+            ));
         }
 
         if ($this->app->runningInConsole()) {

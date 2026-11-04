@@ -273,6 +273,9 @@ final class InlayManager
         $this->previewView = $view;
     }
 
+    /**
+     * @return view-string|null
+     */
     public function resolvePreviewView(): ?string
     {
         return $this->previewView;
