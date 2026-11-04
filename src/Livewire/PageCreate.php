@@ -8,7 +8,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use WeArePixel\Inlay\Actions\SetPageAsHomepage;
+use WeArePixel\Inlay\Actions\CreatePage;
 use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
@@ -73,35 +73,14 @@ final class PageCreate extends Component
         $registry = app(PageDefinitionRegistry::class);
         $definition = $registry->definition($this->definitionHandle) ?? $registry->default();
 
-        $page = Page::create([
-            'title' => $this->title,
-            'path' => $this->path,
-            'meta_title' => $this->metaTitle !== '' ? $this->metaTitle : null,
-            'meta_description' => $this->metaDescription !== '' ? $this->metaDescription : null,
-            // Deliberately fixed at creation - Page Definition is
-            // immutable afterward for this release, a decisive
-            // simplification the spec explicitly sanctions rather than
-            // building a "validate and confirm every existing block
-            // against the new rules" migration flow
-            // (docs/inlay/v1/page-definitions#page-creation).
-            'definition' => $definition->handle,
-        ]);
-
-        // Seeded in the definition's own declared order, with sparse
-        // settings resolved from each block's current defaults - identical
-        // in shape to adding one by hand from the picker
-        // (docs/v1-implementation-specification.md §12).
-        foreach ($definition->defaultBlocks as $index => $handle) {
-            $page->sections()->create([
-                'handle' => $handle,
-                'order' => $index,
-                'settings' => [],
-            ]);
-        }
-
-        if ($this->isHomepage) {
-            app(SetPageAsHomepage::class)->execute($page);
-        }
+        $page = app(CreatePage::class)->execute(
+            definition: $definition,
+            title: $this->title,
+            path: $this->path,
+            metaTitle: $this->metaTitle !== '' ? $this->metaTitle : null,
+            metaDescription: $this->metaDescription !== '' ? $this->metaDescription : null,
+            isHomepage: $this->isHomepage,
+        );
 
         $this->redirectRoute('inlay.admin.pages.edit', ['page' => $page], navigate: false);
     }

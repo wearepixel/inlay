@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace WeArePixel\Inlay\Livewire;
 
-use BackedEnum;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -24,13 +23,13 @@ use WeArePixel\Inlay\Pages\PageDefinitionValidator;
 use WeArePixel\Inlay\Pages\PageDefinitionViolationException;
 use WeArePixel\Inlay\Pages\ResolvedPageDefinition;
 use WeArePixel\Inlay\Rules\PagePath;
-use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
 use WeArePixel\Inlay\Support\BlockDefinition;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionInstanceLabel;
 use WeArePixel\Inlay\Support\SectionRenderer;
+use WeArePixel\Inlay\Support\SettingsCoercer;
 
 #[Layout('inlay::layout')]
 final class PageEditor extends Component
@@ -669,7 +668,7 @@ final class PageEditor extends Component
             return;
         }
 
-        $coerced = $this->coerceValue($setting, $this->editingProps[$fieldName] ?? null);
+        $coerced = app(SettingsCoercer::class)->coerce($setting, $this->editingProps[$fieldName] ?? null);
         $this->editingProps[$fieldName] = $coerced;
 
         $stored = $section->settings ?? [];
@@ -678,141 +677,5 @@ final class PageEditor extends Component
         $section->update(['settings' => $stored]);
         $this->bumpPreview();
         $this->dispatch('setting-saved');
-    }
-
-    /**
-     * Livewire public properties are settable by the client for any nested
-     * key, not just the ones rendered by the schema-driven form. Coerce every
-     * declared field's value to the shape its FieldType expects before it
-     * reaches storage - a declared scalar field can still be set to an array
-     * via the same wire:model mechanism, which would otherwise reach the
-     * block's constructor and throw a fatal TypeError.
-     */
-    private function coerceValue(Setting $setting, mixed $value): mixed
-    {
-        $itemSchema = $setting->itemSchema;
-
-        return match (true) {
-            $setting->type === FieldType::Repeater && $itemSchema instanceof Settings => is_array($value)
-                ? array_values(array_map(
-                    fn (mixed $item): array => $this->coerceNested($itemSchema, is_array($item) ? $item : []),
-                    $value,
-                ))
-                : [],
-            $setting->type === FieldType::Group && $itemSchema instanceof Settings => $this->coerceNested($itemSchema, is_array($value) ? $value : []),
-            $setting->type === FieldType::Link => $this->coerceLinkValue($value),
-            $setting->type === FieldType::Toggle => is_scalar($value) ? (bool) $value : false,
-            $setting->type === FieldType::Number => $this->coerceNumber($value, $setting),
-            $setting->type === FieldType::Select && $setting->enumClass !== null => $this->coerceEnumValue($setting, $value),
-            default => $this->coerceScalarValue($value),
-        };
-    }
-
-    /**
-     * @param  array<string, mixed>  $values
-     * @return array<string, mixed>
-     */
-    private function coerceNested(Settings $schema, array $values): array
-    {
-        $result = [];
-
-        foreach ($schema->fields() as $nested) {
-            if (! array_key_exists($nested->name, $values)) {
-                continue;
-            }
-
-            $result[$nested->name] = $this->coerceValue($nested, $values[$nested->name]);
-        }
-
-        return $result;
-    }
-
-    /**
-     * The Link field's Blade partial binds `label`, `url`, and `openInNewTab`
-     * as separate sub-paths, so its value is a structured array rather than
-     * a plain scalar. Validate its own sub-keys instead of coercing the
-     * whole value to a string.
-     *
-     * @return array{label: string, url: string, openInNewTab: bool}
-     */
-    private function coerceLinkValue(mixed $value): array
-    {
-        $value = is_array($value) ? $value : [];
-
-        $url = is_string($value['url'] ?? null) ? $value['url'] : '';
-
-        return [
-            'label' => is_string($value['label'] ?? null) ? $value['label'] : '',
-            'url' => $this->isAllowedUrlScheme($url) ? $url : '',
-            'openInNewTab' => is_scalar($value['openInNewTab'] ?? null) ? (bool) $value['openInNewTab'] : false,
-        ];
-    }
-
-    /**
-     * Consuming apps render the Link field's `url` directly into an `href`
-     * attribute. Blade's HTML-attribute escaping neutralises HTML-special
-     * characters but not a dangerous URI scheme, so a value like
-     * `javascript:alert(1)` would otherwise persist and execute on click.
-     * Allow only http(s), mailto, and relative URLs (scheme-less).
-     */
-    private function isAllowedUrlScheme(string $url): bool
-    {
-        if (! str_contains($url, ':')) {
-            return true;
-        }
-
-        return (bool) preg_match('/^(https?|mailto):/i', $url);
-    }
-
-    /**
-     * A stored value that no longer matches a real case (an enum case was
-     * removed) falls back to the constructor default here too, so the
-     * editor's own form state never holds a value the renderer would reject.
-     */
-    private function coerceEnumValue(Setting $setting, mixed $value): string
-    {
-        $enumClass = $setting->enumClass;
-
-        $candidate = $value instanceof BackedEnum ? $value->value : $value;
-
-        if (is_string($candidate) && $enumClass::tryFrom($candidate) !== null) {
-            return $candidate;
-        }
-
-        $default = $setting->default;
-
-        return match (true) {
-            $default instanceof BackedEnum => $default->value,
-            is_string($default) => $default,
-            default => '',
-        };
-    }
-
-    private function coerceNumber(mixed $value, Setting $setting): int|float
-    {
-        if (is_numeric($value)) {
-            return $value + 0;
-        }
-
-        return is_numeric($setting->default) ? $setting->default + 0 : 0;
-    }
-
-    /**
-     * Text, Textarea, Richtext, Image, and non-enum Select fields all bind to
-     * a single scalar model path. Reject non-scalar values (arrays, objects)
-     * that a client could otherwise inject via wire:model rather than
-     * passing them through unchecked.
-     */
-    private function coerceScalarValue(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        if (is_scalar($value)) {
-            return (string) $value;
-        }
-
-        return '';
     }
 }
