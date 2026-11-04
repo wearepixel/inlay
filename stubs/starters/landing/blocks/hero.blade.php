@@ -26,7 +26,8 @@ block(
 ?>
 @php
     $toneClasses = ['light' => 'bg-white text-gray-900', 'muted' => 'bg-gray-50 text-gray-900', 'dark' => 'bg-gray-950 text-white'][$tone] ?? 'bg-white text-gray-900';
-    $centered = $layout === 'centered';
+    $centered = $layout === 'centered' || $image->isEmpty();
+    $outline = $tone === 'dark' ? 'ring-white/40 hover:ring-white/70' : 'ring-gray-300 hover:ring-gray-400';
 @endphp
 <section class="{{ $toneClasses }}">
     <div class="mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:py-28 {{ $centered ? 'text-center' : 'lg:grid-cols-2 lg:items-center' }}">
@@ -44,7 +45,7 @@ block(
                         <a href="{{ $primaryCta->url }}" @if ($primaryCta->openInNewTab) target="_blank" rel="noopener" @endif class="rounded-md bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">{{ $primaryCta->label }}</a>
                     @endif
                     @if ($secondaryCta->url !== '')
-                        <a href="{{ $secondaryCta->url }}" @if ($secondaryCta->openInNewTab) target="_blank" rel="noopener" @endif class="rounded-md px-5 py-3 text-sm font-semibold ring-1 ring-current/20 hover:ring-current/40">{{ $secondaryCta->label }}</a>
+                        <a href="{{ $secondaryCta->url }}" @if ($secondaryCta->openInNewTab) target="_blank" rel="noopener" @endif class="rounded-md px-5 py-3 text-sm font-semibold ring-1 {{ $outline }}">{{ $secondaryCta->label }}</a>
                     @endif
                 </div>
             @endif

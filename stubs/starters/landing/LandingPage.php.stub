@@ -24,11 +24,6 @@ final class LandingPage extends PageDefinition
         return [BlockHandle::make('hero')];
     }
 
-    public function lockedBlocks(): array
-    {
-        return [BlockHandle::make('hero')];
-    }
-
     public function defaultBlocks(): array
     {
         return array_map(BlockHandle::make(...), ['hero', 'feature-grid', 'cta-band']);

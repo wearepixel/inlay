@@ -33,7 +33,7 @@ Inlay::singleFileBlocks(resource_path('views/inlay/blocks'));
 Inlay::pageDefinition(\App\Inlay\LandingPage::class);
 ```
 
-The blocks are yours from then on - restyle them to the client's brand.
+The blocks are yours from then on - restyle them to the client's brand. They use Tailwind v4 syntax; make sure your Tailwind build scans `resources/views/inlay`.
 
 ## MCP server
 
@@ -56,10 +56,10 @@ protected array $resources = [...InlayTools::RESOURCES];
 
 Every tool name starts with `inlay-`, and every tool authorises the request itself, so mounting them in a server with a wider audience does not widen who can edit pages:
 
-- `inlay.manage-pages` (Gate ability, receives the `Page` where there is one) for everything.
+- `inlay.manage-pages` for everything. Tools that act on a page pass it to the ability, and tools that don't (listing blocks, creating a page) pass nothing, so declare it optional: `Gate::define('inlay.manage-pages', fn (User $user, ?Page $page = null) => ...)`.
 - `inlay.publish-pages` plus `config('inlay.mcp.allow_publish') === true` to publish. Publishing is off by default.
 
-Spatie permissions with those names work as they are. Agents get feedback after every change: what each section renders (headings, links, images, text), content still on block defaults, publish blockers and a signed preview link. To enable preview links, call `Inlay::previewLinkRoutes()` from `routes/web.php`.
+Spatie permissions with those names work as they are. Agents get feedback after every change: what each section renders (headings, links, images, text), content still on block defaults, publish blockers and a signed preview link. To enable preview links, call `Inlay::previewLinkRoutes()` from `routes/web.php`. Links are built from `APP_URL` (never the request's Host header) and their payload is held in the default cache store, which must be shared between processes - not `array`.
 
 For desktop and mobile screenshots in `inlay-preview-page`, install `spatie/browsershot` (with Puppeteer) and set `INLAY_SCREENSHOT_DRIVER=browsershot`, or bind your own `WeArePixel\Inlay\Contracts\Screenshotter`. The renderer must be able to reach `APP_URL`. Clients that support MCP Apps also show the preview inline.
 

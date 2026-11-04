@@ -22,6 +22,8 @@ block(
 ?>
 @php
     $toneClasses = ['brand' => 'bg-indigo-600 text-white', 'dark' => 'bg-gray-950 text-white', 'light' => 'bg-gray-50 text-gray-900'][$tone] ?? 'bg-indigo-600 text-white';
+    $primary = $tone === 'light' ? 'bg-indigo-600 text-white hover:bg-indigo-500' : 'bg-white text-gray-900 hover:bg-gray-100';
+    $outline = $tone === 'light' ? 'ring-gray-300 hover:ring-gray-400' : 'ring-white/40 hover:ring-white/70';
 @endphp
 <section class="{{ $toneClasses }}">
     <div class="mx-auto max-w-4xl px-6 py-16 text-center lg:py-20">
@@ -31,10 +33,10 @@ block(
         @endif
         <div class="mt-8 flex flex-wrap justify-center gap-4">
             @if ($primaryCta->url !== '')
-                <a href="{{ $primaryCta->url }}" @if ($primaryCta->openInNewTab) target="_blank" rel="noopener" @endif class="rounded-md bg-white px-5 py-3 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-100">{{ $primaryCta->label }}</a>
+                <a href="{{ $primaryCta->url }}" @if ($primaryCta->openInNewTab) target="_blank" rel="noopener" @endif class="rounded-md px-5 py-3 text-sm font-semibold shadow-sm {{ $primary }}">{{ $primaryCta->label }}</a>
             @endif
             @if ($secondaryCta->url !== '')
-                <a href="{{ $secondaryCta->url }}" @if ($secondaryCta->openInNewTab) target="_blank" rel="noopener" @endif class="rounded-md px-5 py-3 text-sm font-semibold ring-1 ring-current/30 hover:ring-current/60">{{ $secondaryCta->label }}</a>
+                <a href="{{ $secondaryCta->url }}" @if ($secondaryCta->openInNewTab) target="_blank" rel="noopener" @endif class="rounded-md px-5 py-3 text-sm font-semibold ring-1 {{ $outline }}">{{ $secondaryCta->label }}</a>
             @endif
         </div>
     </div>

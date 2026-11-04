@@ -24,7 +24,7 @@ block(
 );
 ?>
 <section class="bg-white py-20">
-    <div class="mx-auto grid max-w-7xl items-center gap-12 px-6 lg:grid-cols-2">
+    <div class="mx-auto grid max-w-7xl items-center gap-12 px-6 {{ $image->isEmpty() ? 'max-w-3xl' : 'lg:grid-cols-2' }}">
         <div class="{{ $imagePosition === 'left' ? 'lg:order-2' : '' }}">
             @if ($eyebrow !== '')
                 <p class="text-sm font-semibold uppercase tracking-wider text-indigo-600">{{ $eyebrow }}</p>

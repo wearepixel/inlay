@@ -28,7 +28,9 @@ block(
 <section class="bg-white py-20">
     <div class="mx-auto max-w-7xl px-6">
         <div class="mx-auto max-w-2xl text-center">
-            <h2 class="text-3xl font-bold tracking-tight text-gray-900 text-balance sm:text-4xl">{{ $heading }}</h2>
+            @if ($heading !== '')
+                <h2 class="text-3xl font-bold tracking-tight text-gray-900 text-balance sm:text-4xl">{{ $heading }}</h2>
+            @endif
             @if ($intro !== '')
                 <p class="mt-4 text-lg text-gray-600 text-pretty">{{ $intro }}</p>
             @endif
