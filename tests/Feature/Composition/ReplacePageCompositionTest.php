@@ -139,6 +139,7 @@ it('reports each settings problem with its dotted path', function (array $settin
     'group wrong type' => [['badge' => ['text' => ['nope']]], 'sections.0.settings.badge.text'],
     'missing image' => [['photo' => 'inlay/missing.png'], 'sections.0.settings.photo'],
     'image path traversal' => [['photo' => '../.env'], 'sections.0.settings.photo'],
+    'infinite number' => [['columns' => '1e999'], 'sections.0.settings.columns'],
 ]);
 
 it('accepts an image path that exists on the configured disk', function () {
@@ -182,4 +183,41 @@ it('strips script, event handlers and dangerous links from rich text before stor
 
     expect($body)->not->toContain('<script', 'onclick', 'onerror', 'javascript:')
         ->and($body)->toContain('<strong>there</strong>', 'href="/menu"');
+});
+
+it('treats a null inside a repeater item as "use the default"', function () {
+    $page = Page::create(['title' => 'Landing']);
+
+    replaceComposition($page, [['block' => 'promo', 'settings' => ['items' => [['title' => 'One', 'link' => null]]]]]);
+
+    expect(storedComposition($page)[0][1]['items'])->toBe([['title' => 'One']]);
+});
+
+it('stores an int-backed enum select whether it arrives as an int or a numeric string', function (int|string $value) {
+    Inlay::singleFileBlock(__DIR__.'/../../Fixtures/single-file/composition/ranked.blade.php');
+    $page = Page::create(['title' => 'Landing']);
+
+    replaceComposition($page, [['block' => 'ranked', 'settings' => ['priority' => $value]]]);
+
+    expect(storedComposition($page)[0][1])->toBe(['priority' => 2]);
+})->with([2, '2']);
+
+it('refuses to replace a page that still holds a section whose block is no longer registered', function () {
+    $page = Page::create(['title' => 'Landing']);
+    $page->sections()->create(['handle' => 'retired-block', 'order' => 0, 'settings' => ['heading' => 'Keep me']]);
+
+    $errors = compositionErrors($page, [['block' => 'promo']]);
+
+    expect($errors[0])->toStartWith('sections.0: The saved section at index 0 uses "retired-block"')
+        ->and(storedComposition($page))->toBe([['retired-block', ['heading' => 'Keep me']]]);
+});
+
+it('refuses an existing file that is outside the inlay image folder', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('private/contract.png', 'png');
+    $page = Page::create(['title' => 'Landing']);
+
+    $errors = compositionErrors($page, [['block' => 'promo', 'settings' => ['photo' => 'private/contract.png']]]);
+
+    expect($errors)->toBe(['sections.0.settings.photo: Must be a relative path on the Inlay disk, as returned by inlay-upload-image.']);
 });

@@ -10,6 +10,7 @@ use WeArePixel\Inlay\Composition\InvalidCompositionException;
 use WeArePixel\Inlay\Composition\SettingsValidator;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Models\PageSection;
+use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\RichTextSanitizer;
 use WeArePixel\Inlay\Support\SectionRenderer;
@@ -19,6 +20,7 @@ final class UpdatePageSection
 {
     public function __construct(
         private readonly BlockRegistry $blocks,
+        private readonly PageDefinitionRegistry $definitions,
         private readonly SettingsValidator $validator,
         private readonly SettingsCoercer $coercer,
         private readonly SectionRenderer $renderer,
@@ -35,7 +37,19 @@ final class UpdatePageSection
      */
     public function execute(Page $page, int $sectionId, array $patch): PageSection
     {
-        $section = $page->sections()->whereKey($sectionId)->first();
+        return DB::transaction(fn () => $this->apply($page, $sectionId, $patch));
+    }
+
+    /**
+     * @param  array<string, mixed>  $patch
+     */
+    private function apply(Page $page, int $sectionId, array $patch): PageSection
+    {
+        if ($this->definitions->resolveForPage($page) === null) {
+            throw new InvalidCompositionException([new CompositionError('definition', "This page's type \"{$page->definition}\" is no longer registered, so it cannot be edited until a developer resolves it.")]);
+        }
+
+        $section = $page->sections()->whereKey($sectionId)->lockForUpdate()->first();
 
         if ($section === null) {
             throw new InvalidCompositionException([new CompositionError('section_id', "Section {$sectionId} does not exist on this page. Call inlay-get-page for its section ids.")]);
@@ -75,10 +89,8 @@ final class UpdatePageSection
             throw new InvalidCompositionException($errors);
         }
 
-        DB::transaction(function () use ($page, $section, $stored) {
-            $section->update(['settings' => $stored]);
-            $page->touch();
-        });
+        $section->update(['settings' => $stored]);
+        $page->touch();
 
         return $section;
     }

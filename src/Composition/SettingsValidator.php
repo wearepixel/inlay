@@ -79,7 +79,7 @@ final class SettingsValidator
     {
         return match ($setting->type) {
             FieldType::Text, FieldType::Textarea, FieldType::Richtext => $this->validateText($setting, $value, $path),
-            FieldType::Number => is_int($value) || is_float($value) || (is_string($value) && is_numeric($value))
+            FieldType::Number => (is_int($value) || is_float($value) || (is_string($value) && is_numeric($value))) && is_finite((float) $value)
                 ? []
                 : [new CompositionError($path, 'Must be a number.')],
             FieldType::Toggle => is_bool($value) ? [] : [new CompositionError($path, 'Must be true or false.')],
@@ -145,7 +145,7 @@ final class SettingsValidator
             return [];
         }
 
-        if (str_contains($value, '..') || str_starts_with($value, '/') || str_contains($value, ':')) {
+        if (! str_starts_with($value, 'inlay/') || str_contains($value, '..') || str_contains($value, ':')) {
             return [new CompositionError($path, 'Must be a relative path on the Inlay disk, as returned by inlay-upload-image.')];
         }
 
@@ -227,7 +227,7 @@ final class SettingsValidator
             return [new CompositionError($path, 'Must be an object with: '.$this->fieldNames($schema).'.')];
         }
 
-        $effective = $item;
+        $effective = array_filter($item, fn (mixed $value) => $value !== null);
 
         foreach ($schema->fields() as $nested) {
             if (! array_key_exists($nested->name, $effective) && $nested->hasNestedDefault) {

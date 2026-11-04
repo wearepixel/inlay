@@ -60,7 +60,7 @@ final class SettingsCoercer
         $result = [];
 
         foreach ($schema->fields() as $nested) {
-            if (! array_key_exists($nested->name, $values)) {
+            if (($values[$nested->name] ?? null) === null) {
                 continue;
             }
 
@@ -91,13 +91,17 @@ final class SettingsCoercer
      * falls back to the default, so stored state never holds a value the
      * renderer would reject.
      */
-    private function coerceEnumValue(Setting $setting, mixed $value): string
+    private function coerceEnumValue(Setting $setting, mixed $value): int|string
     {
         $enumClass = $setting->enumClass;
 
         $candidate = $value instanceof BackedEnum ? $value->value : $value;
 
-        if (is_string($candidate) && $enumClass::tryFrom($candidate) !== null) {
+        if (is_string($candidate) && (string) (new \ReflectionEnum($enumClass))->getBackingType() === 'int') {
+            $candidate = ctype_digit($candidate) ? (int) $candidate : null;
+        }
+
+        if ((is_string($candidate) || is_int($candidate)) && $enumClass::tryFrom($candidate) !== null) {
             return $candidate;
         }
 

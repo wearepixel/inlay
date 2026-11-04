@@ -43,14 +43,14 @@ final class ReplacePageComposition
      */
     public function execute(Page $page, array $sections): void
     {
-        $errors = $this->validate($page, $sections);
-
-        if ($errors !== []) {
-            throw new InvalidCompositionException($errors);
-        }
-
         DB::transaction(function () use ($page, $sections) {
             Page::query()->whereKey($page->getKey())->lockForUpdate()->first();
+
+            $errors = $this->validate($page, $sections);
+
+            if ($errors !== []) {
+                throw new InvalidCompositionException($errors);
+            }
 
             $page->sections()->delete();
 
@@ -94,6 +94,7 @@ final class ReplacePageComposition
 
         return [
             ...$errors,
+            ...$this->unregisteredSectionErrors($page),
             ...$this->lockedPositionErrors($page, $definition, $sections),
             ...$this->missingRequiredErrors($definition, $sections),
         ];
@@ -137,6 +138,28 @@ final class ReplacePageComposition
         $effective = $this->renderer->resolveEffectiveRawSettings($block, $this->storable($handle, $settings));
 
         return $this->validator->validateRequired($block->settings, $effective, "{$path}.settings");
+    }
+
+    /**
+     * Replacing would delete these sections and their content, and they cannot
+     * be resubmitted because their block no longer exists.
+     *
+     * @return array<int, CompositionError>
+     */
+    private function unregisteredSectionErrors(Page $page): array
+    {
+        $errors = [];
+
+        foreach ($page->sections()->orderBy('order')->get()->values() as $index => $existing) {
+            if (! $this->blocks->hasHandle($existing->handle)) {
+                $errors[] = new CompositionError(
+                    "sections.{$index}",
+                    "The saved section at index {$index} uses \"{$existing->handle}\", a block that is no longer registered. Replacing the page would delete it, so a developer must resolve it first. inlay-update-section still works on the other sections.",
+                );
+            }
+        }
+
+        return $errors;
     }
 
     /**
