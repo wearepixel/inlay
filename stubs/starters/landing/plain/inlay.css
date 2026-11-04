@@ -1,0 +1,128 @@
+/*
+ * Inlay starter blocks. Rebrand by overriding the variables below in your own
+ * stylesheet; every rule is scoped to inlay- classes, so it does not touch the
+ * rest of the site.
+ */
+:root {
+    --inlay-brand: #4f46e5;
+    --inlay-brand-hover: #4338ca;
+    --inlay-on-brand: #ffffff;
+    --inlay-text: #111827;
+    --inlay-muted: #4b5563;
+    --inlay-surface: #ffffff;
+    --inlay-surface-muted: #f9fafb;
+    --inlay-surface-dark: #030712;
+    --inlay-border: #e5e7eb;
+    --inlay-radius: 0.75rem;
+    --inlay-font: inherit;
+    --inlay-heading-font: inherit;
+    --inlay-container: 80rem;
+    --inlay-section-space: clamp(4rem, 8vw, 7rem);
+}
+
+.inlay-hero, .inlay-feature-grid, .inlay-feature, .inlay-pricing, .inlay-testimonials, .inlay-faq, .inlay-cta { position: relative; }
+.inlay-section { padding-block: var(--inlay-section-space); background: var(--inlay-surface); color: var(--inlay-text); font-family: var(--inlay-font); }
+.inlay-section *, .inlay-section *::before, .inlay-section *::after { box-sizing: border-box; }
+.inlay-tone-muted { background: var(--inlay-surface-muted); }
+.inlay-tone-dark { background: var(--inlay-surface-dark); color: #fff; --inlay-muted: rgb(255 255 255 / 0.75); --inlay-border: rgb(255 255 255 / 0.2); }
+.inlay-tone-brand { background: var(--inlay-brand); color: var(--inlay-on-brand); --inlay-muted: rgb(255 255 255 / 0.85); --inlay-border: rgb(255 255 255 / 0.35); }
+.inlay-container { width: 100%; max-width: var(--inlay-container); margin-inline: auto; padding-inline: 1.5rem; }
+.inlay-container--narrow { max-width: 48rem; }
+.inlay-container--wide-text { max-width: 64rem; }
+.inlay-center { text-align: center; }
+
+.inlay-eyebrow { margin: 0 0 0.75rem; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--inlay-brand); }
+.inlay-tone-dark .inlay-eyebrow, .inlay-tone-brand .inlay-eyebrow { color: inherit; opacity: 0.75; }
+.inlay-heading { margin: 0; font-family: var(--inlay-heading-font); font-size: clamp(1.875rem, 3.5vw, 2.5rem); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; }
+.inlay-lead { margin: 1rem 0 0; font-size: 1.125rem; line-height: 1.7; color: var(--inlay-muted); text-wrap: pretty; }
+.inlay-muted { margin: 0.5rem 0 0; color: var(--inlay-muted); }
+.inlay-section__header { max-width: 42rem; margin: 0 auto 3.5rem; text-align: center; }
+
+.inlay-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 2.5rem; }
+.inlay-actions--center { justify-content: center; }
+.inlay-button { display: inline-block; padding: 0.75rem 1.25rem; border: 1px solid var(--inlay-brand); border-radius: calc(var(--inlay-radius) * 0.6); background: var(--inlay-brand); color: var(--inlay-on-brand); font-size: 0.875rem; font-weight: 600; text-align: center; text-decoration: none; }
+.inlay-button:hover { background: var(--inlay-brand-hover); border-color: var(--inlay-brand-hover); }
+.inlay-button--outline { background: transparent; color: inherit; border-color: var(--inlay-border); }
+.inlay-button--outline:hover { background: transparent; border-color: currentColor; }
+.inlay-button--inverse { background: #fff; border-color: #fff; color: var(--inlay-text); }
+.inlay-button--inverse:hover { background: #f3f4f6; border-color: #f3f4f6; }
+
+.inlay-hero__inner { display: grid; gap: 3rem; align-items: center; }
+.inlay-hero--centered .inlay-hero__inner { text-align: center; }
+.inlay-hero--centered .inlay-hero__content { max-width: 48rem; margin-inline: auto; }
+.inlay-hero--centered .inlay-actions { justify-content: center; }
+.inlay-hero__title { margin: 0; font-family: var(--inlay-heading-font); font-size: clamp(2.25rem, 5vw, 3.75rem); font-weight: 700; line-height: 1.05; letter-spacing: -0.03em; text-wrap: balance; }
+.inlay-hero__image { display: block; width: 100%; border-radius: calc(var(--inlay-radius) * 1.5); object-fit: cover; }
+.inlay-hero--centered .inlay-hero__image { max-width: 64rem; margin-inline: auto; }
+
+.inlay-logo-cloud { padding-block: 4rem; }
+.inlay-logo-cloud__heading { margin: 0; text-align: center; font-size: 0.875rem; font-weight: 600; color: var(--inlay-muted); }
+.inlay-logo-cloud__list { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2rem 3rem; margin: 2rem 0 0; padding: 0; list-style: none; }
+.inlay-logo-cloud__logo { display: block; height: 2rem; width: auto; object-fit: contain; filter: grayscale(1); opacity: 0.7; }
+
+.inlay-grid { display: grid; gap: 2.5rem; }
+.inlay-feature__icon { display: block; width: 3rem; height: 3rem; margin-bottom: 1rem; object-fit: contain; }
+.inlay-feature__title { margin: 0; font-size: 1.125rem; font-weight: 600; }
+
+.inlay-split__inner { display: grid; gap: 3rem; align-items: center; }
+.inlay-split:not(.inlay-split--with-image) .inlay-split__inner { max-width: 48rem; }
+.inlay-split__image { display: block; width: 100%; border-radius: calc(var(--inlay-radius) * 1.5); object-fit: cover; }
+
+.inlay-prose { margin-top: 1.5rem; font-size: 1.125rem; line-height: 1.75; color: var(--inlay-muted); }
+.inlay-rich-text .inlay-prose { margin-top: 0; }
+.inlay-prose > * + * { margin-top: 1.25em; }
+.inlay-prose h2, .inlay-prose h3, .inlay-prose h4 { color: var(--inlay-text); font-family: var(--inlay-heading-font); line-height: 1.3; }
+.inlay-prose a { color: var(--inlay-brand); }
+.inlay-prose blockquote { margin-inline: 0; padding-left: 1rem; border-left: 4px solid var(--inlay-border); }
+
+.inlay-checklist { margin: 2rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.75rem; }
+.inlay-checklist li { display: flex; gap: 0.75rem; }
+.inlay-checklist li::before { content: "\2713"; color: var(--inlay-brand); font-weight: 700; }
+
+.inlay-stats { padding-block: 4rem; }
+.inlay-stats__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem; margin: 2.5rem 0 0; text-align: center; }
+.inlay-stats__item { display: flex; flex-direction: column-reverse; gap: 0.5rem; }
+.inlay-stats__label { color: var(--inlay-muted); font-size: 0.875rem; }
+.inlay-stats__value { margin: 0; font-size: 2.25rem; font-weight: 700; letter-spacing: -0.02em; }
+
+.inlay-card { margin: 0; padding: 2rem; border-radius: calc(var(--inlay-radius) * 1.5); background: var(--inlay-surface-muted); }
+.inlay-testimonials .inlay-grid { margin-top: 3rem; }
+.inlay-testimonial { display: flex; flex-direction: column; justify-content: space-between; gap: 1.5rem; }
+.inlay-testimonial blockquote { margin: 0; }
+.inlay-testimonial__author { display: flex; align-items: center; gap: 1rem; }
+.inlay-testimonial__author .inlay-muted { display: block; margin: 0; font-size: 0.875rem; }
+.inlay-avatar { width: 2.5rem; height: 2.5rem; border-radius: 999px; object-fit: cover; }
+
+.inlay-pricing__plans { display: grid; gap: 2rem; }
+.inlay-plan { display: flex; flex-direction: column; background: var(--inlay-surface); border: 1px solid var(--inlay-border); }
+.inlay-plan--highlighted { background: var(--inlay-surface-dark); color: #fff; border: 2px solid var(--inlay-brand); --inlay-muted: rgb(255 255 255 / 0.75); }
+.inlay-plan__name { margin: 0; font-size: 1.125rem; font-weight: 600; }
+.inlay-plan__price { margin: 1.5rem 0 0; }
+.inlay-plan__price span { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.02em; }
+.inlay-plan__price small { color: var(--inlay-muted); }
+.inlay-plan__features { flex: 1; margin-bottom: 2rem; font-size: 0.875rem; }
+
+.inlay-faq__list { margin-top: 2.5rem; border-block: 1px solid var(--inlay-border); }
+.inlay-faq__item + .inlay-faq__item { border-top: 1px solid var(--inlay-border); }
+.inlay-faq__question { display: flex; justify-content: space-between; gap: 1.5rem; padding-block: 1.25rem; font-weight: 600; cursor: pointer; list-style: none; }
+.inlay-faq__question::-webkit-details-marker { display: none; }
+.inlay-faq__question::after { content: "+"; color: var(--inlay-muted); font-size: 1.25rem; line-height: 1; transition: transform 0.2s; }
+.inlay-faq__item[open] .inlay-faq__question::after { transform: rotate(45deg); }
+.inlay-faq__answer { margin: 0; padding-bottom: 1.25rem; white-space: pre-line; color: var(--inlay-muted); }
+
+@media (min-width: 40rem) {
+    .inlay-grid--2, .inlay-grid--3, .inlay-grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 64rem) {
+    .inlay-hero--split .inlay-hero__inner, .inlay-split--with-image .inlay-split__inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .inlay-split--image-left .inlay-split__content { order: 2; }
+    .inlay-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .inlay-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .inlay-stats__list { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-template-columns: none; }
+    .inlay-pricing__plans { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .inlay-faq__question::after { transition: none; }
+}

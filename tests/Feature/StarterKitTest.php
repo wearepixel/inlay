@@ -42,8 +42,8 @@ it('rejects an unknown starter without installing anything', function () {
     expect($this->base.'/resources/views/inlay')->not->toBeDirectory();
 });
 
-it('registers every starter block and renders each one from its defaults without problems', function () {
-    Inlay::singleFileBlocks(dirname(__DIR__, 2).'/stubs/starters/landing/blocks');
+it('registers every starter block and renders each one from its defaults without problems', function (string $variant) {
+    Inlay::singleFileBlocks(dirname(__DIR__, 2)."/stubs/starters/landing/{$variant}/blocks");
     require_once dirname(__DIR__, 2).'/stubs/starters/landing/LandingPage.php.stub';
     Inlay::pageDefinition(LandingPage::class);
 
@@ -57,4 +57,27 @@ it('registers every starter block and renders each one from its defaults without
     expect($handles)->toHaveCount(10)
         ->and($failures)->toBe([])
         ->and(app(PageDefinitionRegistry::class)->definition('landing-page')?->defaultBlocks)->toBe(['hero', 'feature-grid', 'cta-band']);
+})->with(['tailwind', 'plain']);
+
+it('installs the plain variant with its stylesheet', function () {
+    $this->artisan('inlay:install', ['--starter' => 'landing', '--css' => 'plain'])->assertSuccessful();
+
+    expect(glob($this->base.'/resources/views/inlay/blocks/*.blade.php'))->toHaveCount(10)
+        ->and(file_get_contents($this->base.'/resources/views/inlay/blocks/hero.blade.php'))->toContain('inlay-hero')
+        ->and($this->base.'/resources/css/inlay.css')->toBeFile();
+});
+
+it('uses only classes its own stylesheet defines in the plain variant', function () {
+    $defined = array_map('strval', array_keys((new WeArePixel\Inlay\Styling\CompiledStylesheets)->parseClasses((string) file_get_contents(dirname(__DIR__, 2).'/stubs/starters/landing/plain/inlay.css'))));
+    $used = [];
+
+    foreach (glob(dirname(__DIR__, 2).'/stubs/starters/landing/plain/blocks/*.blade.php') as $block) {
+        preg_match_all('/inlay-[a-z0-9_-]+/', (string) file_get_contents($block), $matches);
+        array_push($used, ...$matches[0]);
+    }
+
+    $dynamic = ['inlay-tone-', 'inlay-grid--'];
+    $undefined = array_filter(array_unique($used), fn (string $class) => ! in_array($class, $defined, true) && ! in_array($class, $dynamic, true));
+
+    expect(array_values($undefined))->toBe([]);
 });

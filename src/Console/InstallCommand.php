@@ -11,11 +11,14 @@ final class InstallCommand extends Command
 {
     protected $signature = 'inlay:install
         {--starter= : Copy a starter block set into the application (available: landing)}
+        {--css= : Starter styling: tailwind or plain (defaults from inlay.styling.framework)}
         {--force : Overwrite starter files that already exist}';
 
     protected $description = "Publish Inlay's configuration, run its migrations and optionally install a starter block set";
 
     private const STARTERS = ['landing'];
+
+    private const CSS_VARIANTS = ['tailwind', 'plain'];
 
     public function handle(Filesystem $files): int
     {
@@ -27,13 +30,21 @@ final class InstallCommand extends Command
             return self::FAILURE;
         }
 
+        $css = $this->option('css') ?? (config('inlay.styling.framework') === 'tailwind' ? 'tailwind' : 'plain');
+
+        if ($starter !== null && ! in_array($css, self::CSS_VARIANTS, true)) {
+            $this->components->error("Unknown --css [{$css}]. Available: ".implode(', ', self::CSS_VARIANTS).'.');
+
+            return self::FAILURE;
+        }
+
         $this->components->info('Installing Inlay...');
 
         $this->call('vendor:publish', ['--tag' => 'inlay-config']);
         $this->call('migrate');
 
         if ($starter !== null) {
-            $this->installStarter($files, $starter);
+            $this->installStarter($files, $starter, (string) $css);
         }
 
         $this->newLine();
@@ -51,9 +62,10 @@ final class InstallCommand extends Command
         return self::SUCCESS;
     }
 
-    private function installStarter(Filesystem $files, string $starter): void
+    private function installStarter(Filesystem $files, string $starter, string $css): void
     {
-        $source = dirname(__DIR__, 2)."/stubs/starters/{$starter}";
+        $root = dirname(__DIR__, 2)."/stubs/starters/{$starter}";
+        $source = "{$root}/{$css}";
         $blocksTarget = resource_path('views/inlay/blocks');
 
         $copies = [];
@@ -62,7 +74,11 @@ final class InstallCommand extends Command
             $copies[$block] = $blocksTarget.'/'.basename($block);
         }
 
-        $copies["{$source}/LandingPage.php.stub"] = app_path('Inlay/LandingPage.php');
+        $copies["{$root}/LandingPage.php.stub"] = app_path('Inlay/LandingPage.php');
+
+        if ($files->exists("{$source}/inlay.css")) {
+            $copies["{$source}/inlay.css"] = resource_path('css/inlay.css');
+        }
 
         $skipped = [];
 
@@ -87,6 +103,8 @@ final class InstallCommand extends Command
         $this->line('    Inlay::singleFileBlocks(resource_path(\'views/inlay/blocks\'));');
         $this->line('    Inlay::pageDefinition(\App\Inlay\LandingPage::class);');
         $this->newLine();
-        $this->line('  The blocks use Tailwind utility classes. Restyle them to your brand - they are yours now.');
+        $this->line($css === 'tailwind'
+            ? '  The blocks use Tailwind v4 utility classes. Restyle them to your brand - they are yours now.'
+            : '  Import resources/css/inlay.css into your main stylesheet (@import "./inlay.css";) and rebrand it with the --inlay-* variables.');
     }
 }

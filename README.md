@@ -23,7 +23,8 @@ Livewire is required by the packaged admin only - rendering a composed page neve
 ## Landing page starter kit
 
 ```bash
-php artisan inlay:install --starter=landing
+php artisan inlay:install --starter=landing              # Tailwind v4 classes
+php artisan inlay:install --starter=landing --css=plain  # framework-free CSS
 ```
 
 Copies ten Tailwind blocks (hero, logo cloud, feature grid, text and image, stats, testimonials, pricing, FAQ, call to action, rich text) into `resources/views/inlay/blocks` and a `LandingPage` page type into `app/Inlay`. Existing files are kept unless you pass `--force`. Register them in a service provider:
@@ -33,7 +34,7 @@ Inlay::singleFileBlocks(resource_path('views/inlay/blocks'));
 Inlay::pageDefinition(\App\Inlay\LandingPage::class);
 ```
 
-The blocks are yours from then on - restyle them to the client's brand. They use Tailwind v4 syntax; make sure your Tailwind build scans `resources/views/inlay`.
+The blocks are yours from then on - restyle them to the client's brand. The Tailwind variant uses v4 syntax; make sure your Tailwind build scans `resources/views/inlay`. The plain variant (the default when `inlay.styling.framework` is not `tailwind`, e.g. a Bootstrap site) uses `inlay-` prefixed classes and copies `resources/css/inlay.css` - import it into your main stylesheet and rebrand it with the `--inlay-*` variables.
 
 ## MCP server
 
@@ -60,6 +61,12 @@ Every tool name starts with `inlay-`, and every tool authorises the request itse
 - `inlay.publish-pages` plus `config('inlay.mcp.allow_publish') === true` to publish. Publishing is off by default.
 
 Spatie permissions with those names work as they are. Agents get feedback after every change: what each section renders (headings, links, images, text), content still on block defaults, publish blockers and a signed preview link. To enable preview links, call `Inlay::previewLinkRoutes()` from `routes/web.php`. Links are built from `APP_URL` (never the request's Host header) and their payload is held in the default cache store, which must be shared between processes - not `array`.
+
+### Agent-authored blocks
+
+To recreate a design such as a Figma file, an agent sometimes needs a block that does not exist yet. With `INLAY_AGENT_BLOCKS=true` (and the migrations run), MCP users with the `inlay.author-blocks` ability can create blocks with `inlay-save-block`. These are declarative - a JSON element tree, never Blade or PHP - and live as soon as they are saved, with no deploy.
+
+An agent block may only use classes your compiled CSS defines. Inlay reads them from the Vite manifest (`public/build/manifest.json`) plus any `inlay.styling.stylesheets`, so on a Tailwind site the agent can use exactly the utilities your build contains - no arbitrary values, no other framework, no inline styles. `inlay-get-styling` gives the agent that list and your design tokens. To make more utilities available, safelist them in your CSS (`@source inline(...)` in Tailwind v4) and rebuild. Set `INLAY_CSS_FRAMEWORK` (`tailwind`, `bootstrap` or `plain`) so agents know which approach the site uses.
 
 For desktop and mobile screenshots in `inlay-preview-page`, install `spatie/browsershot` (with Puppeteer) and set `INLAY_SCREENSHOT_DRIVER=browsershot`, or bind your own `WeArePixel\Inlay\Contracts\Screenshotter`. The renderer must be able to reach `APP_URL`. Clients that support MCP Apps also show the preview inline.
 
