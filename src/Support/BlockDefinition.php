@@ -43,6 +43,10 @@ final readonly class BlockDefinition
          * @var array<int, string> extra terms the block picker's search matches against
          */
         public array $keywords = [],
+        /**
+         * @var array<string, mixed>|null the element tree of a declarative (agent-authored) block
+         */
+        public ?array $template = null,
     ) {}
 
     /**

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\View;
 use RuntimeException;
 use Throwable;
 use WeArePixel\Inlay\Schema\FieldType;
+use WeArePixel\Inlay\Declarative\DeclarativeRenderer;
 use WeArePixel\Inlay\Schema\Setting;
 
 /**
@@ -112,9 +113,18 @@ final class SectionRenderer
      */
     public function renderSection(array $section): string
     {
-        $definition = $this->registry->definition($section['handle'] ?? '');
+        return $this->renderDefinition($this->registry->definition($section['handle'] ?? ''), $section['settings'] ?? []);
+    }
 
-        return $this->renderBlock($definition, $this->resolveEffectiveSettings($definition, $section['settings'] ?? []));
+    /**
+     * Renders a block definition that need not be registered - used to preview
+     * an agent-authored block before it is saved.
+     *
+     * @param  array<string, mixed>  $stored
+     */
+    public function renderDefinition(BlockDefinition $definition, array $stored = []): string
+    {
+        return $this->renderBlock($definition, $this->resolveEffectiveSettings($definition, $stored));
     }
 
     /**
@@ -352,6 +362,7 @@ final class SectionRenderer
         return match ($definition->sourceType) {
             BlockSourceType::ClassBased => $this->renderClassBasedBlock($definition->sourceIdentifier, $settings),
             BlockSourceType::SingleFile => $this->renderSingleFileBlock($definition->sourceIdentifier, $settings),
+            BlockSourceType::Declarative => app(DeclarativeRenderer::class)->render($definition->template ?? [], $settings),
         };
     }
 

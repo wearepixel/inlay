@@ -15,4 +15,5 @@ enum BlockSourceType
 {
     case ClassBased;
     case SingleFile;
+    case Declarative;
 }
