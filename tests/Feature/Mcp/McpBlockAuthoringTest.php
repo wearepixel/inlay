@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Gate;
+use WeArePixel\Inlay\Actions\PublishPage;
 use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Mcp\InlayServer;
 use WeArePixel\Inlay\Mcp\Tools\DeleteBlockTool;
@@ -12,6 +13,7 @@ use WeArePixel\Inlay\Mcp\Tools\ReplaceSectionsTool;
 use WeArePixel\Inlay\Mcp\Tools\SaveBlockTool;
 use WeArePixel\Inlay\Models\DeclarativeBlock;
 use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Support\BlockRegistry;
 
 beforeEach(function () {
     config([
@@ -104,4 +106,35 @@ it('lists the site classes grouped by utility, and its tokens', function () {
         ->tool(GetStylingTool::class)
         ->assertHasNoErrors()
         ->assertSee(['"framework":"tailwind"', 'bg-brand-600', 'lg:grid-cols-2', '--color-brand-600']);
+});
+
+it('does not leave a dry-run draft resolvable after the request', function () {
+    Gate::define('inlay.author-blocks', fn (User $user) => true);
+
+    InlayServer::actingAs($this->user)->tool(SaveBlockTool::class, ['block' => bandBlock(), 'dry_run' => true])->assertHasNoErrors();
+
+    expect(app(BlockRegistry::class)->hasHandle('figma-band'))->toBeFalse();
+});
+
+it('needs publish rights to change a block that a published page uses', function () {
+    Gate::define('inlay.author-blocks', fn (User $user) => true);
+    InlayServer::actingAs($this->user)->tool(SaveBlockTool::class, ['block' => bandBlock()])->assertHasNoErrors();
+
+    $page = Page::create(['title' => 'Live']);
+    $page->sections()->create(['handle' => 'figma-band', 'order' => 0, 'settings' => []]);
+    app(PublishPage::class)->execute($page);
+    $page->sections()->delete();
+
+    InlayServer::actingAs($this->user)
+        ->tool(SaveBlockTool::class, ['block' => bandBlock('flex')])
+        ->assertHasErrors(['published page']);
+
+    expect(DeclarativeBlock::first()->definition['template']['class'])->toBe('py-20');
+
+    Gate::define('inlay.publish-pages', fn (User $user) => true);
+    config(['inlay.mcp.allow_publish' => true]);
+
+    InlayServer::actingAs($this->user)->tool(SaveBlockTool::class, ['block' => bandBlock('flex')])->assertHasNoErrors();
+
+    expect(DeclarativeBlock::first()->definition['template']['class'])->toBe('flex');
 });

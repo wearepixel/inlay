@@ -10,12 +10,17 @@ use WeArePixel\Inlay\Support\LinkValue;
 use WeArePixel\Inlay\Support\RichTextSanitizer;
 
 /**
- * Renders a compiled declarative block's element tree. Every value is escaped
- * on output and rich text is sanitised again, so a tree that somehow skipped
- * the compiler still cannot inject markup.
+ * Renders a compiled declarative block's element tree. Tags and attributes are
+ * re-checked against the allowlists, every value is escaped, rich text is
+ * sanitised again and output is capped, so a stored tree that was tampered
+ * with after validation still cannot inject markup or exhaust a worker.
  */
 final class DeclarativeRenderer
 {
+    public const MAX_RENDERED_ELEMENTS = 5000;
+
+    private int $rendered = 0;
+
     public function __construct(private readonly RichTextSanitizer $richText) {}
 
     /**
@@ -24,6 +29,8 @@ final class DeclarativeRenderer
      */
     public function render(array $template, array $settings): string
     {
+        $this->rendered = 0;
+
         return $this->node($template, $settings, []);
     }
 
@@ -44,7 +51,7 @@ final class DeclarativeRenderer
             unset($single['each']);
             $html = '';
 
-            foreach (is_array($items) ? $items : [] as $item) {
+            foreach (array_slice(is_array($items) ? $items : [], 0, 100) as $item) {
                 $html .= $this->node($single, $settings, [...$scope, $as => is_array($item) ? $item : []]);
             }
 
@@ -61,9 +68,11 @@ final class DeclarativeRenderer
 
         $tag = (string) $node['tag'];
 
-        if (! in_array($tag, DeclarativeBlockCompiler::TAGS, true)) {
+        if (! in_array($tag, DeclarativeBlockCompiler::TAGS, true) || ++$this->rendered > self::MAX_RENDERED_ELEMENTS) {
             return '';
         }
+
+        $allowedAttributes = [...DeclarativeBlockCompiler::GLOBAL_ATTRIBUTES, ...(DeclarativeBlockCompiler::TAG_ATTRIBUTES[$tag] ?? [])];
 
         $attributes = [];
         $class = $this->classes($node['class'] ?? null, $settings, $scope);
@@ -92,6 +101,14 @@ final class DeclarativeRenderer
         }
 
         foreach (is_array($node['attrs'] ?? null) ? $node['attrs'] : [] as $name => $value) {
+            if (! in_array($name, $allowedAttributes, true) || isset($attributes[$name])) {
+                continue;
+            }
+
+            if ($name === 'id' && (! is_string($value) || preg_match('/^[A-Za-z][\w-]{0,63}$/', $value) !== 1)) {
+                continue;
+            }
+
             $resolved = $this->attribute((string) $name, $value, $settings, $scope);
 
             if ($resolved === null) {
@@ -194,11 +211,11 @@ final class DeclarativeRenderer
         $value = $this->plain($this->value($condition, $settings, $scope));
 
         if (array_key_exists('equals', $condition)) {
-            return $value == $condition['equals'];
+            return $this->same($value, $condition['equals']);
         }
 
         if (array_key_exists('not_equals', $condition)) {
-            return $value != $condition['not_equals'];
+            return ! $this->same($value, $condition['not_equals']);
         }
 
         return match (true) {
@@ -242,6 +259,19 @@ final class DeclarativeRenderer
         }
 
         return $settings[$name] ?? null;
+    }
+
+    private function same(mixed $value, mixed $expected): bool
+    {
+        if (is_bool($value) || is_bool($expected)) {
+            return $value === $expected;
+        }
+
+        if (is_numeric($value) && is_numeric($expected)) {
+            return (float) $value === (float) $expected;
+        }
+
+        return is_scalar($value) && (string) $value === (string) $expected;
     }
 
     private function plain(mixed $value): mixed

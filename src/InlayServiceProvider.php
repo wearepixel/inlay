@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeArePixel\Inlay;
 
+use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
@@ -24,7 +25,10 @@ final class InlayServiceProvider extends ServiceProvider
 
         $this->app->singleton(BlockRegistry::class, function () {
             $registry = BlockRegistry::fromConfig();
-            $registry->useDeclarativeLoader(fn () => app(DeclarativeBlocks::class)->definitions());
+            $registry->useDeclarativeLoader(
+                fn () => app(DeclarativeBlocks::class)->definitions(),
+                fn () => DeclarativeBlocks::enabled() ? DeclarativeBlocks::version() : 0,
+            );
 
             return $registry;
         });
@@ -48,6 +52,8 @@ final class InlayServiceProvider extends ServiceProvider
         if (LivewireRequirement::isSatisfied()) {
             Livewire::addNamespace('inlay', classNamespace: 'WeArePixel\\Inlay\\Livewire');
         }
+
+        $this->app['events']->listen(RequestHandled::class, fn () => $this->app->make(BlockRegistry::class)->forgetDeclarative());
 
         if (config('inlay.mcp.screenshots.driver') === 'browsershot' && ! $this->app->bound(Screenshotter::class)) {
             $this->app->singleton(Screenshotter::class, fn () => new BrowsershotScreenshotter(

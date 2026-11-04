@@ -51,6 +51,14 @@ final class DeclarativeBlockCompiler
 
     private const MAX_TEXT = 2000;
 
+    private const MAX_DEFINITION_BYTES = 65536;
+
+    private const MAX_CLASS_LENGTH = 1000;
+
+    private const MAX_SETTINGS = 50;
+
+    private const MAX_LABEL = 200;
+
     private const TEXT_TYPES = ['text', 'textarea', 'number', 'select'];
 
     /** @var array<int, CompositionError> */
@@ -74,6 +82,10 @@ final class DeclarativeBlockCompiler
         $this->errors = [];
         $this->nodeCount = 0;
 
+        if (strlen((string) json_encode($definition)) > self::MAX_DEFINITION_BYTES) {
+            throw new InvalidCompositionException([new CompositionError('block', 'A block definition may be at most 64 KB. Split it into smaller blocks.')]);
+        }
+
         $handle = $this->validateHandle($definition['handle'] ?? null);
         $settings = $this->buildSettings($definition['settings'] ?? [], 'settings', nested: false);
 
@@ -86,7 +98,7 @@ final class DeclarativeBlockCompiler
         if (! is_array($template) || ! isset($template['tag'])) {
             $this->errors[] = new CompositionError('template', 'Must be a single root element node, e.g. {"tag": "section", "children": [...]}.');
         } else {
-            $this->validateNode($template, 'template', $settings, [], 1);
+            $this->validateNode($template, 'template', $settings, [], 1, false);
         }
 
         foreach (['name' => 80, 'description' => 1000, 'category' => 40] as $key => $max) {
@@ -126,7 +138,7 @@ final class DeclarativeBlockCompiler
     {
         $pending = $this->errors;
         $handle = (string) ($definition['handle'] ?? '');
-        $settings = $this->buildSettings($definition['settings'] ?? [], 'settings', nested: false);
+        $settings = $this->buildSettings($definition['settings'] ?? [], 'settings', nested: false, validateDefaults: false);
         $this->errors = $pending;
 
         return new BlockDefinition(
@@ -158,7 +170,7 @@ final class DeclarativeBlockCompiler
         return $handle;
     }
 
-    private function buildSettings(mixed $specs, string $path, bool $nested): Settings
+    private function buildSettings(mixed $specs, string $path, bool $nested, bool $validateDefaults = true): Settings
     {
         $settings = Settings::make();
 
@@ -168,7 +180,14 @@ final class DeclarativeBlockCompiler
             return $settings;
         }
 
+        if (count($specs) > self::MAX_SETTINGS) {
+            $this->errors[] = new CompositionError($path, 'A block may have at most '.self::MAX_SETTINGS.' settings.');
+
+            return $settings;
+        }
+
         $defaults = [];
+        $indexes = [];
 
         foreach ($specs as $index => $spec) {
             $specPath = "{$path}.{$index}";
@@ -195,22 +214,30 @@ final class DeclarativeBlockCompiler
                 continue;
             }
 
-            $this->addSetting($settings, $name, $type, $spec, $specPath);
+            $this->addSetting($settings, $name, $type, $spec, $specPath, $validateDefaults);
 
-            if (array_key_exists('default', $spec)) {
+            $indexes[$name] = $index;
+
+            if (array_key_exists('default', $spec) && $spec['default'] !== null) {
                 $defaults[$name] = $spec['default'];
             }
         }
 
-        foreach ($this->settingsValidator->validate($settings, $defaults, $path.'.defaults') as $error) {
-            $this->errors[] = $error;
+        if ($validateDefaults) {
+            foreach ($defaults as $name => $default) {
+                foreach ($this->settingsValidator->validate($settings, [$name => $default], '@') as $error) {
+                    $suffix = substr($error->path, strlen("@.{$name}"));
+                    $this->errors[] = new CompositionError("{$path}.{$indexes[$name]}.default{$suffix}", $error->message);
+                }
+            }
         }
 
         foreach ($settings->fields() as $setting) {
-            $default = $defaults[$setting->name] ?? $this->emptyDefault($setting->type);
+            $default = $defaults[$setting->name] ?? $this->emptyDefault($setting);
 
             if ($setting->type === FieldType::Link && is_array($default)) {
-                $default = new LinkValue((string) ($default['label'] ?? ''), (string) ($default['url'] ?? ''), (bool) ($default['openInNewTab'] ?? false));
+                $plain = ['label' => (string) ($default['label'] ?? ''), 'url' => (string) ($default['url'] ?? ''), 'openInNewTab' => (bool) ($default['openInNewTab'] ?? false)];
+                $default = $nested ? $plain : new LinkValue($plain['label'], $plain['url'], $plain['openInNewTab']);
             }
 
             $setting->nestedDefault = $default;
@@ -228,10 +255,16 @@ final class DeclarativeBlockCompiler
     /**
      * @param  array<string, mixed>  $spec
      */
-    private function addSetting(Settings $settings, string $name, string $type, array $spec, string $path): void
+    private function addSetting(Settings $settings, string $name, string $type, array $spec, string $path, bool $validateDefaults): void
     {
+        foreach (['label', 'help'] as $key) {
+            if (is_string($spec[$key] ?? null) && mb_strlen($spec[$key]) > self::MAX_LABEL) {
+                $this->errors[] = new CompositionError("{$path}.{$key}", 'Must be at most '.self::MAX_LABEL.' characters.');
+            }
+        }
+
         if ($type === 'repeater') {
-            $settings->repeater($name, $this->buildSettings($spec['item_settings'] ?? [], "{$path}.item_settings", nested: true));
+            $settings->repeater($name, $this->buildSettings($spec['item_settings'] ?? [], "{$path}.item_settings", nested: true, validateDefaults: $validateDefaults));
         } else {
             $settings->{$type}($name);
         }
@@ -253,7 +286,7 @@ final class DeclarativeBlockCompiler
         if ($type === 'select') {
             $options = [];
 
-            foreach (is_array($spec['options'] ?? null) ? $spec['options'] : [] as $option) {
+            foreach (array_slice(is_array($spec['options'] ?? null) ? $spec['options'] : [], 0, self::MAX_SETTINGS) as $option) {
                 if (is_array($option) && is_string($option['value'] ?? null) && $option['value'] !== '') {
                     $options[$option['value']] = is_string($option['label'] ?? null) ? $option['label'] : $option['value'];
                 }
@@ -267,11 +300,12 @@ final class DeclarativeBlockCompiler
         }
     }
 
-    private function emptyDefault(FieldType $type): mixed
+    private function emptyDefault(Setting $setting): mixed
     {
-        return match ($type) {
+        return match ($setting->type) {
             FieldType::Toggle => false,
             FieldType::Number => 0,
+            FieldType::Select => (string) (array_key_first($setting->options) ?? ''),
             FieldType::Link => new LinkValue,
             FieldType::Repeater => [],
             default => '',
@@ -281,7 +315,7 @@ final class DeclarativeBlockCompiler
     /**
      * @param  array<string, Settings>  $scopes  loop variables in scope, keyed by name
      */
-    private function validateNode(mixed $node, string $path, Settings $settings, array $scopes, int $depth): void
+    private function validateNode(mixed $node, string $path, Settings $settings, array $scopes, int $depth, bool $inLoop): void
     {
         if (++$this->nodeCount > self::MAX_NODES) {
             if ($this->nodeCount === self::MAX_NODES + 1) {
@@ -326,7 +360,12 @@ final class DeclarativeBlockCompiler
         }
 
         if (isset($node['each'])) {
+            if ($inLoop) {
+                $this->errors[] = new CompositionError("{$path}.each", 'Loops cannot be nested inside another loop. Use a separate repeater per list.');
+            }
+
             $scopes = $this->validateEach($node['each'], "{$path}.each", $settings, $scopes);
+            $inLoop = true;
         }
 
         if (isset($node['if'])) {
@@ -370,7 +409,7 @@ final class DeclarativeBlockCompiler
                 $this->errors[] = new CompositionError("{$path}.children", 'Must be a list of nodes.');
             } else {
                 foreach ($node['children'] as $index => $child) {
-                    $this->validateNode($child, "{$path}.children.{$index}", $settings, $scopes, $depth + 1);
+                    $this->validateNode($child, "{$path}.children.{$index}", $settings, $scopes, $depth + 1, $inLoop);
                 }
             }
         }
@@ -451,8 +490,21 @@ final class DeclarativeBlockCompiler
         }
 
         foreach (['equals', 'not_equals'] as $key) {
-            if (array_key_exists($key, $condition) && ! is_scalar($condition[$key])) {
-                $this->errors[] = new CompositionError("{$path}.{$key}", 'Must be a string, number or boolean.');
+            if (! array_key_exists($key, $condition)) {
+                continue;
+            }
+
+            $expected = $condition[$key];
+            $problem = match (true) {
+                ! is_scalar($expected) => 'Must be a string, number or boolean.',
+                $setting->type === FieldType::Toggle && ! is_bool($expected) => 'Must be true or false, to match a toggle.',
+                $setting->type === FieldType::Number && ! is_numeric($expected) => 'Must be a number, to match a number setting.',
+                $setting->type === FieldType::Select && ! in_array((string) $expected, array_map('strval', array_keys($setting->options)), true) => 'Must be one of: '.implode(', ', array_map('strval', array_keys($setting->options))).'.',
+                default => null,
+            };
+
+            if ($problem !== null) {
+                $this->errors[] = new CompositionError("{$path}.{$key}", $problem);
             }
         }
     }
@@ -480,6 +532,12 @@ final class DeclarativeBlockCompiler
 
             if (! is_string($part)) {
                 $this->errors[] = new CompositionError($partPath, 'Must be a string of class names, or a list of strings and conditional classes.');
+
+                continue;
+            }
+
+            if (strlen($part) > self::MAX_CLASS_LENGTH) {
+                $this->errors[] = new CompositionError($partPath, 'A class string may be at most '.self::MAX_CLASS_LENGTH.' characters.');
 
                 continue;
             }
@@ -526,6 +584,18 @@ final class DeclarativeBlockCompiler
 
             if ($name === 'src') {
                 $this->expectBinding($value, $attributePath, $settings, $scopes, [FieldType::Image]);
+
+                continue;
+            }
+
+            if ($name === 'href' && isset($node['link'])) {
+                $this->errors[] = new CompositionError($attributePath, 'Use either "link" or an href attribute, not both.');
+
+                continue;
+            }
+
+            if (in_array($name, ['id', 'href'], true) && is_array($value)) {
+                $this->errors[] = new CompositionError($attributePath, $name === 'id' ? 'An id must be a literal string.' : 'Bind a link setting with "link" instead.');
 
                 continue;
             }
@@ -613,9 +683,17 @@ final class DeclarativeBlockCompiler
         return array_map(fn (string $type) => FieldType::from($type), self::TEXT_TYPES);
     }
 
+    /**
+     * Relative, #anchor, http(s), mailto and tel links. A leading // or /\
+     * would be read by browsers as another host.
+     */
     public static function isSafeHref(string $href): bool
     {
         $href = trim($href);
+
+        if (preg_match('#^[/\\\\]{2}#', $href) === 1) {
+            return false;
+        }
 
         return ! str_contains($href, ':') || preg_match('/^(https?|mailto|tel):/i', $href) === 1;
     }

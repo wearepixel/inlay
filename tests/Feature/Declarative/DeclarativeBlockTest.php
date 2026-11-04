@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use WeArePixel\Inlay\Composition\InvalidCompositionException;
 use WeArePixel\Inlay\Declarative\DeclarativeBlockCompiler;
+use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Support\SectionRenderer;
 
 beforeEach(function () {
@@ -26,6 +27,7 @@ function promoBlock(array $overrides = []): array
             ['name' => 'tone', 'type' => 'select', 'label' => 'Tone', 'options' => [['value' => 'light', 'label' => 'Light'], ['value' => 'dark', 'label' => 'Dark']], 'default' => 'dark'],
             ['name' => 'cta', 'type' => 'link', 'label' => 'Button', 'default' => ['label' => 'Go', 'url' => '/go']],
             ['name' => 'photo', 'type' => 'image', 'label' => 'Photo', 'default' => ''],
+            ['name' => 'flag', 'type' => 'toggle', 'label' => 'Flag', 'default' => false],
             ['name' => 'items', 'type' => 'repeater', 'label' => 'Items', 'item_settings' => [
                 ['name' => 'title', 'type' => 'text', 'label' => 'Title'],
             ], 'default' => [['title' => 'One'], ['title' => 'Two']]],
@@ -101,7 +103,84 @@ it('rejects anything that could run script or escape the design system', functio
 ]);
 
 it('rejects a handle that a developer-registered block already uses', function () {
-    WeArePixel\Inlay\Facades\Inlay::singleFileBlock(__DIR__.'/../../Fixtures/single-file/composition/promo.blade.php');
+    Inlay::singleFileBlock(__DIR__.'/../../Fixtures/single-file/composition/promo.blade.php');
 
     expect(compileErrors(promoBlock(['handle' => 'promo'])))->toContain('handle: "promo" is already used by a block a developer registered. Choose another handle.');
+});
+
+it('rejects a loop nested inside another loop', function () {
+    $errors = compileErrors(promoBlock(['template' => ['children' => [
+        ['tag' => 'div', 'each' => ['setting' => 'items'], 'children' => [
+            ['tag' => 'div', 'each' => ['setting' => 'items', 'as' => 'inner'], 'text' => 'x'],
+        ]],
+    ]]]));
+
+    expect(implode("\n", $errors))->toContain('template.children.0.children.0.each: Loops cannot be nested');
+});
+
+it('caps repeater items in defaults and the size of a definition', function () {
+    $tooMany = array_fill(0, 101, ['title' => 'x']);
+
+    expect(implode("\n", compileErrors(promoBlock(['settings' => [6 => ['default' => $tooMany]]]))))->toContain('at most 100 items')
+        ->and(implode("\n", compileErrors(promoBlock(['template' => ['class' => str_repeat('flex ', 300)]]))))->toContain('at most 1000 characters')
+        ->and(implode("\n", compileErrors(promoBlock(['description' => str_repeat('x', 70000)]))))->toContain('at most 64 KB');
+});
+
+it('rejects protocol-relative links, ids from settings, and a link with an href', function (array $node, string $expected) {
+    expect(implode("\n", compileErrors(promoBlock(['template' => ['children' => [$node]]]))))->toContain($expected);
+})->with([
+    'protocol relative' => [['tag' => 'a', 'attrs' => ['href' => '//evil.example'], 'text' => 'x'], 'attrs.href'],
+    'backslash host' => [['tag' => 'a', 'attrs' => ['href' => '/\\evil.example'], 'text' => 'x'], 'attrs.href'],
+    'id from a setting' => [['tag' => 'div', 'attrs' => ['id' => ['setting' => 'heading']]], 'attrs.id'],
+    'link and href together' => [['tag' => 'a', 'link' => ['setting' => 'cta'], 'attrs' => ['href' => '/x']], 'attrs.href'],
+]);
+
+it('never renders attributes or tags outside the allowlist, even from a tampered stored definition', function () {
+    $tampered = [...promoBlock(), 'template' => [
+        'tag' => 'div',
+        'attrs' => ['onmouseover' => 'alert(1)', 'style' => 'position:fixed', 'x><script>alert(1)</script><b' => 'y', 'id' => 'a" onclick="x', 'title' => 'ok'],
+        'children' => [['tag' => 'script', 'text' => 'alert(1)']],
+    ]];
+
+    $html = app(SectionRenderer::class)->renderDefinition(app(DeclarativeBlockCompiler::class)->hydrate($tampered));
+
+    expect($html)->toBe('<div title="ok"></div>');
+});
+
+it('stops rendering at the element ceiling instead of exhausting the worker', function () {
+    $settings = promoBlock()['settings'];
+    $settings[6]['default'] = array_fill(0, 100, ['title' => 'x']);
+    $tampered = [...promoBlock(), 'settings' => $settings, 'template' => ['tag' => 'div', 'children' => [
+        ['tag' => 'div', 'each' => ['setting' => 'items'], 'children' => [
+            ['tag' => 'div', 'each' => ['setting' => 'items', 'as' => 'b'], 'children' => [
+                ['tag' => 'span', 'each' => ['setting' => 'items', 'as' => 'c'], 'text' => 'x'],
+            ]],
+        ]],
+    ]]];
+
+    $html = app(SectionRenderer::class)->renderDefinition(app(DeclarativeBlockCompiler::class)->hydrate($tampered));
+
+    expect(substr_count($html, '<span>'))->toBeGreaterThan(1000)->toBeLessThan(5001);
+});
+
+it('keeps repeater link defaults as plain arrays and defaults a select to its first option', function () {
+    $definition = app(DeclarativeBlockCompiler::class)->compile(promoBlock(['settings' => [
+        2 => ['default' => null],
+        6 => ['item_settings' => [1 => ['name' => 'link', 'type' => 'link', 'default' => ['label' => 'More', 'url' => '/more']]]],
+    ]]));
+
+    expect($definition->settings->field('tone')->default)->toBe('light')
+        ->and($definition->settings->field('items')->itemSchema->field('link')->nestedDefault)->toBe(['label' => 'More', 'url' => '/more', 'openInNewTab' => false]);
+});
+
+it('rejects a condition whose value cannot match the setting', function (array $when, string $expected) {
+    expect(implode("\n", compileErrors(promoBlock(['template' => ['children' => [['tag' => 'p', 'if' => $when, 'text' => 'x']]]]))))->toContain($expected);
+})->with([
+    'unknown option' => [['setting' => 'tone', 'equals' => 'purple'], 'Must be one of: light, dark'],
+    'string for a toggle' => [['setting' => 'flag', 'equals' => 'false'], 'Must be true or false'],
+]);
+
+it('reports a bad default where the agent wrote it', function () {
+    expect(compileErrors(promoBlock(['settings' => [3 => ['default' => ['url' => 'javascript:x']]]])))
+        ->toContain('settings.3.default.url: Only http(s), mailto and relative URLs are allowed.');
 });

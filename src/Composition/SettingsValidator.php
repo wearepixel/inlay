@@ -21,6 +21,8 @@ final class SettingsValidator
 {
     private const LINK_KEYS = ['label', 'url', 'openInNewTab'];
 
+    public const MAX_REPEATER_ITEMS = 100;
+
     /**
      * @param  array<array-key, mixed>  $values
      * @return array<int, CompositionError>
@@ -197,6 +199,10 @@ final class SettingsValidator
     {
         if (! is_array($value) || ! array_is_list($value)) {
             return [new CompositionError($path, 'Must be a list of items.')];
+        }
+
+        if (count($value) > self::MAX_REPEATER_ITEMS) {
+            return [new CompositionError($path, 'Must have at most '.self::MAX_REPEATER_ITEMS.' items.')];
         }
 
         $errors = [];

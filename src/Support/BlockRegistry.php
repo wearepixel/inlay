@@ -37,6 +37,15 @@ final class BlockRegistry
     private ?array $declarativeDefinitions = null;
 
     /**
+     * @var (Closure(): int)|null
+     */
+    private ?Closure $declarativeVersion = null;
+
+    private ?int $loadedVersion = null;
+
+    private float $versionCheckedAt = 0.0;
+
+    /**
      * @param  array<string, class-string<InlayBlock>>  $blocks
      */
     public function __construct(private readonly array $blocks) {}
@@ -90,11 +99,17 @@ final class BlockRegistry
      * Agent-authored blocks, loaded on first use. A developer-registered block
      * with the same handle always wins.
      *
+     * $version reports a shared counter bumped on every save or delete, so a
+     * long-lived process (a queue worker, Octane, a stdio MCP server) picks up
+     * changes made elsewhere. It is checked at most once a second.
+     *
      * @param  Closure(): array<string, BlockDefinition>  $loader
+     * @param  (Closure(): int)|null  $version
      */
-    public function useDeclarativeLoader(Closure $loader): void
+    public function useDeclarativeLoader(Closure $loader, ?Closure $version = null): void
     {
         $this->declarativeLoader = $loader;
+        $this->declarativeVersion = $version;
         $this->declarativeDefinitions = null;
     }
 
@@ -211,6 +226,20 @@ final class BlockRegistry
             return [];
         }
 
-        return $this->declarativeDefinitions ??= ($this->declarativeLoader)();
+        if ($this->declarativeDefinitions !== null && $this->declarativeVersion !== null && (float) now()->format('U.u') - $this->versionCheckedAt >= 1.0) {
+            $this->versionCheckedAt = (float) now()->format('U.u');
+
+            if (($this->declarativeVersion)() !== $this->loadedVersion) {
+                $this->declarativeDefinitions = null;
+            }
+        }
+
+        if ($this->declarativeDefinitions === null) {
+            $this->loadedVersion = $this->declarativeVersion !== null ? ($this->declarativeVersion)() : null;
+            $this->versionCheckedAt = (float) now()->format('U.u');
+            $this->declarativeDefinitions = ($this->declarativeLoader)();
+        }
+
+        return $this->declarativeDefinitions;
     }
 }

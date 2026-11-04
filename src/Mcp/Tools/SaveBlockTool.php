@@ -79,6 +79,11 @@ final class SaveBlockTool extends InlayTool
         }
 
         $dryRun = (bool) $request->get('dry_run', false);
+        $handle = is_string($definition['handle'] ?? null) ? $definition['handle'] : '';
+
+        if (! $dryRun && $store->exists($handle) && $store->usedByPublishedPage($handle) && ! $this->mayPublish($request)) {
+            return Response::error("\"{$handle}\" is used by a published page, so changing it would change that live page without a publish. Save it under a new handle and swap it in on the draft, or ask someone who can publish.");
+        }
 
         if ($throttled = $this->throttle($request)) {
             return $throttled;
@@ -92,15 +97,21 @@ final class SaveBlockTool extends InlayTool
             return $this->invalid($exception);
         }
 
-        $registry->registerDraft($compiled);
-
         $section = ['handle' => $compiled->handle, 'settings' => []];
         $url = $links->enabled() ? $links->forComposition(null, [$section], [$definition]) : null;
+
+        $registry->registerDraft($compiled);
+
+        try {
+            $renders = $report->build([$section])['sections'][0] ?? null;
+        } finally {
+            $registry->forgetDeclarative();
+        }
 
         $described = [
             'saved' => ! $dryRun,
             'block' => $catalogue->describeBlock($compiled),
-            'renders' => $report->build([$section])['sections'][0] ?? null,
+            'renders' => $renders,
             'preview_url' => $url,
             'next' => $dryRun
                 ? 'Compare the preview with the design, adjust, then call again without dry_run to save.'
@@ -119,6 +130,12 @@ final class SaveBlockTool extends InlayTool
             'block' => $schema->object()->description('The block definition. See the tool description for the format.')->required(),
             'dry_run' => $schema->boolean()->description('Preview without saving.'),
         ];
+    }
+
+    private function mayPublish(Request $request): bool
+    {
+        return (bool) config('inlay.mcp.allow_publish', false)
+            && $this->allows($request, (string) config('inlay.mcp.abilities.publish', 'inlay.publish-pages'));
     }
 
     private function userId(Request $request): ?int

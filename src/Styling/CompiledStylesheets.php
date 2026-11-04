@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Cache;
  */
 final class CompiledStylesheets
 {
-    private const CACHE_KEY = 'inlay:compiled-stylesheets:';
+    private const CACHE_KEY = 'inlay:compiled-stylesheets';
 
     private const TOKEN_PREFIXES = ['--color-', '--font-', '--text-', '--spacing', '--radius', '--shadow', '--breakpoint-', '--container-', '--bs-'];
 
@@ -58,8 +58,19 @@ final class CompiledStylesheets
         return $this->parsed()['classes'];
     }
 
+    /**
+     * Denied utilities (by default `fixed`, which lets a block overlay the
+     * whole page) are refused with any variant, even when the CSS defines them.
+     */
     public function allows(string $class): bool
     {
+        $parts = explode(':', $class);
+        $utility = ltrim((string) array_pop($parts), '!');
+
+        if (in_array($utility, (array) config('inlay.styling.denied_classes', ['fixed']), true)) {
+            return false;
+        }
+
         return isset($this->classes()[$class]);
     }
 
@@ -107,8 +118,13 @@ final class CompiledStylesheets
 
         $paths = $this->paths();
         $signature = md5(implode('|', array_map(fn (string $path) => $path.':'.filemtime($path), $paths)).json_encode(config('inlay.styling.extra_classes', [])));
+        $cached = Cache::get(self::CACHE_KEY);
 
-        return $this->parsed = Cache::rememberForever(self::CACHE_KEY.$signature, function () use ($paths) {
+        if (is_array($cached) && ($cached['signature'] ?? null) === $signature) {
+            return $this->parsed = $cached['parsed'];
+        }
+
+        $this->parsed = (function () use ($paths) {
             $classes = [];
             $tokens = [];
 
@@ -128,7 +144,11 @@ final class CompiledStylesheets
             ksort($tokens);
 
             return ['classes' => $classes, 'tokens' => $tokens];
-        });
+        })();
+
+        Cache::forever(self::CACHE_KEY, ['signature' => $signature, 'parsed' => $this->parsed]);
+
+        return $this->parsed;
     }
 
     /**
@@ -145,6 +165,8 @@ final class CompiledStylesheets
         preg_match_all('/([^{}]+)\{/', $css, $preludes);
 
         foreach ($preludes[1] as $prelude) {
+            $prelude = (string) preg_replace(['/(?<!\\\\)\[[^\]]*(?<!\\\\)\]/', '/"[^"]*"|\'[^\']*\'/'], '', $prelude);
+
             if (str_starts_with(ltrim($prelude), '@') && ! str_contains($prelude, '.')) {
                 continue;
             }
@@ -205,9 +227,10 @@ final class CompiledStylesheets
 
         $base = dirname($manifest);
         $files = [];
+        $only = config('inlay.styling.vite_entries');
 
-        foreach ($entries as $entry) {
-            if (! is_array($entry)) {
+        foreach ($entries as $key => $entry) {
+            if (! is_array($entry) || (is_array($only) && ! in_array($key, $only, true) && ! in_array($entry['src'] ?? null, $only, true))) {
                 continue;
             }
 

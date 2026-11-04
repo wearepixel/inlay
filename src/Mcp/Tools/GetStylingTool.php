@@ -34,6 +34,8 @@ final class GetStylingTool extends InlayTool
         'plain' => 'This site uses its own CSS. Use the component classes as listed (for example inlay-hero, inlay-hero__title).',
     ];
 
+    private const FULL_LIST_LIMIT = 1500;
+
     public function handle(Request $request, CompiledStylesheets $styles): Response|ResponseFactory
     {
         if ($denied = $this->deny($request)) {
@@ -56,7 +58,7 @@ final class GetStylingTool extends InlayTool
                 continue;
             }
 
-            $parts = explode(':', $class);
+            $parts = preg_split('/:(?![^\[]*\])/', $class) ?: [$class];
             $utility = array_pop($parts);
 
             foreach ($parts as $variant) {
@@ -68,14 +70,19 @@ final class GetStylingTool extends InlayTool
         }
 
         ksort($groups);
+        $count = array_sum(array_map('count', $groups));
+        $summarised = $search === '' && $count > self::FULL_LIST_LIMIT;
 
         return Response::structured([
             'framework' => $framework,
             'guidance' => self::GUIDANCE[$framework] ?? 'Use only the classes listed.',
             'tokens' => $search === '' ? $styles->tokens() : [],
             'variants' => array_keys($variants),
-            'class_count' => array_sum(array_map('count', $groups)),
-            'classes' => array_map(fn (array $classes) => implode(' ', $classes), $groups),
+            'class_count' => $count,
+            'classes' => $summarised
+                ? array_map(fn (array $classes) => count($classes).' classes, e.g. '.implode(' ', array_slice($classes, 0, 6)), $groups)
+                : array_map(fn (array $classes) => implode(' ', $classes), $groups),
+            'note' => $summarised ? 'Too many classes to list at once. Call again with "search" (e.g. "bg-", "text-", "grid") for the full list in a group.' : null,
         ]);
     }
 

@@ -2,3 +2,4 @@
 @layer theme{:root,:host{--color-brand-600:oklch(51% .26 277);--color-gray-950:#030712;--spacing:.25rem;--font-sans:Inter,sans-serif;--tw-ring-offset:0}}
 @layer utilities{.flex{display:flex}.bg-brand-600{background-color:var(--color-brand-600)}.py-20{padding-block:calc(var(--spacing)*20)}.w-1\/2{width:50%}.hover\:bg-gray-950:hover{background:#030712}
 @media (min-width:64rem){.lg\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}.text-\[\#ff0000\]{color:#f00}.\31 0xl{font-size:9rem}.bg-\[url\(hero\.png\)\]{background:url(hero.png)}.p-1\.5{padding:.375rem}}
+.fixed{position:fixed}.inset-0{inset:0}

@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Cache;
+use WeArePixel\Inlay\Actions\PublishPage;
 use WeArePixel\Inlay\Composition\InvalidCompositionException;
 use WeArePixel\Inlay\Declarative\DeclarativeBlocks;
+use WeArePixel\Inlay\Models\DeclarativeBlock;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
@@ -52,4 +55,26 @@ it('refuses to delete a block that a page still uses', function () {
     expect(fn () => app(DeclarativeBlocks::class)->delete('figma-band'))->toThrow(InvalidCompositionException::class, 'used by 1 section');
 
     expect(app(BlockRegistry::class)->hasHandle('figma-band'))->toBeTrue();
+});
+
+it('refuses to delete a block a published page still renders', function () {
+    app(DeclarativeBlocks::class)->save(simpleBlock(), userId: null);
+    $page = Page::create(['title' => 'Live']);
+    $page->sections()->create(['handle' => 'figma-band', 'order' => 0, 'settings' => []]);
+    app(PublishPage::class)->execute($page);
+    $page->sections()->delete();
+
+    expect(fn () => app(DeclarativeBlocks::class)->delete('figma-band'))->toThrow(InvalidCompositionException::class, 'published page');
+});
+
+it('sees a block saved by another process without a restart', function () {
+    $registry = app(BlockRegistry::class);
+    expect($registry->hasHandle('figma-band'))->toBeFalse();
+
+    DeclarativeBlock::create(['handle' => 'figma-band', 'definition' => simpleBlock()]);
+    Cache::forget('inlay:declarative-blocks');
+    Cache::forever(DeclarativeBlocks::VERSION_KEY, DeclarativeBlocks::version() + 1);
+    $this->travel(2)->seconds();
+
+    expect($registry->hasHandle('figma-band'))->toBeTrue();
 });

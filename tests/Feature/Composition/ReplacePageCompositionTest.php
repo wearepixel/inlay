@@ -181,7 +181,10 @@ it('strips script, event handlers and dangerous links from rich text before stor
 
     $body = storedComposition($page)[0][1]['body'];
 
-    expect($body)->not->toContain('<script', 'onclick', 'onerror', 'javascript:')
+    expect($body)->not->toContain('<script')
+        ->and($body)->not->toContain('onclick')
+        ->and($body)->not->toContain('onerror')
+        ->and($body)->not->toContain('javascript:')
         ->and($body)->toContain('<strong>there</strong>', 'href="/menu"');
 });
 

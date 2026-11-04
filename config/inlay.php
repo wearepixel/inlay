@@ -137,8 +137,10 @@ return [
     'styling' => [
         'framework' => env('INLAY_CSS_FRAMEWORK', 'tailwind'),
         'vite_manifest' => null,
+        'vite_entries' => null,
         'stylesheets' => [],
         'extra_classes' => [],
+        'denied_classes' => ['fixed'],
     ],
 
     'agent_blocks' => [
