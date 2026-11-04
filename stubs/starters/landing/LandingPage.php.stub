@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Inlay;
+
+use WeArePixel\Inlay\Attributes\PageDefinitionMeta;
+use WeArePixel\Inlay\Pages\PageDefinition;
+use WeArePixel\Inlay\Support\BlockHandle;
+
+#[PageDefinitionMeta(handle: 'landing-page', label: 'Landing page', description: 'A campaign or product landing page that opens with a hero.')]
+final class LandingPage extends PageDefinition
+{
+    public function allowedBlocks(): array
+    {
+        return array_map(BlockHandle::make(...), [
+            'hero', 'logo-cloud', 'feature-grid', 'split-media', 'stats',
+            'testimonials', 'pricing', 'faq', 'cta-band', 'rich-text',
+        ]);
+    }
+
+    public function requiredBlocks(): array
+    {
+        return [BlockHandle::make('hero')];
+    }
+
+    public function lockedBlocks(): array
+    {
+        return [BlockHandle::make('hero')];
+    }
+
+    public function defaultBlocks(): array
+    {
+        return array_map(BlockHandle::make(...), ['hero', 'feature-grid', 'cta-band']);
+    }
+}
