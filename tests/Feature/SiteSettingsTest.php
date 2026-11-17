@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Livewire\SiteSettingsEditor;
@@ -84,3 +85,7 @@ it('returns the default for an unknown group or field', function () {
 it('404s an unknown group in the URL', function () {
     $this->get(route('inlay.admin.settings', 'missing'))->assertNotFound();
 });
+
+it('does not let a client switch group without selectGroup()', function () {
+    Livewire::test(SiteSettingsEditor::class)->set('group', 'header');
+})->throws(CannotUpdateLockedPropertyException::class);

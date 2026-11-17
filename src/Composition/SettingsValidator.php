@@ -153,7 +153,7 @@ final class SettingsValidator
         }
 
         if ((new ImageValue($value))->isPublicPath()) {
-            return is_file(public_path(ltrim($value, '/')))
+            return preg_match('/\.(jpe?g|png|webp|gif|svg|avif)$/i', $value) === 1 && is_file(public_path(ltrim($value, '/')))
                 ? []
                 : [new CompositionError($path, "No file exists at \"{$value}\" in the application's public directory.")];
         }

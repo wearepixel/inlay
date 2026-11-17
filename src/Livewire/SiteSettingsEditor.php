@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeArePixel\Inlay\Livewire;
 
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -17,6 +18,7 @@ final class SiteSettingsEditor extends Component
     use InlayAdminComponent;
     use WithFileUploads;
 
+    #[Locked]
     public ?string $group = null;
 
     /** @var array<string, mixed> */

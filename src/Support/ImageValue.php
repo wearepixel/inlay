@@ -52,11 +52,11 @@ final readonly class ImageValue implements Stringable
     /**
      * A root-relative path ("/images/hero.jpg") is a file the application
      * serves itself - how a block ships a default image without uploading
-     * one. Protocol-relative "//host" is not, so it cannot point offsite.
+     * one. "//host" and "/\\host" are refused: browsers resolve both offsite.
      */
     public function isPublicPath(): bool
     {
-        return str_starts_with($this->path, '/') && ! str_starts_with($this->path, '//');
+        return (bool) preg_match('#^/(?![/\\\\])[A-Za-z0-9._~\-/]+$#', $this->path);
     }
 
     public function __toString(): string

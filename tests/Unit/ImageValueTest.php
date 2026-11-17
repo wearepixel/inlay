@@ -42,3 +42,7 @@ it('serves a root-relative path as-is, so a block can default to a bundled image
 it('does not treat a protocol-relative path as a bundled image', function () {
     expect((new ImageValue('//evil.example/x.png'))->url())->not->toBe('//evil.example/x.png');
 });
+
+it('does not treat a backslash path as a bundled image, since browsers resolve it offsite', function () {
+    expect((new ImageValue('/\\evil.example/x.png'))->isPublicPath())->toBeFalse();
+});
