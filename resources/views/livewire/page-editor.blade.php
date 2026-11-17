@@ -67,11 +67,11 @@
             {{-- Block tree (default sidebar state) --}}
             <div x-show="view === 'tree'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
-                    <span class="inlay-eyebrow">Blocks</span>
+                    <span class="inlay-eyebrow">Sections</span>
                     <button type="button" wire:click="openPicker" data-test="open-picker" class="inlay-button inlay-button--small inlay-button--primary">+ Add</button>
                 </div>
 
-                <ul class="inlay-tree" x-ref="list" role="listbox" aria-label="Page blocks">
+                <ul class="inlay-tree" x-ref="list" role="listbox" aria-label="Page sections">
                     @php $sectionHandleCounts = $sections->countBy('handle'); @endphp
                     @forelse ($sections as $section)
                         @php
@@ -123,7 +123,7 @@
                                     <button
                                         type="button"
                                         wire:click.stop="deleteSection({{ $section->id }})"
-                                        wire:confirm="Remove this block from the page?"
+                                        wire:confirm="Remove this section from the page?"
                                         data-test="delete-{{ $section->id }}"
                                         class="inlay-tree__icon-button inlay-tree__icon-button--danger"
                                         title="Delete"
@@ -143,8 +143,8 @@
                         </li>
                     @empty
                         <li class="inlay-empty-state inlay-empty-state--tree">
-                            <p class="inlay-empty-state__title">No blocks yet</p>
-                            <p>This page has no blocks yet. Add a block to begin composing the page.</p>
+                            <p class="inlay-empty-state__title">No sections yet</p>
+                            <p>Add a section to start building this page.</p>
                         </li>
                     @endforelse
                 </ul>
@@ -154,7 +154,7 @@
             <div x-show="view === 'settings'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
                     <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-to-blocks">
-                        <x-inlay::icon name="arrow-left" :size="12" /> Blocks
+                        <x-inlay::icon name="arrow-left" :size="12" /> Sections
                     </button>
                 </div>
 
@@ -168,7 +168,7 @@
                 @endif
 
                 @if ($selectedSchema)
-                    <div x-data="{ activeTab: 0 }">
+                    <div x-data="{ activeTab: 0 }" wire:key="inspector-{{ $selectedSectionId }}">
                         @if ($inspectorTabs->count() > 1)
                             <div class="inlay-tabs" role="tablist">
                                 @foreach ($inspectorTabs as $index => $tab)
@@ -200,7 +200,7 @@
                                             </button>
                                             <div class="inlay-group-section__body" x-show="!collapsed" x-transition>
                                                 @foreach ($group['fields'] as $field)
-                                                    <div @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
+                                                    <div wire:key="field-{{ $selectedSectionId }}-{{ $field->name }}" @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
                                                         @include('inlay::fields.' . $field->type->value, [
                                                             'field' => $field,
                                                             'modelPath' => "editingProps.{$field->name}",
@@ -211,7 +211,7 @@
                                         </div>
                                     @else
                                         @foreach ($group['fields'] as $field)
-                                            <div @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
+                                            <div wire:key="field-{{ $selectedSectionId }}-{{ $field->name }}" @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
                                                 @include('inlay::fields.' . $field->type->value, [
                                                     'field' => $field,
                                                     'modelPath' => "editingProps.{$field->name}",
@@ -224,7 +224,7 @@
                         @endforeach
                     </div>
                 @else
-                    <p class="inlay-inspector__empty">Select a block from the list to edit its settings.</p>
+                    <p class="inlay-inspector__empty">Select a section from the list to edit its settings.</p>
                 @endif
             </div>
 
@@ -232,7 +232,7 @@
             <div x-show="view === 'page-settings'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
                     <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-from-page-settings">
-                        <x-inlay::icon name="arrow-left" :size="12" /> Blocks
+                        <x-inlay::icon name="arrow-left" :size="12" /> Sections
                     </button>
                 </div>
 
@@ -304,7 +304,7 @@
                 <div x-show="view === 'history'" x-cloak x-transition.opacity.duration.120ms>
                     <div class="inlay-editor__heading">
                         <button type="button" class="inlay-back-link" wire:click="toggleHistory" data-test="close-history">
-                            <x-inlay::icon name="arrow-left" :size="12" /> Blocks
+                            <x-inlay::icon name="arrow-left" :size="12" /> Sections
                         </button>
                     </div>
                     <p class="inlay-eyebrow">Version history</p>
@@ -327,7 +327,7 @@
             :class="collapsed ? 'is-collapsed' : ''"
             role="separator"
             aria-orientation="vertical"
-            aria-label="Resize the blocks panel"
+            aria-label="Resize the sections panel"
             tabindex="0"
             data-test="panel-resize-handle"
             x-on:mousedown="startResize($event)"
@@ -371,7 +371,7 @@
                     @if ($sections->isEmpty())
                         <div class="inlay-preview__empty" data-test="preview-empty-state">
                             <strong>Nothing here yet</strong>
-                            Add a block to see it appear here.
+                            Add a section to see it appear here.
                         </div>
                     @endif
                 </div>
@@ -393,7 +393,7 @@
                 class="inlay-picker__panel"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Add a block"
+                aria-label="Add a section"
                 x-transition:enter="inlay-picker__panel-enter"
                 x-transition:enter-start="inlay-picker__panel-enter-start"
                 x-transition:enter-end="inlay-picker__panel-enter-end"
@@ -406,10 +406,10 @@
                         type="text"
                         x-model="query"
                         x-init="$nextTick(() => $el.focus())"
-                        placeholder="Search blocks…"
+                        placeholder="Search sections…"
                         class="inlay-picker__search"
                         data-test="picker-search"
-                        aria-label="Search blocks"
+                        aria-label="Search sections"
                     >
                 </div>
                 <div class="inlay-picker__hint">
@@ -473,9 +473,9 @@
                     @empty
                         <p class="inlay-empty-state" style="padding: 24px 20px; text-align: center;" data-test="picker-empty-state">
                             @if ($pageDefinitionUnresolved)
-                                This page's type is no longer registered, so Inlay cannot tell which blocks it allows. A developer needs to resolve this before blocks can be added.
+                                This page's type is no longer registered, so Inlay cannot tell which sections it allows. A developer needs to resolve this before sections can be added.
                             @elseif ($blocksExistButNoneAllowed)
-                                No more blocks are available for this page type.
+                                No more sections are available for this page type.
                             @else
                                 No blocks have been registered yet. Add one to <code>config('inlay.blocks')</code> or via <code>Inlay::singleFileBlock()</code>.
                             @endif
@@ -506,31 +506,31 @@
                 <p class="inlay-shortcuts__title">Keyboard shortcuts</p>
                 <ul class="inlay-shortcuts__list">
                     <li class="inlay-shortcuts__row">
-                        <span>Move focus between blocks</span>
+                        <span>Move focus between sections</span>
                         <span class="inlay-shortcuts__keys"><kbd>&uarr;</kbd><kbd>&darr;</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Open the focused block's settings</span>
+                        <span>Open the focused section's settings</span>
                         <span class="inlay-shortcuts__keys"><kbd>&crarr;</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Reorder the focused block</span>
+                        <span>Reorder the focused section</span>
                         <span class="inlay-shortcuts__keys"><kbd>Alt</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Delete the focused block</span>
+                        <span>Delete the focused section</span>
                         <span class="inlay-shortcuts__keys"><kbd>Delete</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Back to the block tree</span>
+                        <span>Back to the section list</span>
                         <span class="inlay-shortcuts__keys"><kbd>Esc</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Resize the blocks panel</span>
+                        <span>Resize the sections panel</span>
                         <span class="inlay-shortcuts__keys"><kbd>&larr;</kbd><kbd>&rarr;</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>In the block picker: navigate / add</span>
+                        <span>In the section picker: navigate / add</span>
                         <span class="inlay-shortcuts__keys"><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&crarr;</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
