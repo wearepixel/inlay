@@ -22,7 +22,7 @@ afterEach(function () {
 });
 
 it('copies the landing sections and page type, keeping existing files unless forced', function () {
-    $this->artisan('inlay:install', ['--starter' => 'landing'])->assertSuccessful();
+    $this->artisan('inlay:install', ['--starter' => 'landing', '--no-interaction' => true])->assertSuccessful();
 
     $sectionTypes = glob($this->base.'/resources/views/inlay/sections/*.blade.php');
     expect($sectionTypes)->toHaveCount(11)
@@ -31,15 +31,15 @@ it('copies the landing sections and page type, keeping existing files unless for
 
     file_put_contents($this->base.'/resources/views/inlay/sections/hero.blade.php', 'customised');
 
-    $this->artisan('inlay:install', ['--starter' => 'landing'])->assertSuccessful();
+    $this->artisan('inlay:install', ['--starter' => 'landing', '--no-interaction' => true])->assertSuccessful();
     expect(file_get_contents($this->base.'/resources/views/inlay/sections/hero.blade.php'))->toBe('customised');
 
-    $this->artisan('inlay:install', ['--starter' => 'landing', '--force' => true])->assertSuccessful();
+    $this->artisan('inlay:install', ['--starter' => 'landing', '--force' => true, '--no-interaction' => true])->assertSuccessful();
     expect(file_get_contents($this->base.'/resources/views/inlay/sections/hero.blade.php'))->not->toBe('customised');
 });
 
 it('rejects an unknown starter without installing anything', function () {
-    $this->artisan('inlay:install', ['--starter' => 'nope'])->assertFailed();
+    $this->artisan('inlay:install', ['--starter' => 'nope', '--no-interaction' => true])->assertFailed();
 
     expect($this->base.'/resources/views/inlay')->not->toBeDirectory();
 });
@@ -47,7 +47,9 @@ it('rejects an unknown starter without installing anything', function () {
 it('registers every starter section and renders each one from its defaults without problems', function (string $variant) {
     Inlay::singleFileBlocks(dirname(__DIR__, 2)."/stubs/starters/landing/{$variant}/blocks");
     Inlay::singleFileSections(dirname(__DIR__, 2)."/stubs/starters/landing/{$variant}/sections");
-    require_once dirname(__DIR__, 2).'/stubs/starters/landing/LandingPage.php.stub';
+    if (! class_exists(LandingPage::class)) {
+        require_once dirname(__DIR__, 2).'/stubs/starters/landing/LandingPage.php.stub';
+    }
     Inlay::pageDefinition(LandingPage::class);
 
     $handles = app(SectionRegistry::class)->slugs();
@@ -60,10 +62,10 @@ it('registers every starter section and renders each one from its defaults witho
     expect($handles)->toHaveCount(11)
         ->and($failures)->toBe([])
         ->and(app(PageDefinitionRegistry::class)->definition('landing-page')?->defaultSections)->toBe(['hero', 'feature-grid', 'cta-band']);
-})->with(['tailwind', 'plain']);
+})->with(['tailwind', 'plain', 'bootstrap']);
 
 it('installs the plain variant with its stylesheet', function () {
-    $this->artisan('inlay:install', ['--starter' => 'landing', '--css' => 'plain'])->assertSuccessful();
+    $this->artisan('inlay:install', ['--starter' => 'landing', '--css' => 'plain', '--no-interaction' => true])->assertSuccessful();
 
     expect(glob($this->base.'/resources/views/inlay/sections/*.blade.php'))->toHaveCount(11)
         ->and(file_get_contents($this->base.'/resources/views/inlay/sections/hero.blade.php'))->toContain('inlay-hero')

@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Providers;
+
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
+use WeArePixel\Inlay\Facades\Inlay;
+
+class InlayServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        // Who may edit pages. Allowed only while running locally until you
+        // decide, e.g. fn (User $user) => $user->is_admin.
+        Gate::define('{{ ability }}', fn ($user = null) => $this->app->isLocal());
+
+        Inlay::singleFileBlocks(resource_path('views/inlay/blocks'));
+        Inlay::singleFileSections(resource_path('views/inlay/sections'));{{ pageDefinitions }}
+
+        Inlay::previewView('{{ pageView }}');
+    }
+}

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
+use WeArePixel\Inlay\Console\DoctorCommand;
 use WeArePixel\Inlay\Console\InstallCommand;
 use WeArePixel\Inlay\Contracts\Screenshotter;
 use WeArePixel\Inlay\Declarative\DeclarativeSections;
@@ -69,7 +70,7 @@ final class InlayServiceProvider extends ServiceProvider
         }
 
         if ($this->app->runningInConsole()) {
-            $this->commands([InstallCommand::class]);
+            $this->commands([InstallCommand::class, DoctorCommand::class]);
         }
     }
 }
