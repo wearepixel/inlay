@@ -10,7 +10,7 @@ use WeArePixel\Inlay\Support\LinkValue;
 use WeArePixel\Inlay\Support\RichTextSanitizer;
 
 /**
- * Renders a compiled declarative block's element tree. Tags and attributes are
+ * Renders a compiled declarative section's element tree. Tags and attributes are
  * re-checked against the allowlists, every value is escaped, rich text is
  * sanitised again and output is capped, so a stored tree that was tampered
  * with after validation still cannot inject markup or exhaust a worker.
@@ -68,11 +68,11 @@ final class DeclarativeRenderer
 
         $tag = (string) $node['tag'];
 
-        if (! in_array($tag, DeclarativeBlockCompiler::TAGS, true) || ++$this->rendered > self::MAX_RENDERED_ELEMENTS) {
+        if (! in_array($tag, DeclarativeSectionCompiler::TAGS, true) || ++$this->rendered > self::MAX_RENDERED_ELEMENTS) {
             return '';
         }
 
-        $allowedAttributes = [...DeclarativeBlockCompiler::GLOBAL_ATTRIBUTES, ...(DeclarativeBlockCompiler::TAG_ATTRIBUTES[$tag] ?? [])];
+        $allowedAttributes = [...DeclarativeSectionCompiler::GLOBAL_ATTRIBUTES, ...(DeclarativeSectionCompiler::TAG_ATTRIBUTES[$tag] ?? [])];
 
         $attributes = [];
         $class = $this->classes($node['class'] ?? null, $settings, $scope);
@@ -86,7 +86,7 @@ final class DeclarativeRenderer
         if (isset($node['link'])) {
             $link = $this->value($node['link'], $settings, $scope);
 
-            if (! $link instanceof LinkValue || $link->url === '' || ! DeclarativeBlockCompiler::isSafeHref($link->url)) {
+            if (! $link instanceof LinkValue || $link->url === '' || ! DeclarativeSectionCompiler::isSafeHref($link->url)) {
                 return '';
             }
 
@@ -120,7 +120,7 @@ final class DeclarativeRenderer
 
         $open = '<'.$tag.$this->attributeString($attributes).'>';
 
-        if (in_array($tag, DeclarativeBlockCompiler::VOID_TAGS, true)) {
+        if (in_array($tag, DeclarativeSectionCompiler::VOID_TAGS, true)) {
             return $open;
         }
 
@@ -151,7 +151,7 @@ final class DeclarativeRenderer
 
         $resolved = is_array($value) ? $this->text($value, $settings, $scope) : (string) $value;
 
-        if ($name === 'href' && ! DeclarativeBlockCompiler::isSafeHref($resolved)) {
+        if ($name === 'href' && ! DeclarativeSectionCompiler::isSafeHref($resolved)) {
             return null;
         }
 

@@ -9,14 +9,14 @@ use WeArePixel\Inlay\Pages\PageDefinition;
 
 /**
  * Paired with TestLockedPositionV2 - same handle, no locking here. Used to
- * isolate the "restoring a revision would move a now-locked block" check
+ * isolate the "restoring a revision would move a now-locked section" check
  * from the ordinary required/allowed checks (both versions allow and, once
- * present, are satisfied by, the same blocks - only locking differs).
+ * present, are satisfied by, the same sections - only locking differs).
  */
 #[PageDefinitionMeta(handle: 'locked-position-page', label: 'Locked Position Page (v1)')]
 final class TestLockedPositionV1 extends PageDefinition
 {
-    public function allowedBlocks(): array
+    public function allowedSections(): array
     {
         return [TestHeroSection::class, TestFaqSection::class];
     }

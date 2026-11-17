@@ -6,15 +6,15 @@ namespace WeArePixel\Inlay\Tests\Fixtures;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WeArePixel\Inlay\Attributes\BlockMeta;
 use WeArePixel\Inlay\Attributes\Image;
+use WeArePixel\Inlay\Attributes\SectionMeta;
 use WeArePixel\Inlay\Attributes\Select;
 use WeArePixel\Inlay\Attributes\Text;
-use WeArePixel\Inlay\Contracts\InlayBlock;
+use WeArePixel\Inlay\Contracts\InlaySection;
 use WeArePixel\Inlay\Support\ImageValue;
 
-#[BlockMeta(label: 'Hero', category: 'Headers', description: 'A large banner with a heading and image.', icon: '🖼')]
-final class TestHeroSection extends Component implements InlayBlock
+#[SectionMeta(label: 'Hero', category: 'Headers', description: 'A large banner with a heading and image.', icon: '🖼')]
+final class TestHeroSection extends Component implements InlaySection
 {
     public function __construct(
         #[Text(label: 'Heading')]
@@ -26,7 +26,7 @@ final class TestHeroSection extends Component implements InlayBlock
     ) {}
 
     /**
-     * The mapsToClass() mechanic is removed - a block maps a setting to
+     * The mapsToClass() mechanic is removed - a section maps a setting to
      * presentation with an ordinary computed method on its own class.
      * docs/v1-implementation-specification.md §9.
      */

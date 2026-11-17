@@ -8,7 +8,7 @@ use WeArePixel\Inlay\Enums\PageStatus;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Pages\PageDefinitionViolationException;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestLockedPositionV1;
@@ -17,7 +17,7 @@ use WeArePixel\Inlay\Tests\Fixtures\TestShiftingPageDefinitionV1;
 use WeArePixel\Inlay\Tests\Fixtures\TestShiftingPageDefinitionV2;
 
 beforeEach(function () {
-    config(['inlay.blocks' => [
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
     ]]);
 });
@@ -42,7 +42,7 @@ it('overwrites live sections from a revision snapshot and creates a new revision
 });
 
 it('restores into the draft only, without publishing, when the content no longer satisfies the current Page Definition', function () {
-    config(['inlay.blocks' => [
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
     ]]);
@@ -56,7 +56,7 @@ it('restores into the draft only, without publishing, when the content no longer
     // same handle the Page still points to) requires - the Page's own
     // definition column never changed.
     app()->instance(PageDefinitionRegistry::class, tap(
-        new PageDefinitionRegistry(app(BlockRegistry::class)),
+        new PageDefinitionRegistry(app(SectionRegistry::class)),
         fn (PageDefinitionRegistry $registry) => $registry->register(TestShiftingPageDefinitionV2::class),
     ));
 
@@ -82,8 +82,8 @@ it('restores into the draft only, without publishing, when the content no longer
         ->and($republished->snapshot['sections'])->toHaveCount(2);
 });
 
-it('restores into the draft only when the restored content would move a block that is locked under the current definition', function () {
-    config(['inlay.blocks' => [
+it('restores into the draft only when the restored content would move a section that is locked under the current definition', function () {
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
     ]]);
@@ -100,15 +100,15 @@ it('restores into the draft only when the restored content would move a block th
     $page->sections()->where('handle', 'test-faq')->update(['order' => 0]);
 
     // Simulates a developer having since locked the hero under the same
-    // "locked-position-page" handle - both allow/require the same blocks,
+    // "locked-position-page" handle - both allow/require the same sections,
     // so only the locked-position check can produce a violation here.
     app()->instance(PageDefinitionRegistry::class, tap(
-        new PageDefinitionRegistry(app(BlockRegistry::class)),
+        new PageDefinitionRegistry(app(SectionRegistry::class)),
         fn (PageDefinitionRegistry $registry) => $registry->register(TestLockedPositionV2::class),
     ));
 
     // The current draft has hero@1; $original would restore it to hero@0 -
-    // a position change for a now-locked block.
+    // a position change for a now-locked section.
     $result = app(RestorePageRevision::class)->execute($original);
 
     expect($result)->toBeNull()

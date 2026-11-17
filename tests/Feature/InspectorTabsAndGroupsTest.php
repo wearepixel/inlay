@@ -9,13 +9,13 @@ use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestTabbedSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => [
+    config(['inlay.sections' => [
         'test-tabbed' => TestTabbedSection::class,
         'test-hero' => TestHeroSection::class,
     ]]);
 });
 
-it('renders tab navigation only when a block declares more than one tab', function () {
+it('renders tab navigation only when a section declares more than one tab', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $tabbed = $page->sections()->create(['handle' => 'test-tabbed', 'order' => 0, 'settings' => []]);
     $plain = $page->sections()->create(['handle' => 'test-hero', 'order' => 1, 'settings' => []]);

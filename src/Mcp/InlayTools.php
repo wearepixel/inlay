@@ -6,17 +6,17 @@ namespace WeArePixel\Inlay\Mcp;
 
 use WeArePixel\Inlay\Mcp\Apps\PreviewApp;
 use WeArePixel\Inlay\Mcp\Tools\CreatePageTool;
-use WeArePixel\Inlay\Mcp\Tools\DeleteBlockTool;
-use WeArePixel\Inlay\Mcp\Tools\GetBlockTool;
+use WeArePixel\Inlay\Mcp\Tools\DeleteSectionTool;
 use WeArePixel\Inlay\Mcp\Tools\GetPageTool;
+use WeArePixel\Inlay\Mcp\Tools\GetSectionTool;
 use WeArePixel\Inlay\Mcp\Tools\GetStylingTool;
-use WeArePixel\Inlay\Mcp\Tools\ListBlocksTool;
 use WeArePixel\Inlay\Mcp\Tools\ListPageDefinitionsTool;
 use WeArePixel\Inlay\Mcp\Tools\ListPagesTool;
+use WeArePixel\Inlay\Mcp\Tools\ListSectionsTool;
 use WeArePixel\Inlay\Mcp\Tools\PreviewPageTool;
 use WeArePixel\Inlay\Mcp\Tools\PublishPageTool;
 use WeArePixel\Inlay\Mcp\Tools\ReplaceSectionsTool;
-use WeArePixel\Inlay\Mcp\Tools\SaveBlockTool;
+use WeArePixel\Inlay\Mcp\Tools\SaveSectionTool;
 use WeArePixel\Inlay\Mcp\Tools\UpdateSectionTool;
 use WeArePixel\Inlay\Mcp\Tools\UploadImageTool;
 
@@ -29,7 +29,7 @@ use WeArePixel\Inlay\Mcp\Tools\UploadImageTool;
 final class InlayTools
 {
     public const TOOLS = [
-        ListBlocksTool::class,
+        ListSectionsTool::class,
         ListPageDefinitionsTool::class,
         ListPagesTool::class,
         GetPageTool::class,
@@ -40,9 +40,9 @@ final class InlayTools
         PreviewPageTool::class,
         PublishPageTool::class,
         GetStylingTool::class,
-        SaveBlockTool::class,
-        GetBlockTool::class,
-        DeleteBlockTool::class,
+        SaveSectionTool::class,
+        GetSectionTool::class,
+        DeleteSectionTool::class,
     ];
 
     public const RESOURCES = [PreviewApp::class];

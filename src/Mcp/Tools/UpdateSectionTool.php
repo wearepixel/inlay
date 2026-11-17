@@ -20,7 +20,7 @@ use WeArePixel\Inlay\Mcp\PageFeedback;
 #[Title('Update one Inlay section')]
 #[Description(<<<'TEXT'
 Changes some settings of one section of a page's DRAFT, leaving every other setting and section as
-it is. Send only the settings to change; send null for a setting to reset it to the block default.
+it is. Send only the settings to change; send null for a setting to reset it to the section default.
 Get section ids from inlay-get-page. To add, remove or reorder sections use inlay-replace-sections.
 TEXT)]
 final class UpdateSectionTool extends InlayTool

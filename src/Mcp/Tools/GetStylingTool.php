@@ -22,7 +22,7 @@ use WeArePixel\Inlay\Styling\CompiledStylesheets;
 Returns the CSS framework this site uses, its design tokens (colours, fonts, spacing, radii with their
 values) and every class its compiled CSS defines, grouped by utility.
 
-Call this before authoring a block with inlay-save-block. A block may use ONLY these classes - anything
+Call this before authoring a section with inlay-save-section. A section may use ONLY these classes - anything
 else is rejected. Map a design's colours, font sizes and spacing to the nearest token-based class
 rather than trying to match exact pixel values. Pass "search" to filter, e.g. "bg-" or "grid".
 TEXT)]

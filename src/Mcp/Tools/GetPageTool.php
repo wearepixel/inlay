@@ -15,7 +15,7 @@ use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 use WeArePixel\Inlay\Mcp\InlayTool;
 use WeArePixel\Inlay\Models\PageSection;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 
 #[Name('inlay-get-page')]
@@ -23,7 +23,7 @@ use WeArePixel\Inlay\Support\SectionRenderer;
 #[IsReadOnly]
 #[Description(<<<'TEXT'
 Returns a page's details and its current draft sections in order. Each section has its id, its
-block, the settings explicitly set on it ("settings") and the values it actually renders with,
+section, the settings explicitly set on it ("settings") and the values it actually renders with,
 defaults included ("effective_settings").
 
 To change a page, send the complete new section list to inlay-replace-sections, or change one
@@ -31,7 +31,7 @@ section with inlay-update-section.
 TEXT)]
 final class GetPageTool extends InlayTool
 {
-    public function handle(Request $request, BlockRegistry $blocks, SectionRenderer $renderer): Response|ResponseFactory
+    public function handle(Request $request, SectionRegistry $registry, SectionRenderer $renderer): Response|ResponseFactory
     {
         $page = $this->authorizedPage($request);
 
@@ -41,18 +41,18 @@ final class GetPageTool extends InlayTool
 
         $definition = $this->definitionFor($page);
 
-        $sections = $page->sections()->orderBy('order')->get()->map(function (PageSection $section) use ($blocks, $renderer) {
-            $registered = $blocks->hasHandle($section->handle);
+        $sections = $page->sections()->orderBy('order')->get()->map(function (PageSection $section) use ($registry, $renderer) {
+            $registered = $registry->hasHandle($section->handle);
 
             return array_filter([
                 'id' => $section->id,
-                'block' => $section->handle,
-                'name' => $registered ? $blocks->definition($section->handle)->name : null,
+                'section' => $section->handle,
+                'name' => $registered ? $registry->definition($section->handle)->name : null,
                 'settings' => $section->settings ?? [],
                 'effective_settings' => $registered
-                    ? $renderer->resolveEffectiveRawSettings($blocks->definition($section->handle), $section->settings ?? [])
+                    ? $renderer->resolveEffectiveRawSettings($registry->definition($section->handle), $section->settings ?? [])
                     : null,
-                'problem' => $registered ? null : 'This block is no longer registered and does not render.',
+                'problem' => $registered ? null : 'This section is no longer registered and does not render.',
             ], fn (mixed $value) => $value !== null);
         })->all();
 
@@ -62,8 +62,8 @@ final class GetPageTool extends InlayTool
             'meta_description' => $page->meta_description,
             'page_type' => $definition === null ? null : [
                 'label' => $definition->label,
-                'required_blocks' => $definition->requiredBlocks,
-                'locked_blocks' => $definition->lockedBlocks,
+                'required_sections' => $definition->requiredSections,
+                'locked_sections' => $definition->lockedSections,
             ],
             'admin_url' => Route::has('inlay.admin.pages.edit') ? route('inlay.admin.pages.edit', $page) : null,
             'sections' => $sections,

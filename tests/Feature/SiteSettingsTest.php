@@ -40,7 +40,7 @@ it('stores only the fields an editor changed', function () {
         ->toBe(['email' => 'hello@example.com']);
 });
 
-it('hydrates images and links like block settings', function () {
+it('hydrates images and links like section settings', function () {
     Livewire::test(SiteSettingsEditor::class, ['group' => 'header'])
         ->set('editingProps.cta', ['label' => 'Enquire', 'url' => '/enquire', 'openInNewTab' => false]);
 

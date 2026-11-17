@@ -14,8 +14,8 @@ final class CreatePage
 
     /**
      * The Page Definition is fixed at creation and never changes afterwards.
-     * New sections are seeded from its default blocks with no stored
-     * overrides, the same shape as adding a block from the picker.
+     * New sections are seeded from its default sections with no stored
+     * overrides, the same shape as adding a section from the picker.
      */
     public function execute(
         ResolvedPageDefinition $definition,
@@ -34,7 +34,7 @@ final class CreatePage
                 'definition' => $definition->handle,
             ]);
 
-            foreach ($definition->defaultBlocks as $index => $handle) {
+            foreach ($definition->defaultSections as $index => $handle) {
                 $page->sections()->create([
                     'handle' => $handle,
                     'order' => $index,

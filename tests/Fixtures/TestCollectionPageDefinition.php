@@ -10,7 +10,7 @@ use WeArePixel\Inlay\Pages\PageDefinition;
 #[PageDefinitionMeta(label: 'Test Collection Page', description: 'A constrained Page type for tests.')]
 final class TestCollectionPageDefinition extends PageDefinition
 {
-    public function allowedBlocks(): array
+    public function allowedSections(): array
     {
         return [
             TestHeroSection::class,
@@ -18,21 +18,21 @@ final class TestCollectionPageDefinition extends PageDefinition
         ];
     }
 
-    public function requiredBlocks(): array
+    public function requiredSections(): array
     {
         return [
             TestHeroSection::class,
         ];
     }
 
-    public function lockedBlocks(): array
+    public function lockedSections(): array
     {
         return [
             TestHeroSection::class,
         ];
     }
 
-    public function defaultBlocks(): array
+    public function defaultSections(): array
     {
         return [
             TestHeroSection::class,

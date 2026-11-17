@@ -15,7 +15,7 @@ use WeArePixel\Inlay\Support\SettingsCoercer;
 /**
  * Content that belongs to the whole site rather than one page - a phone
  * number in the footer, the header's navigation links. Declared with the
- * same Settings schema as a block, edited in the admin, and live as soon
+ * same Settings schema as a section, edited in the admin, and live as soon
  * as it is saved: there is no draft or publish step.
  */
 final class SiteSettingsRegistry
@@ -51,7 +51,7 @@ final class SiteSettingsRegistry
 
     /**
      * Every field of a group, resolved over its defaults and hydrated the
-     * same way a block's settings are (images to ImageValue, links to
+     * same way a section's settings are (images to ImageValue, links to
      * LinkValue, selects to their enum).
      *
      * @return array<string, mixed>
@@ -129,7 +129,7 @@ final class SiteSettingsRegistry
     }
 
     /**
-     * A block takes its defaults from its constructor; a site settings group
+     * A section takes its defaults from its constructor; a site settings group
      * has no constructor, so ->default() on a top-level field applies here.
      *
      * @return array<string, mixed>

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'blocks' => [],
+    'sections' => [],
     'disk' => 'public',
 
     /*
@@ -19,7 +19,7 @@ return [
     | - the default of ['web'] leaves every admin action public.
     | Inlay::adminRoutes() also registers this same middleware as Livewire
     | "persistent" middleware, so it re-runs on every subsequent admin
-    | action (add/reorder/delete a block, persist a setting, publish), not
+    | action (add/reorder/delete a section, persist a setting, publish), not
     | just the first page load.
     |
     */
@@ -109,7 +109,7 @@ return [
         'abilities' => [
             'manage' => 'inlay.manage-pages',
             'publish' => 'inlay.publish-pages',
-            'author' => 'inlay.author-blocks',
+            'author' => 'inlay.author-sections',
         ],
         'allow_publish' => false,
         'writes_per_minute' => 60,
@@ -132,20 +132,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Styling and agent-authored blocks
+    | Styling and agent-authored sections
     |--------------------------------------------------------------------------
     |
     | 'framework' - the CSS approach this site uses (tailwind, bootstrap or
     | plain). Agents are told to use it, and the starter kit defaults to it.
     |
-    | Agent-authored blocks may only use classes the site's compiled CSS
+    | Agent-authored sections may only use classes the site's compiled CSS
     | actually defines - read from the Vite manifest ('vite_manifest', null
     | for public/build/manifest.json) plus any 'stylesheets'. Rebuild your
     | assets to make new classes available; 'extra_classes' allows classes
     | that exist only for JavaScript hooks.
     |
-    | 'agent_blocks.enabled' - lets MCP users with the 'author' ability create
-    | blocks (run the migrations first). Off by default.
+    | 'agent_sections.enabled' - lets MCP users with the 'author' ability create
+    | sections (run the migrations first). Off by default.
     |
     */
     'styling' => [
@@ -157,7 +157,7 @@ return [
         'denied_classes' => ['fixed'],
     ],
 
-    'agent_blocks' => [
-        'enabled' => (bool) env('INLAY_AGENT_BLOCKS', false),
+    'agent_sections' => [
+        'enabled' => (bool) env('INLAY_AGENT_SECTIONS', false),
     ],
 ];

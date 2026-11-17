@@ -1,10 +1,10 @@
 <?php
 
 use WeArePixel\Inlay\Schema\Settings;
-use WeArePixel\Inlay\SingleFile\Block;
+use WeArePixel\Inlay\SingleFile\Section;
 
-block(
-    Block::make('broken')
+section(
+    Section::make('broken')
         ->name('Broken')
         ->settings(Settings::make()->text('heading')->default('Hi'))
 );

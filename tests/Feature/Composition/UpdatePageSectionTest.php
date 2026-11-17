@@ -8,7 +8,7 @@ use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Models\Page;
 
 beforeEach(function () {
-    Inlay::singleFileBlock(__DIR__.'/../../Fixtures/single-file/composition/promo.blade.php');
+    Inlay::singleFileSection(__DIR__.'/../../Fixtures/single-file/composition/promo.blade.php');
 });
 
 it('merges a settings patch into the stored overrides, and null resets a field to its default', function () {

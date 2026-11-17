@@ -131,8 +131,8 @@ it('assigns the built-in default definition and hides the selector when nothing 
     expect(Page::sole()->definition)->toBe('default');
 });
 
-it('shows the Page type selector once a second definition is registered, and seeds its default blocks in order', function () {
-    config(['inlay.blocks' => [
+it('shows the Page type selector once a second definition is registered, and seeds its default sections in order', function () {
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
     ]]);

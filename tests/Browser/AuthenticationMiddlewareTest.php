@@ -11,7 +11,7 @@ use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
  * Confirms config('inlay.admin.middleware') actually protects the admin's
  * initial GET requests, and that a legitimately authenticated session can
  * still complete a full Livewire action (add/select/publish) end to end -
- * i.e. an 'auth'-guarded admin doesn't wrongly block a real, authenticated
+ * i.e. an 'auth'-guarded admin doesn't wrongly section a real, authenticated
  * editor. Exercised against the fixed /inlay-secure route group registered
  * in tests/TestCase.php (see that file for why a separate, permanently
  * 'auth'-guarded group is used instead of toggling config per test).
@@ -29,7 +29,7 @@ use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
  * Feature-level test already proves precisely.
  */
 beforeEach(function () {
-    config(['inlay.blocks' => ['hero' => BrowserHeroSection::class]]);
+    config(['inlay.sections' => ['hero' => BrowserHeroSection::class]]);
 });
 
 it('redirects an unauthenticated visitor away from the initial admin request', function () {
@@ -63,7 +63,7 @@ it('allows an authenticated visitor to load the admin and complete a real Livewi
 /**
  * A real bug (found manually, against a genuine standalone Laravel app, not
  * this suite) sent a logged-in editor back to the login screen the moment
- * they performed their first Livewire action (adding a block,
+ * they performed their first Livewire action (adding a section,
  * publishing, etc) - the initial page load worked fine, every action after
  * it did not. Root cause: Livewire's persistent middleware re-runs the
  * *original* route's middleware against a *cloned* request on every action -

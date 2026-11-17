@@ -14,17 +14,17 @@ use WeArePixel\Inlay\Pages\PageDefinition;
 #[PageDefinitionMeta(handle: 'locked-position-page', label: 'Locked Position Page (v2)')]
 final class TestLockedPositionV2 extends PageDefinition
 {
-    public function allowedBlocks(): array
+    public function allowedSections(): array
     {
         return [TestHeroSection::class, TestFaqSection::class];
     }
 
-    public function requiredBlocks(): array
+    public function requiredSections(): array
     {
         return [TestHeroSection::class];
     }
 
-    public function lockedBlocks(): array
+    public function lockedSections(): array
     {
         return [TestHeroSection::class];
     }

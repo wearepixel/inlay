@@ -18,7 +18,7 @@ use WeArePixel\Inlay\Pages\PageDefinition;
 #[PageDefinitionMeta(handle: 'shifting-page', label: 'Shifting Page (v1)')]
 final class TestShiftingPageDefinitionV1 extends PageDefinition
 {
-    public function allowedBlocks(): array
+    public function allowedSections(): array
     {
         return [TestHeroSection::class, TestFaqSection::class];
     }

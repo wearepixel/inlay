@@ -36,7 +36,7 @@ return new class extends Migration
             $table->boolean('is_homepage')->default(false);
             // The registered Page Definition handle this Page follows
             // (docs/inlay/v1/page-definitions) - never the PHP class itself,
-            // matching how a PageSection stores a Block's handle rather
+            // matching how a PageSection stores a Section's handle rather
             // than its class. Nullable, and treated everywhere as "use the
             // built-in, unrestricted default definition" - existing Pages
             // from before this column existed get that same default rather

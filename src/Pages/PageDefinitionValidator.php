@@ -6,7 +6,7 @@ namespace WeArePixel\Inlay\Pages;
 
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Models\PageSection;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\SectionRegistry;
 
 /**
  * The single authoritative check for whether a Page currently satisfies its
@@ -20,7 +20,7 @@ final class PageDefinitionValidator
 {
     public function __construct(
         private readonly PageDefinitionRegistry $definitions,
-        private readonly BlockRegistry $blocks,
+        private readonly SectionRegistry $sections,
     ) {}
 
     /**
@@ -46,11 +46,11 @@ final class PageDefinitionValidator
             /** @var PageSection $section */
             $presentHandles[] = $section->handle;
 
-            if (! $this->blocks->hasHandle($section->handle)) {
+            if (! $this->sections->hasHandle($section->handle)) {
                 $violations[] = new PageDefinitionViolation(
-                    type: 'unresolved_block',
-                    message: 'This page contains a block that is no longer registered. A developer needs to resolve this before it can be published.',
-                    blockHandle: $section->handle,
+                    type: 'unresolved_section',
+                    message: 'This page contains a section that is no longer registered. A developer needs to resolve this before it can be published.',
+                    sectionHandle: $section->handle,
                 );
 
                 continue;
@@ -58,26 +58,26 @@ final class PageDefinitionValidator
 
             if (! $definition->allows($section->handle)) {
                 $violations[] = new PageDefinitionViolation(
-                    type: 'disallowed_block',
-                    message: "{$this->blocks->definition($section->handle)->name} is not allowed on {$definition->label}.",
-                    blockHandle: $section->handle,
+                    type: 'disallowed_section',
+                    message: "{$this->sections->definition($section->handle)->name} is not allowed on {$definition->label}.",
+                    sectionHandle: $section->handle,
                 );
             }
         }
 
-        foreach ($definition->requiredBlocks as $requiredHandle) {
+        foreach ($definition->requiredSections as $requiredHandle) {
             if (in_array($requiredHandle, $presentHandles, true)) {
                 continue;
             }
 
-            $label = $this->blocks->hasHandle($requiredHandle)
-                ? $this->blocks->definition($requiredHandle)->name
+            $label = $this->sections->hasHandle($requiredHandle)
+                ? $this->sections->definition($requiredHandle)->name
                 : $requiredHandle;
 
             $violations[] = new PageDefinitionViolation(
-                type: 'missing_required_block',
+                type: 'missing_required_section',
                 message: "{$label} is required by {$definition->label}.",
-                blockHandle: $requiredHandle,
+                sectionHandle: $requiredHandle,
             );
         }
 

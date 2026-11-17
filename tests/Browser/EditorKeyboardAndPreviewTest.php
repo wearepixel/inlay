@@ -6,10 +6,10 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => ['hero' => BrowserHeroSection::class]]);
+    config(['inlay.sections' => ['hero' => BrowserHeroSection::class]]);
 });
 
-it('reorders blocks with a keyboard shortcut, not just by dragging', function () {
+it('reorders sections with a keyboard shortcut, not just by dragging', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $first = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => ['heading' => 'First']]);
     $second = $page->sections()->create(['handle' => 'hero', 'order' => 1, 'settings' => ['heading' => 'Second']]);
@@ -30,7 +30,7 @@ it('reorders blocks with a keyboard shortcut, not just by dragging', function ()
         ->and($second->fresh()->order)->toBe(0);
 });
 
-it('deletes the focused block with the Delete key, after confirmation', function () {
+it('deletes the focused section with the Delete key, after confirmation', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -44,7 +44,7 @@ it('deletes the focused block with the Delete key, after confirmation', function
     expect($page->sections()->count())->toBe(0);
 });
 
-it('navigates and adds a block from the picker with arrow keys and Enter', function () {
+it('navigates and adds a section from the picker with arrow keys and Enter', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");

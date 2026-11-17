@@ -14,7 +14,7 @@ use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
  * stay gone from the views most likely to reintroduce one.
  */
 beforeEach(function () {
-    config(['inlay.blocks' => [
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
     ]]);
 });

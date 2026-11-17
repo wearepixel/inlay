@@ -4,67 +4,67 @@ declare(strict_types=1);
 
 namespace WeArePixel\Inlay\Pages;
 
-use WeArePixel\Inlay\Contracts\InlayBlock;
-use WeArePixel\Inlay\Support\BlockHandle;
+use WeArePixel\Inlay\Contracts\InlaySection;
+use WeArePixel\Inlay\Support\SectionHandle;
 
 /**
- * Developer-owned composition *policy* for a kind of Page - which Blocks it
+ * Developer-owned composition *policy* for a kind of Page - which Sections it
  * may contain, which are required or locked, and what a new Page of this
  * kind starts with. A Page Definition renders nothing, is not itself a
- * Block, and is never persisted beyond a stable handle stored on the Page
+ * Section, and is never persisted beyond a stable handle stored on the Page
  * row - see docs/inlay/v1/page-definitions. Register a subclass with
  * Inlay::pageDefinition()/pageDefinitions().
  */
 abstract class PageDefinition
 {
     /**
-     * `null` (the default) means every registered Block is allowed - an
+     * `null` (the default) means every registered Section is allowed - an
      * unrestricted Page. An explicit array restricts a Page of this kind to
-     * exactly those Blocks; a Block's picker category is presentational
+     * exactly those Sections; a Section's picker category is presentational
      * only and never itself a permission boundary.
      *
-     * @return array<int, class-string<InlayBlock>|BlockHandle>|null
+     * @return array<int, class-string<InlaySection>|SectionHandle>|null
      */
-    public function allowedBlocks(): ?array
+    public function allowedSections(): ?array
     {
         return null;
     }
 
     /**
-     * Blocks that must appear at least once before a Page of this kind can
-     * be published. A required Block is implicitly also allowed, whether or
-     * not it's separately listed in allowedBlocks().
+     * Sections that must appear at least once before a Page of this kind can
+     * be published. A required Section is implicitly also allowed, whether or
+     * not it's separately listed in allowedSections().
      *
-     * @return array<int, class-string<InlayBlock>|BlockHandle>
+     * @return array<int, class-string<InlaySection>|SectionHandle>
      */
-    public function requiredBlocks(): array
+    public function requiredSections(): array
     {
         return [];
     }
 
     /**
-     * Every placed instance of a Block whose handle appears here can be
+     * Every placed instance of a Section whose handle appears here can be
      * neither deleted nor reordered (docs/inlay/v1/page-definitions#locked). A
-     * locked Block is always also required - PageDefinitionRegistry rejects
-     * a definition that locks a Block without also requiring it, rather
+     * locked Section is always also required - PageDefinitionRegistry rejects
+     * a definition that locks a Section without also requiring it, rather
      * than silently normalising the contradiction away.
      *
-     * @return array<int, class-string<InlayBlock>|BlockHandle>
+     * @return array<int, class-string<InlaySection>|SectionHandle>
      */
-    public function lockedBlocks(): array
+    public function lockedSections(): array
     {
         return [];
     }
 
     /**
      * Seeded, in this declared order, when a new Page of this kind is
-     * created - with sparse settings, resolved from each Block's own
+     * created - with sparse settings, resolved from each Section's own
      * current defaults exactly like adding one by hand from the picker. May
      * repeat a handle.
      *
-     * @return array<int, class-string<InlayBlock>|BlockHandle>
+     * @return array<int, class-string<InlaySection>|SectionHandle>
      */
-    public function defaultBlocks(): array
+    public function defaultSections(): array
     {
         return [];
     }

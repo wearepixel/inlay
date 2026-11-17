@@ -13,11 +13,11 @@ namespace WeArePixel\Inlay\Pages;
 final readonly class PageDefinitionViolation
 {
     /**
-     * @param  'unresolved_definition'|'unresolved_block'|'disallowed_block'|'missing_required_block'  $type
+     * @param  'unresolved_definition'|'unresolved_section'|'disallowed_section'|'missing_required_section'  $type
      */
     public function __construct(
         public string $type,
         public string $message,
-        public ?string $blockHandle = null,
+        public ?string $sectionHandle = null,
     ) {}
 }

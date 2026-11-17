@@ -8,9 +8,9 @@ use Illuminate\View\Component;
 use Illuminate\View\View;
 use WeArePixel\Inlay\Attributes\Select;
 use WeArePixel\Inlay\Attributes\Text;
-use WeArePixel\Inlay\Contracts\InlayBlock;
+use WeArePixel\Inlay\Contracts\InlaySection;
 
-final class TestRequiredFieldSection extends Component implements InlayBlock
+final class TestRequiredFieldSection extends Component implements InlaySection
 {
     public function __construct(
         #[Text(label: 'Heading', required: true)]

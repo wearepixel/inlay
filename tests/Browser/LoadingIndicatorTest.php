@@ -6,7 +6,7 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => ['hero' => BrowserHeroSection::class]]);
+    config(['inlay.sections' => ['hero' => BrowserHeroSection::class]]);
 });
 
 it('clears the Saving indicator once the debounced setting update actually completes', function () {

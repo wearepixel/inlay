@@ -64,7 +64,7 @@
 
         <div class="inlay-editor__sidebar" :class="(mobilePanel === 'preview' ? 'inlay-mobile-hide ' : '') + (collapsed ? 'is-collapsed' : '')" :inert="collapsed">
 
-            {{-- Block tree (default sidebar state) --}}
+            {{-- Section tree (default sidebar state) --}}
             <div x-show="view === 'tree'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
                     <span class="inlay-eyebrow">Sections</span>
@@ -75,8 +75,8 @@
                     @php $sectionHandleCounts = $sections->countBy('handle'); @endphp
                     @forelse ($sections as $section)
                         @php
-                            $isLocked = in_array($section->handle, $lockedBlockHandles, true);
-                            $isRequired = in_array($section->handle, $requiredBlockHandles, true);
+                            $isLocked = in_array($section->handle, $lockedSectionHandles, true);
+                            $isRequired = in_array($section->handle, $requiredSectionHandles, true);
                             $isFinalRequiredInstance = $isRequired && $sectionHandleCounts[$section->handle] <= 1;
                             $canDelete = ! $isLocked && ! $isFinalRequiredInstance;
                         @endphp
@@ -150,10 +150,10 @@
                 </ul>
             </div>
 
-            {{-- Settings inspector (shown while a block is selected) --}}
+            {{-- Settings inspector (shown while a section is selected) --}}
             <div x-show="view === 'settings'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
-                    <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-to-blocks">
+                    <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-to-sections">
                         <x-inlay::icon name="arrow-left" :size="12" /> Sections
                     </button>
                 </div>
@@ -252,7 +252,7 @@
                     @else
                         <p class="inlay-field__help" style="color: var(--inlay-danger);" data-test="page-settings-definition-unresolved">This page's type is no longer registered. A developer needs to resolve this before publishing.</p>
                     @endif
-                    <p class="inlay-field__help">Controls which blocks this page may contain. Cannot be changed after creation.</p>
+                    <p class="inlay-field__help">Controls which sections this page may contain. Cannot be changed after creation.</p>
                 </div>
                 <div class="inlay-field">
                     <label class="inlay-field__label" for="page-settings-path">Public path</label>
@@ -294,7 +294,7 @@
                     <p class="inlay-field__help" data-test="page-settings-last-published">Never published.</p>
                 @endif
 
-                <p class="inlay-field__help" data-test="page-settings-live-notice">Public path and homepage status take effect as soon as you save - they aren't part of this page's unpublished block content, so they don't wait for Publish.</p>
+                <p class="inlay-field__help" data-test="page-settings-live-notice">Public path and homepage status take effect as soon as you save - they aren't part of this page's unpublished section content, so they don't wait for Publish.</p>
 
                 <button type="button" wire:click="savePageSettings" class="inlay-button inlay-button--primary" data-test="save-page-settings">Save page settings</button>
             </div>
@@ -382,7 +382,7 @@
     @if ($showingPicker)
         <div
             class="inlay-picker__overlay"
-            x-data="inlayBlockPicker(@js($blockLookup))"
+            x-data="inlaySectionPicker(@js($sectionLookup))"
             x-on:keydown.escape.window="$wire.closePicker()"
             x-on:keydown.down.window.prevent="highlightNext(1)"
             x-on:keydown.up.window.prevent="highlightNext(-1)"
@@ -418,19 +418,19 @@
                     <span><kbd>Esc</kbd> close</span>
                 </div>
                 <div class="inlay-picker__body">
-                    <template x-if="recentBlocks().length > 0 && query === ''">
+                    <template x-if="recentSections().length > 0 && query === ''">
                         <div>
                             <p class="inlay-eyebrow inlay-picker__recent-title">Recent</p>
                             <div class="inlay-picker__grid">
-                                <template x-for="block in recentBlocks()" :key="block.slug">
+                                <template x-for="section in recentSections()" :key="section.slug">
                                     <button
                                         type="button"
                                         class="inlay-picker__card"
-                                        x-on:click="recordRecent(block.slug); $wire.addSection(block.slug)"
+                                        x-on:click="recordRecent(section.slug); $wire.addSection(section.slug)"
                                     >
-                                        <span class="inlay-picker__card-icon" x-text="block.icon || block.label.charAt(0)"></span>
+                                        <span class="inlay-picker__card-icon" x-text="section.icon || section.label.charAt(0)"></span>
                                         <span class="inlay-picker__card-body">
-                                            <span class="inlay-picker__card-title" x-text="block.label"></span>
+                                            <span class="inlay-picker__card-title" x-text="section.label"></span>
                                         </span>
                                     </button>
                                 </template>
@@ -438,32 +438,32 @@
                         </div>
                     </template>
 
-                    @forelse ($availableBlocks as $category => $blocks)
+                    @forelse ($availableSections as $category => $sectionTypes)
                         <div x-show="categoryHasMatches($el)">
                             <p class="inlay-eyebrow inlay-picker__category">{{ $category }}</p>
                             <div class="inlay-picker__grid">
-                                @foreach ($blocks as $block)
+                                @foreach ($sectionTypes as $sectionType)
                                     <button
                                         type="button"
-                                        wire:click="addSection(@js($block->slug))"
-                                        x-on:click="recordRecent(@js($block->slug))"
-                                        data-search="{{ \Illuminate\Support\Str::lower(implode(' ', $block->searchTerms())) }}"
+                                        wire:click="addSection(@js($sectionType->slug))"
+                                        x-on:click="recordRecent(@js($sectionType->slug))"
+                                        data-search="{{ \Illuminate\Support\Str::lower(implode(' ', $sectionType->searchTerms())) }}"
                                         x-show="matches($el.dataset.search)"
-                                        data-test="picker-block-{{ $block->slug }}"
+                                        data-test="picker-section-{{ $sectionType->slug }}"
                                         class="inlay-picker__card"
                                         :class="highlighted === $el ? 'is-highlighted' : ''"
                                     >
                                         <span class="inlay-picker__card-icon">
-                                            @if ($block->thumbnail)
-                                                <img src="{{ $block->thumbnail }}" alt="">
+                                            @if ($sectionType->thumbnail)
+                                                <img src="{{ $sectionType->thumbnail }}" alt="">
                                             @else
-                                                {{ $block->icon ?? \Illuminate\Support\Str::substr($block->label, 0, 1) }}
+                                                {{ $sectionType->icon ?? \Illuminate\Support\Str::substr($sectionType->label, 0, 1) }}
                                             @endif
                                         </span>
                                         <span class="inlay-picker__card-body">
-                                            <span class="inlay-picker__card-title" x-html="highlight(@js($block->label))">{{ $block->label }}</span>
-                                            @if ($block->description)
-                                                <span class="inlay-picker__card-description">{{ $block->description }}</span>
+                                            <span class="inlay-picker__card-title" x-html="highlight(@js($sectionType->label))">{{ $sectionType->label }}</span>
+                                            @if ($sectionType->description)
+                                                <span class="inlay-picker__card-description">{{ $sectionType->description }}</span>
                                             @endif
                                         </span>
                                     </button>
@@ -474,16 +474,16 @@
                         <p class="inlay-empty-state" style="padding: 24px 20px; text-align: center;" data-test="picker-empty-state">
                             @if ($pageDefinitionUnresolved)
                                 This page's type is no longer registered, so Inlay cannot tell which sections it allows. A developer needs to resolve this before sections can be added.
-                            @elseif ($blocksExistButNoneAllowed)
+                            @elseif ($sectionsExistButNoneAllowed)
                                 No more sections are available for this page type.
                             @else
-                                No blocks have been registered yet. Add one to <code>config('inlay.blocks')</code> or via <code>Inlay::singleFileBlock()</code>.
+                                No sections have been registered yet. Add one to <code>config('inlay.sections')</code> or via <code>Inlay::singleFileSection()</code>.
                             @endif
                         </p>
                     @endforelse
 
-                    @if ($availableBlocks->isNotEmpty())
-                        <p class="inlay-picker__no-results" x-show="!hasAnyMatches()">No blocks match &ldquo;<span x-text="query"></span>&rdquo;.</p>
+                    @if ($availableSections->isNotEmpty())
+                        <p class="inlay-picker__no-results" x-show="!hasAnyMatches()">No sections match &ldquo;<span x-text="query"></span>&rdquo;.</p>
                     @endif
                 </div>
             </div>

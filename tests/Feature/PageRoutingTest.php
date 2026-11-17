@@ -11,7 +11,7 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 it('resolves a published page at its stored path under a configured prefix', function () {
-    config(['inlay.blocks' => ['test-hero' => TestHeroSection::class]]);
+    config(['inlay.sections' => ['test-hero' => TestHeroSection::class]]);
     Inlay::pageRoutes(prefix: 'pages', view: 'public-page-view');
 
     $page = Page::create(['title' => 'About', 'path' => 'about', 'status' => PageStatus::Published]);

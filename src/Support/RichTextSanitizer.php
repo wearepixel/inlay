@@ -10,7 +10,7 @@ use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 
 /**
- * Blocks render rich text unescaped, so HTML written by an agent is cleaned
+ * Sections render rich text unescaped, so HTML written by an agent is cleaned
  * to formatting markup before it is stored: no scripts, event handlers,
  * styles, iframes or non-http(s)/mailto links.
  */

@@ -7,11 +7,11 @@ namespace WeArePixel\Inlay\Tests\Fixtures;
 use Illuminate\View\Component;
 use Illuminate\View\View;
 use WeArePixel\Inlay\Attributes\Link;
-use WeArePixel\Inlay\Contracts\InlayBlock;
+use WeArePixel\Inlay\Contracts\InlaySection;
 use WeArePixel\Inlay\Support\LinkValue;
 
 // Non-nullable Link default, distinct from TestCtaSection's `?LinkValue $cta = null`.
-final class TestCtaWithDefaultSection extends Component implements InlayBlock
+final class TestCtaWithDefaultSection extends Component implements InlaySection
 {
     public function __construct(
         #[Link(label: 'Call to action')]

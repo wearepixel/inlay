@@ -12,7 +12,7 @@ use WeArePixel\Inlay\Schema\Settings;
 use WeArePixel\Inlay\Tests\Fixtures\TestRichTextSection;
 
 it('strips script from rich text saved in the page editor', function () {
-    config(['inlay.blocks' => ['test-rich-text' => TestRichTextSection::class]]);
+    config(['inlay.sections' => ['test-rich-text' => TestRichTextSection::class]]);
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'test-rich-text', 'order' => 0, 'settings' => []]);
 

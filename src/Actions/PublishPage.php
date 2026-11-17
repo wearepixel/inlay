@@ -11,13 +11,13 @@ use WeArePixel\Inlay\Models\PageRevision;
 use WeArePixel\Inlay\Models\PageSection;
 use WeArePixel\Inlay\Pages\PageDefinitionValidator;
 use WeArePixel\Inlay\Pages\PageDefinitionViolationException;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 
 final class PublishPage
 {
     public function __construct(
-        private readonly BlockRegistry $registry,
+        private readonly SectionRegistry $registry,
         private readonly SectionRenderer $renderer,
         private readonly PageDefinitionValidator $validator,
     ) {}
@@ -49,7 +49,7 @@ final class PublishPage
                     // A published snapshot stores fully-resolved effective
                     // settings for every field, not the section's (possibly
                     // sparse) stored overrides - so a later change to the
-                    // block's own constructor default never silently
+                    // section's own constructor default never silently
                     // changes how this historical revision renders.
                     // docs/v1-implementation-specification.md §13.
                     'id' => $section->id,
@@ -68,7 +68,7 @@ final class PublishPage
             // *revision*, not the live/draft Page row, so editing a title
             // or meta description in the admin can never change what's
             // already public without an explicit Publish - the same
-            // guarantee Block settings already have. `path` and
+            // guarantee Section settings already have. `path` and
             // `is_homepage` are deliberately NOT snapshotted - they're
             // routing/identity concerns PagesController must resolve
             // against current, live state to find this Page at all, not

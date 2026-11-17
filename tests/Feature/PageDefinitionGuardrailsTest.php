@@ -13,7 +13,7 @@ use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => [
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
         'test-cta' => TestCtaSection::class,
@@ -22,7 +22,7 @@ beforeEach(function () {
     app(PageDefinitionRegistry::class)->register(TestCollectionPageDefinition::class);
 });
 
-it('rejects adding a block that is not allowed by the current Page Definition, even via a direct call bypassing the picker', function () {
+it('rejects adding a section that is not allowed by the current Page Definition, even via a direct call bypassing the picker', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
@@ -32,7 +32,7 @@ it('rejects adding a block that is not allowed by the current Page Definition, e
     expect($page->sections()->count())->toBe(0);
 });
 
-it('allows adding a block the current Page Definition does allow', function () {
+it('allows adding a section the current Page Definition does allow', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
 
     Livewire::test(PageEditor::class, ['page' => $page])
@@ -42,7 +42,7 @@ it('allows adding a block the current Page Definition does allow', function () {
     expect($page->sections()->count())->toBe(1);
 });
 
-it('rejects deleting a locked block instance', function () {
+it('rejects deleting a locked section instance', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
     $section = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
 
@@ -53,15 +53,15 @@ it('rejects deleting a locked block instance', function () {
     expect($page->sections()->count())->toBe(1);
 });
 
-it('allows deleting a required block instance when another instance of the same block remains', function () {
+it('allows deleting a required section instance when another instance of the same section remains', function () {
     final class RequiredNotLockedForGuardrailsTest extends PageDefinition
     {
-        public function allowedBlocks(): array
+        public function allowedSections(): array
         {
             return [TestHeroSection::class];
         }
 
-        public function requiredBlocks(): array
+        public function requiredSections(): array
         {
             return [TestHeroSection::class];
         }
@@ -83,12 +83,12 @@ it('allows deleting a required block instance when another instance of the same 
 it('rejects the final required instance under the same not-locked definition', function () {
     final class RequiredNotLockedForGuardrailsTest2 extends PageDefinition
     {
-        public function allowedBlocks(): array
+        public function allowedSections(): array
         {
             return [TestHeroSection::class];
         }
 
-        public function requiredBlocks(): array
+        public function requiredSections(): array
         {
             return [TestHeroSection::class];
         }
@@ -134,7 +134,7 @@ it('allows a reorder that never changes a locked section\'s position', function 
         ->and($faqA->fresh()->order)->toBe(2);
 });
 
-it('rejects duplicating a block the current Page Definition does not allow', function () {
+it('rejects duplicating a section the current Page Definition does not allow', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
     $section = $page->sections()->create(['handle' => 'test-cta', 'order' => 0, 'settings' => []]);
 
@@ -145,7 +145,7 @@ it('rejects duplicating a block the current Page Definition does not allow', fun
     expect($page->sections()->count())->toBe(1);
 });
 
-it('allows duplicating a locked block, producing another locked instance under the type-level rule', function () {
+it('allows duplicating a locked section, producing another locked instance under the type-level rule', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
     $section = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
 
@@ -211,26 +211,26 @@ it('rejects deleting and reordering when the page\'s own Page Definition no long
         ->and($second->fresh()->order)->toBe(1);
 });
 
-it('rejects adding or duplicating an unregistered block handle instead of throwing', function () {
+it('rejects adding or duplicating an unregistered section handle instead of throwing', function () {
     $page = Page::create(['title' => 'Landing']); // default, unrestricted definition
 
     $section = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
 
     $test = Livewire::test(PageEditor::class, ['page' => $page]);
 
-    $test->call('addSection', 'not-a-real-block')->assertOk();
+    $test->call('addSection', 'not-a-real-section')->assertOk();
     expect($page->sections()->count())->toBe(1);
 
-    // Simulates a block deregistered after this section was created.
-    $section->update(['handle' => 'not-a-real-block']);
+    // Simulates a section deregistered after this section was created.
+    $section->update(['handle' => 'not-a-real-section']);
     $test->call('duplicateSection', $section->id)->assertOk();
     expect($page->sections()->count())->toBe(1);
 });
 
-it('renders without error and allows deleting a section whose block is no longer registered', function () {
+it('renders without error and allows deleting a section whose section is no longer registered', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
     $required = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
-    $orphaned = $page->sections()->create(['handle' => 'no-longer-registered-block', 'order' => 1, 'settings' => []]);
+    $orphaned = $page->sections()->create(['handle' => 'no-longer-registered-section', 'order' => 1, 'settings' => []]);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->assertOk()

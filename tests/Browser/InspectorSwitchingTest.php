@@ -7,7 +7,7 @@ use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 use WeArePixel\Inlay\Tests\Fixtures\BrowserQuoteSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => ['hero' => BrowserHeroSection::class, 'quote' => BrowserQuoteSection::class]]);
+    config(['inlay.sections' => ['hero' => BrowserHeroSection::class, 'quote' => BrowserQuoteSection::class]]);
 });
 
 it('shows the newly selected section\'s values, not the previous section\'s', function () {
@@ -19,7 +19,7 @@ it('shows the newly selected section\'s values, not the previous section\'s', fu
 
     $editor->click("@tree-item-{$first->id}")
         ->assertValue('@setting-heading', 'First heading')
-        ->click('@back-to-blocks')
+        ->click('@back-to-sections')
         ->click("@tree-item-{$second->id}")
         ->assertValue('@setting-heading', 'Second heading');
 });
@@ -33,7 +33,7 @@ it('shows each field\'s own value after switching to a section with different fi
 
     $editor->click("@tree-item-{$hero->id}")
         ->assertValue('@setting-heading', 'Hero heading')
-        ->click('@back-to-blocks')
+        ->click('@back-to-sections')
         ->click("@tree-item-{$quote->id}")
         ->assertValue('@setting-quote', 'Quote text')
         ->assertValue('@setting-author', 'Author name');

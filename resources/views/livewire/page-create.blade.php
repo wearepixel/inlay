@@ -25,7 +25,7 @@
                         <option value="{{ $definition->handle }}">{{ $definition->label }}</option>
                     @endforeach
                 </select>
-                <p class="inlay-field__help">Controls which blocks this page may contain, and which structure it must retain. Cannot be changed after the page is created.</p>
+                <p class="inlay-field__help">Controls which sections this page may contain, and which structure it must retain. Cannot be changed after the page is created.</p>
             </div>
         @endif
 

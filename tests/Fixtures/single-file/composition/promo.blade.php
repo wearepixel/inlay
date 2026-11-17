@@ -1,11 +1,11 @@
 <?php
 
 use WeArePixel\Inlay\Schema\Settings;
-use WeArePixel\Inlay\SingleFile\Block;
+use WeArePixel\Inlay\SingleFile\Section;
 use WeArePixel\Inlay\Support\LinkValue;
 
-block(
-    Block::make('promo')
+section(
+    Section::make('promo')
         ->name('Promo')
         ->category('Marketing')
         ->description('A promotional band with every field type.')

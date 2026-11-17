@@ -12,23 +12,23 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Models\PageSection;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Pages\ResolvedPageDefinition;
-use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\RichTextSanitizer;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Support\SettingsCoercer;
 
 /**
  * Replaces a page's whole draft composition in one step, all or nothing.
  * Applies the same guardrails the editor enforces one action at a time:
- * only registered and allowed blocks, locked blocks keep their position,
- * required blocks stay present.
+ * only registered and allowed sections, locked sections keep their position,
+ * required sections stay present.
  */
 final class ReplacePageComposition
 {
     public const MAX_SECTIONS = 100;
 
     public function __construct(
-        private readonly BlockRegistry $blocks,
+        private readonly SectionRegistry $sections,
         private readonly PageDefinitionRegistry $definitions,
         private readonly SettingsValidator $validator,
         private readonly SettingsCoercer $coercer,
@@ -37,7 +37,7 @@ final class ReplacePageComposition
     ) {}
 
     /**
-     * @param  array<int, mixed>  $sections  each ['block' => handle, 'settings' => [...]]
+     * @param  array<int, mixed>  $sections  each ['section' => handle, 'settings' => [...]]
      *
      * @throws InvalidCompositionException
      */
@@ -56,9 +56,9 @@ final class ReplacePageComposition
 
             foreach (array_values($sections) as $index => $section) {
                 $page->sections()->create([
-                    'handle' => $section['block'],
+                    'handle' => $section['section'],
                     'order' => $index,
-                    'settings' => $this->storable($section['block'], $section['settings'] ?? []),
+                    'settings' => $this->storable($section['section'], $section['settings'] ?? []),
                 ]);
             }
 
@@ -105,22 +105,22 @@ final class ReplacePageComposition
      */
     private function validateSection(ResolvedPageDefinition $definition, mixed $section, string $path): array
     {
-        if (! is_array($section) || ! is_string($section['block'] ?? null)) {
-            return [new CompositionError("{$path}.block", 'Each section needs a "block" handle. Call inlay-list-blocks for the valid handles.')];
+        if (! is_array($section) || ! is_string($section['section'] ?? null)) {
+            return [new CompositionError("{$path}.section", 'Each section needs a "section" handle. Call inlay-list-sections for the valid handles.')];
         }
 
-        $handle = $section['block'];
+        $handle = $section['section'];
 
-        if (! $this->blocks->hasHandle($handle)) {
-            return [new CompositionError("{$path}.block", "No block is registered with the handle \"{$handle}\".")];
+        if (! $this->sections->hasHandle($handle)) {
+            return [new CompositionError("{$path}.section", "No section is registered with the handle \"{$handle}\".")];
         }
 
-        $block = $this->blocks->definition($handle);
+        $sectionType = $this->sections->definition($handle);
 
         if (! $definition->allows($handle)) {
-            $allowed = implode(', ', $definition->allowedBlocks ?? []);
+            $allowed = implode(', ', $definition->allowedSections ?? []);
 
-            return [new CompositionError("{$path}.block", "{$block->name} is not allowed on {$definition->label}. Allowed blocks: {$allowed}.")];
+            return [new CompositionError("{$path}.section", "{$sectionType->name} is not allowed on {$definition->label}. Allowed sections: {$allowed}.")];
         }
 
         $settings = $section['settings'] ?? [];
@@ -129,20 +129,20 @@ final class ReplacePageComposition
             return [new CompositionError("{$path}.settings", 'Must be an object keyed by setting name.')];
         }
 
-        $errors = $this->validator->validate($block->settings, $settings, "{$path}.settings");
+        $errors = $this->validator->validate($sectionType->settings, $settings, "{$path}.settings");
 
         if ($errors !== []) {
             return $errors;
         }
 
-        $effective = $this->renderer->resolveEffectiveRawSettings($block, $this->storable($handle, $settings));
+        $effective = $this->renderer->resolveEffectiveRawSettings($sectionType, $this->storable($handle, $settings));
 
-        return $this->validator->validateRequired($block->settings, $effective, "{$path}.settings");
+        return $this->validator->validateRequired($sectionType->settings, $effective, "{$path}.settings");
     }
 
     /**
      * Replacing would delete these sections and their content, and they cannot
-     * be resubmitted because their block no longer exists.
+     * be resubmitted because their section no longer exists.
      *
      * @return array<int, CompositionError>
      */
@@ -151,10 +151,10 @@ final class ReplacePageComposition
         $errors = [];
 
         foreach ($page->sections()->orderBy('order')->get()->values() as $index => $existing) {
-            if (! $this->blocks->hasHandle($existing->handle)) {
+            if (! $this->sections->hasHandle($existing->handle)) {
                 $errors[] = new CompositionError(
                     "sections.{$index}",
-                    "The saved section at index {$index} uses \"{$existing->handle}\", a block that is no longer registered. Replacing the page would delete it, so a developer must resolve it first. inlay-update-section still works on the other sections.",
+                    "The saved section at index {$index} uses \"{$existing->handle}\", a section that is no longer registered. Replacing the page would delete it, so a developer must resolve it first. inlay-update-section still works on the other sections.",
                 );
             }
         }
@@ -168,7 +168,7 @@ final class ReplacePageComposition
      */
     private function lockedPositionErrors(Page $page, ResolvedPageDefinition $definition, array $sections): array
     {
-        if ($definition->lockedBlocks === []) {
+        if ($definition->lockedSections === []) {
             return [];
         }
 
@@ -180,11 +180,11 @@ final class ReplacePageComposition
                 continue;
             }
 
-            if (($sections[$index]['block'] ?? null) === $existing->handle) {
+            if (($sections[$index]['section'] ?? null) === $existing->handle) {
                 continue;
             }
 
-            $name = $this->blocks->hasHandle($existing->handle) ? $this->blocks->definition($existing->handle)->name : $existing->handle;
+            $name = $this->sections->hasHandle($existing->handle) ? $this->sections->definition($existing->handle)->name : $existing->handle;
 
             $errors[] = new CompositionError(
                 "sections.{$index}",
@@ -201,15 +201,15 @@ final class ReplacePageComposition
      */
     private function missingRequiredErrors(ResolvedPageDefinition $definition, array $sections): array
     {
-        $present = array_map(fn (mixed $section) => is_array($section) ? ($section['block'] ?? null) : null, $sections);
+        $present = array_map(fn (mixed $section) => is_array($section) ? ($section['section'] ?? null) : null, $sections);
         $errors = [];
 
-        foreach ($definition->requiredBlocks as $handle) {
+        foreach ($definition->requiredSections as $handle) {
             if (in_array($handle, $present, true)) {
                 continue;
             }
 
-            $name = $this->blocks->hasHandle($handle) ? $this->blocks->definition($handle)->name : $handle;
+            $name = $this->sections->hasHandle($handle) ? $this->sections->definition($handle)->name : $handle;
 
             $errors[] = new CompositionError('sections', "{$name} is required by {$definition->label}. Add a \"{$handle}\" section.");
         }
@@ -219,7 +219,7 @@ final class ReplacePageComposition
 
     /**
      * Only the keys the caller supplied are stored, so every other field
-     * keeps following the block's default. A null value means "use the
+     * keeps following the section's default. A null value means "use the
      * default" and is dropped rather than stored.
      *
      * @param  array<string, mixed>  $settings
@@ -227,7 +227,7 @@ final class ReplacePageComposition
      */
     public function storable(string $handle, array $settings): array
     {
-        $schema = $this->blocks->definition($handle)->settings;
+        $schema = $this->sections->definition($handle)->settings;
         $stored = [];
 
         foreach ($settings as $name => $value) {

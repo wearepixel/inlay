@@ -10,11 +10,11 @@ use Illuminate\Filesystem\Filesystem;
 final class InstallCommand extends Command
 {
     protected $signature = 'inlay:install
-        {--starter= : Copy a starter block set into the application (available: landing)}
+        {--starter= : Copy a starter section set into the application (available: landing)}
         {--css= : Starter styling: tailwind or plain (defaults from inlay.styling.framework)}
         {--force : Overwrite starter files that already exist}';
 
-    protected $description = "Publish Inlay's configuration, run its migrations and optionally install a starter block set";
+    protected $description = "Publish Inlay's configuration, run its migrations and optionally install a starter section set";
 
     private const STARTERS = ['landing'];
 
@@ -53,8 +53,8 @@ final class InstallCommand extends Command
             'Call Inlay::adminRoutes() from your own routes/web.php to register the admin.',
             "Set config('inlay.admin.middleware') to guard it - the default ['web'] alone leaves it public.",
             $starter !== null
-                ? 'Register the starter blocks and page type in a service provider boot() method (see above).'
-                : "Register your first block in config('inlay.blocks').",
+                ? 'Register the starter sections and page type in a service provider boot() method (see above).'
+                : "Register your first section in config('inlay.sections').",
             'Call Inlay::previewView() so the preview iframe renders using your real frontend.',
             'Call Inlay::pageRoutes() if you want Inlay to serve published Pages publicly - see https://wearepixel.com.au/docs/inlay/v1/routing.',
         ]);
@@ -66,12 +66,12 @@ final class InstallCommand extends Command
     {
         $root = dirname(__DIR__, 2)."/stubs/starters/{$starter}";
         $source = "{$root}/{$css}";
-        $blocksTarget = resource_path('views/inlay/blocks');
+        $sectionsTarget = resource_path('views/inlay/sections');
 
         $copies = [];
 
-        foreach ($files->glob("{$source}/blocks/*.blade.php") as $block) {
-            $copies[$block] = $blocksTarget.'/'.basename($block);
+        foreach ($files->glob("{$source}/sections/*.blade.php") as $sectionType) {
+            $copies[$sectionType] = $sectionsTarget.'/'.basename($sectionType);
         }
 
         $copies["{$root}/LandingPage.php.stub"] = app_path('Inlay/LandingPage.php');
@@ -100,11 +100,11 @@ final class InstallCommand extends Command
         }
 
         $this->components->twoColumnDetail('Add to a service provider boot() method', '');
-        $this->line('    Inlay::singleFileBlocks(resource_path(\'views/inlay/blocks\'));');
+        $this->line('    Inlay::singleFileSections(resource_path(\'views/inlay/sections\'));');
         $this->line('    Inlay::pageDefinition(\App\Inlay\LandingPage::class);');
         $this->newLine();
         $this->line($css === 'tailwind'
-            ? '  The blocks use Tailwind v4 utility classes. Restyle them to your brand - they are yours now.'
+            ? '  The sections use Tailwind v4 utility classes. Restyle them to your brand - they are yours now.'
             : '  Import resources/css/inlay.css into your main stylesheet (@import "./inlay.css";) and rebrand it with the --inlay-* variables.');
     }
 }

@@ -16,7 +16,7 @@ use WeArePixel\Inlay\Support\SettingsCoercer;
  * Strict counterpart to SettingsCoercer for settings an agent supplies:
  * where the coercer silently repairs a bad value, this reports it with a
  * dotted path so the caller can correct it. A null value is valid for any
- * field and means "use the block's default".
+ * field and means "use the section's default".
  */
 final class SettingsValidator
 {
@@ -54,7 +54,7 @@ final class SettingsValidator
 
     /**
      * Required fields are checked against the effective values (stored and
-     * supplied settings merged over the block defaults), so a required field
+     * supplied settings merged over the section defaults), so a required field
      * whose default is already filled in never needs repeating.
      *
      * @param  array<string, mixed>  $effective

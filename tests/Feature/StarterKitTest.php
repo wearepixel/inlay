@@ -7,7 +7,8 @@ use Illuminate\Filesystem\Filesystem;
 use WeArePixel\Inlay\Composition\CompositionReport;
 use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Styling\CompiledStylesheets;
+use WeArePixel\Inlay\Support\SectionRegistry;
 
 beforeEach(function () {
     $this->base = sys_get_temp_dir().'/inlay-starter-'.bin2hex(random_bytes(4));
@@ -20,20 +21,20 @@ afterEach(function () {
     (new Filesystem)->deleteDirectory($this->base);
 });
 
-it('copies the landing blocks and page type, keeping existing files unless forced', function () {
+it('copies the landing sections and page type, keeping existing files unless forced', function () {
     $this->artisan('inlay:install', ['--starter' => 'landing'])->assertSuccessful();
 
-    $blocks = glob($this->base.'/resources/views/inlay/blocks/*.blade.php');
-    expect($blocks)->toHaveCount(10)
+    $sectionTypes = glob($this->base.'/resources/views/inlay/sections/*.blade.php');
+    expect($sectionTypes)->toHaveCount(10)
         ->and($this->base.'/app/Inlay/LandingPage.php')->toBeFile();
 
-    file_put_contents($this->base.'/resources/views/inlay/blocks/hero.blade.php', 'customised');
+    file_put_contents($this->base.'/resources/views/inlay/sections/hero.blade.php', 'customised');
 
     $this->artisan('inlay:install', ['--starter' => 'landing'])->assertSuccessful();
-    expect(file_get_contents($this->base.'/resources/views/inlay/blocks/hero.blade.php'))->toBe('customised');
+    expect(file_get_contents($this->base.'/resources/views/inlay/sections/hero.blade.php'))->toBe('customised');
 
     $this->artisan('inlay:install', ['--starter' => 'landing', '--force' => true])->assertSuccessful();
-    expect(file_get_contents($this->base.'/resources/views/inlay/blocks/hero.blade.php'))->not->toBe('customised');
+    expect(file_get_contents($this->base.'/resources/views/inlay/sections/hero.blade.php'))->not->toBe('customised');
 });
 
 it('rejects an unknown starter without installing anything', function () {
@@ -42,12 +43,12 @@ it('rejects an unknown starter without installing anything', function () {
     expect($this->base.'/resources/views/inlay')->not->toBeDirectory();
 });
 
-it('registers every starter block and renders each one from its defaults without problems', function (string $variant) {
-    Inlay::singleFileBlocks(dirname(__DIR__, 2)."/stubs/starters/landing/{$variant}/blocks");
+it('registers every starter section and renders each one from its defaults without problems', function (string $variant) {
+    Inlay::singleFileSections(dirname(__DIR__, 2)."/stubs/starters/landing/{$variant}/sections");
     require_once dirname(__DIR__, 2).'/stubs/starters/landing/LandingPage.php.stub';
     Inlay::pageDefinition(LandingPage::class);
 
-    $handles = app(BlockRegistry::class)->slugs();
+    $handles = app(SectionRegistry::class)->slugs();
     $report = app(CompositionReport::class)->build(array_map(fn (string $handle) => ['handle' => $handle], $handles));
 
     $failures = collect($report['sections'])
@@ -56,23 +57,23 @@ it('registers every starter block and renders each one from its defaults without
 
     expect($handles)->toHaveCount(10)
         ->and($failures)->toBe([])
-        ->and(app(PageDefinitionRegistry::class)->definition('landing-page')?->defaultBlocks)->toBe(['hero', 'feature-grid', 'cta-band']);
+        ->and(app(PageDefinitionRegistry::class)->definition('landing-page')?->defaultSections)->toBe(['hero', 'feature-grid', 'cta-band']);
 })->with(['tailwind', 'plain']);
 
 it('installs the plain variant with its stylesheet', function () {
     $this->artisan('inlay:install', ['--starter' => 'landing', '--css' => 'plain'])->assertSuccessful();
 
-    expect(glob($this->base.'/resources/views/inlay/blocks/*.blade.php'))->toHaveCount(10)
-        ->and(file_get_contents($this->base.'/resources/views/inlay/blocks/hero.blade.php'))->toContain('inlay-hero')
+    expect(glob($this->base.'/resources/views/inlay/sections/*.blade.php'))->toHaveCount(10)
+        ->and(file_get_contents($this->base.'/resources/views/inlay/sections/hero.blade.php'))->toContain('inlay-hero')
         ->and($this->base.'/resources/css/inlay.css')->toBeFile();
 });
 
 it('uses only classes its own stylesheet defines in the plain variant', function () {
-    $defined = array_map('strval', array_keys((new WeArePixel\Inlay\Styling\CompiledStylesheets)->parseClasses((string) file_get_contents(dirname(__DIR__, 2).'/stubs/starters/landing/plain/inlay.css'))));
+    $defined = array_map('strval', array_keys((new CompiledStylesheets)->parseClasses((string) file_get_contents(dirname(__DIR__, 2).'/stubs/starters/landing/plain/inlay.css'))));
     $used = [];
 
-    foreach (glob(dirname(__DIR__, 2).'/stubs/starters/landing/plain/blocks/*.blade.php') as $block) {
-        preg_match_all('/inlay-[a-z0-9_-]+/', (string) file_get_contents($block), $matches);
+    foreach (glob(dirname(__DIR__, 2).'/stubs/starters/landing/plain/sections/*.blade.php') as $sectionType) {
+        preg_match_all('/inlay-[a-z0-9_-]+/', (string) file_get_contents($sectionType), $matches);
         array_push($used, ...$matches[0]);
     }
 

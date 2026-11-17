@@ -8,14 +8,14 @@ use WeArePixel\Inlay\Contracts\Screenshotter;
 use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Mcp\InlayServer;
 use WeArePixel\Inlay\Mcp\Tools\CreatePageTool;
-use WeArePixel\Inlay\Mcp\Tools\ListBlocksTool;
+use WeArePixel\Inlay\Mcp\Tools\ListSectionsTool;
 use WeArePixel\Inlay\Mcp\Tools\PreviewPageTool;
 use WeArePixel\Inlay\Mcp\Tools\ReplaceSectionsTool;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Screenshots\Screenshot;
 
 beforeEach(function () {
-    Inlay::singleFileBlock(__DIR__.'/../../Fixtures/single-file/composition/promo.blade.php');
+    Inlay::singleFileSection(__DIR__.'/../../Fixtures/single-file/composition/promo.blade.php');
     Inlay::previewView('host-preview');
     Inlay::previewLinkRoutes();
     Gate::define('inlay.manage-pages', fn (User $user) => true);
@@ -25,16 +25,16 @@ beforeEach(function () {
     $this->page->sections()->create(['handle' => 'promo', 'order' => 0, 'settings' => ['heading' => 'Saved']]);
 });
 
-it('describes each block setting with its value format, options and default', function () {
+it('describes each section setting with its value format, options and default', function () {
     InlayServer::actingAs($this->user)
-        ->tool(ListBlocksTool::class)
+        ->tool(ListSectionsTool::class)
         ->assertStructuredContent(function ($json) {
-            $json->where('blocks.0.handle', 'promo')
-                ->where('blocks.0.settings.0.name', 'heading')
-                ->where('blocks.0.settings.0.max_length', 20)
-                ->where('blocks.0.settings.0.default', 'Fresh meals, delivered')
-                ->where('blocks.0.settings.4.options', [['value' => 'left', 'label' => 'Left'], ['value' => 'center', 'label' => 'Center']])
-                ->where('blocks.0.settings.7.item_settings.0.name', 'title')
+            $json->where('sections.0.handle', 'promo')
+                ->where('sections.0.settings.0.name', 'heading')
+                ->where('sections.0.settings.0.max_length', 20)
+                ->where('sections.0.settings.0.default', 'Fresh meals, delivered')
+                ->where('sections.0.settings.4.options', [['value' => 'left', 'label' => 'Left'], ['value' => 'center', 'label' => 'Center']])
+                ->where('sections.0.settings.7.item_settings.0.name', 'title')
                 ->etc();
         });
 });
@@ -42,7 +42,7 @@ it('describes each block setting with its value format, options and default', fu
 it('returns every problem with its path and saves nothing when a composition is invalid', function () {
     InlayServer::actingAs($this->user)
         ->tool(ReplaceSectionsTool::class, ['page_id' => $this->page->id, 'sections' => [
-            ['block' => 'promo', 'settings' => ['heading' => str_repeat('x', 30), 'cta' => ['url' => 'javascript:alert(1)']]],
+            ['section' => 'promo', 'settings' => ['heading' => str_repeat('x', 30), 'cta' => ['url' => 'javascript:alert(1)']]],
         ]])
         ->assertHasErrors(['sections.0.settings.heading', 'sections.0.settings.cta.url']);
 
@@ -64,7 +64,7 @@ it('previews a proposed composition with a report, link and screenshots, without
 
     $response = InlayServer::actingAs($this->user)
         ->tool(PreviewPageTool::class, ['page_id' => $this->page->id, 'sections' => [
-            ['block' => 'promo', 'settings' => ['heading' => 'Proposed', 'cta' => ['label' => 'Shop', 'url' => '/shop']]],
+            ['section' => 'promo', 'settings' => ['heading' => 'Proposed', 'cta' => ['label' => 'Shop', 'url' => '/shop']]],
         ]])
         ->assertHasNoErrors()
         ->assertSee(['Proposed', 'Shop', '/shop', 'proposed sections (not saved)', 'desktop screenshot (1440px wide)', 'mobile screenshot (390px wide)']);
@@ -80,15 +80,15 @@ it('previews a proposed composition with a report, link and screenshots, without
 
 it('creates nothing when the initial sections of a new page are invalid', function () {
     InlayServer::actingAs($this->user)
-        ->tool(CreatePageTool::class, ['title' => 'Autumn', 'path' => 'autumn', 'sections' => [['block' => 'nope']]])
-        ->assertHasErrors(['sections.0.block']);
+        ->tool(CreatePageTool::class, ['title' => 'Autumn', 'path' => 'autumn', 'sections' => [['section' => 'nope']]])
+        ->assertHasErrors(['sections.0.section']);
 
     expect(Page::where('path', 'autumn')->exists())->toBeFalse();
 });
 
 it('creates a draft page with its sections', function () {
     InlayServer::actingAs($this->user)
-        ->tool(CreatePageTool::class, ['title' => 'Autumn', 'path' => 'autumn', 'sections' => [['block' => 'promo', 'settings' => ['heading' => 'Autumn']]]])
+        ->tool(CreatePageTool::class, ['title' => 'Autumn', 'path' => 'autumn', 'sections' => [['section' => 'promo', 'settings' => ['heading' => 'Autumn']]]])
         ->assertHasNoErrors();
 
     $page = Page::where('path', 'autumn')->firstOrFail();

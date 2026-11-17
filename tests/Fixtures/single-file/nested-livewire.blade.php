@@ -1,10 +1,10 @@
 <?php
 
 use WeArePixel\Inlay\Schema\Settings;
-use WeArePixel\Inlay\SingleFile\Block;
+use WeArePixel\Inlay\SingleFile\Section;
 
-block(
-    Block::make('single-file-nested-livewire')
+section(
+    Section::make('single-file-nested-livewire')
         ->name('Nested Livewire')
         ->settings(Settings::make()->text('heading')->label('Heading')->default('Widget'))
 );

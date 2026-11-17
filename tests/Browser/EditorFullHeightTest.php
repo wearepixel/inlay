@@ -6,7 +6,7 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => ['hero' => BrowserHeroSection::class]]);
+    config(['inlay.sections' => ['hero' => BrowserHeroSection::class]]);
 });
 
 // Regression: .inlay-editor-page in inlay.css restores the flex chain through page-editor's Livewire root element.

@@ -7,12 +7,12 @@ use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 
 /**
  * Beta 0.1 polish additions: the contextual panel's collapse toggle, the
- * "?" keyboard-shortcuts reference, and the block picker's search-match
+ * "?" keyboard-shortcuts reference, and the section picker's search-match
  * highlighting - see resources/dist/inlay.js's inlayEditorSidebar,
- * inlayShortcutsHelp, and inlayBlockPicker.highlight().
+ * inlayShortcutsHelp, and inlaySectionPicker.highlight().
  */
 beforeEach(function () {
-    config(['inlay.blocks' => ['hero' => BrowserHeroSection::class]]);
+    config(['inlay.sections' => ['hero' => BrowserHeroSection::class]]);
 });
 
 it('collapses and expands the contextual panel via the toggle, remembering the choice', function () {
@@ -59,7 +59,7 @@ it('opens the keyboard shortcuts overlay from the header and closes it with Esca
         ->assertNoJavaScriptErrors();
 });
 
-it('highlights the matching substring of a block label while searching the picker', function () {
+it('highlights the matching substring of a section label while searching the picker', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
@@ -69,7 +69,7 @@ it('highlights the matching substring of a block label while searching the picke
         ->wait(1);
 
     $highlighted = $editor->script(
-        'document.querySelector(\'[data-test="picker-block-hero"] mark\')?.textContent ?? null',
+        'document.querySelector(\'[data-test="picker-section-hero"] mark\')?.textContent ?? null',
     );
 
     expect($highlighted)->toBe('Her');

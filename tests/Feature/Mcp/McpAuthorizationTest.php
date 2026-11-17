@@ -11,7 +11,7 @@ use WeArePixel\Inlay\Mcp\InlayServer;
 use WeArePixel\Inlay\Mcp\InlayTools;
 use WeArePixel\Inlay\Mcp\Tools\CreatePageTool;
 use WeArePixel\Inlay\Mcp\Tools\GetPageTool;
-use WeArePixel\Inlay\Mcp\Tools\ListBlocksTool;
+use WeArePixel\Inlay\Mcp\Tools\ListSectionsTool;
 use WeArePixel\Inlay\Mcp\Tools\PublishPageTool;
 use WeArePixel\Inlay\Mcp\Tools\ReplaceSectionsTool;
 use WeArePixel\Inlay\Mcp\Tools\UpdateSectionTool;
@@ -20,7 +20,7 @@ use WeArePixel\Inlay\Models\Page;
 
 beforeEach(function () {
     Storage::fake('public');
-    Inlay::singleFileBlock(__DIR__.'/../../Fixtures/single-file/composition/promo.blade.php');
+    Inlay::singleFileSection(__DIR__.'/../../Fixtures/single-file/composition/promo.blade.php');
 
     $this->user = User::forceCreate(['name' => 'Agent', 'email' => 'agent@example.com', 'password' => 'secret']);
     $this->page = Page::create(['title' => 'Spring sale', 'path' => 'spring']);
@@ -38,7 +38,7 @@ it('exposes every tool under an inlay- prefixed name', function () {
     $names = array_map(fn (string $tool) => app($tool)->name(), InlayTools::all());
 
     expect($names)->each->toStartWith('inlay-')
-        ->and($names)->toContain('inlay-list-blocks', 'inlay-replace-sections', 'inlay-preview-page', 'inlay-publish-page');
+        ->and($names)->toContain('inlay-list-sections', 'inlay-replace-sections', 'inlay-preview-page', 'inlay-publish-page');
 });
 
 it('denies every tool to a user without the manage ability, and changes nothing', function (string $tool, array $arguments) {
@@ -50,10 +50,10 @@ it('denies every tool to a user without the manage ability, and changes nothing'
         ->and($this->section->fresh()->settings)->toBe(['heading' => 'Original'])
         ->and(Storage::disk('public')->allFiles())->toBe([]);
 })->with([
-    'list blocks' => [ListBlocksTool::class, []],
+    'list sections' => [ListSectionsTool::class, []],
     'get page' => [GetPageTool::class, ['page_id' => 1]],
     'create page' => [CreatePageTool::class, ['title' => 'New']],
-    'replace sections' => [ReplaceSectionsTool::class, ['page_id' => 1, 'sections' => [['block' => 'promo', 'settings' => ['heading' => 'Hacked']]]]],
+    'replace sections' => [ReplaceSectionsTool::class, ['page_id' => 1, 'sections' => [['section' => 'promo', 'settings' => ['heading' => 'Hacked']]]]],
     'update section' => [UpdateSectionTool::class, ['page_id' => 1, 'section_id' => 1, 'settings' => ['heading' => 'Hacked']]],
     'upload image' => [UploadImageTool::class, ['data' => base64_encode('x')]],
 ]);

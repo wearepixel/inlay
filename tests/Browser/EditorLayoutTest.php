@@ -6,17 +6,17 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Tests\Fixtures\BrowserHeroSection;
 
 /**
- * The two-pane editor redesign: a contextual sidebar (block tree OR a
- * selected block's settings, never both at once) beside a dominant
+ * The two-pane editor redesign: a contextual sidebar (section tree OR a
+ * selected section's settings, never both at once) beside a dominant
  * preview - replacing the old permanent three-column layout. See
  * InlayManager... no, see resources/dist/inlay.js's inlayEditorSidebar and
  * docs/inlay/v1/editor for the interaction model this exercises.
  */
 beforeEach(function () {
-    config(['inlay.blocks' => ['hero' => BrowserHeroSection::class]]);
+    config(['inlay.sections' => ['hero' => BrowserHeroSection::class]]);
 });
 
-it('opens in block-tree mode by default, with the preview dominant and no permanent settings column', function () {
+it('opens in section-tree mode by default, with the preview dominant and no permanent settings column', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -37,7 +37,7 @@ it('opens in block-tree mode by default, with the preview dominant and no perman
     expect($previewWidth)->toBeGreaterThan($sidebarWidth * 1.5);
 });
 
-it('selecting a block replaces the tree with its settings, and back returns to the tree with focus restored', function () {
+it('selecting a section replaces the tree with its settings, and back returns to the tree with focus restored', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -52,7 +52,7 @@ it('selecting a block replaces the tree with its settings, and back returns to t
         ->assertSee('Hero')
         ->assertSee('Welcome');
 
-    $editor->click('@back-to-blocks')
+    $editor->click('@back-to-sections')
         ->assertVisible("@tree-item-{$section->id}")
         ->assertMissing('@setting-heading')
         // Still highlighted as selected, even though the sidebar no longer
@@ -84,13 +84,13 @@ it('opens settings with Enter and returns to the tree with Escape', function () 
         ->assertVisible("@tree-item-{$section->id}");
 });
 
-it('adding from the picker selects the new block and opens its settings', function () {
+it('adding from the picker selects the new section and opens its settings', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
 
     $editor->click('@open-picker')
-        ->click('@picker-block-hero')
+        ->click('@picker-section-hero')
         ->assertVisible('@setting-heading')
         ->assertSee('Hero');
 
@@ -103,7 +103,7 @@ it('opens Page Settings from the header with no JavaScript error, and returns to
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
 
-    // Regression check: the header lives outside the block tree/preview
+    // Regression check: the header lives outside the section tree/preview
     // pane's own markup - a real bug here had the "Page Settings" button's
     // x-on:click call an Alpine method defined on a *different* x-data
     // scope than the one wrapping the button, throwing "showPageSettings
@@ -118,7 +118,7 @@ it('opens Page Settings from the header with no JavaScript error, and returns to
         ->assertSee('Sections');
 });
 
-it('safely returns to the tree if the selected block is deleted', function () {
+it('safely returns to the tree if the selected section is deleted', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -127,7 +127,7 @@ it('safely returns to the tree if the selected block is deleted', function () {
 
     $editor->click("@tree-item-{$section->id}")
         ->assertVisible('@setting-heading')
-        ->click('@back-to-blocks');
+        ->click('@back-to-sections');
 
     $editor->hover("@tree-item-{$section->id}")
         ->click("@delete-{$section->id}")

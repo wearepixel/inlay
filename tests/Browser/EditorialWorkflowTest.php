@@ -16,11 +16,11 @@ use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
  *   unreliable, so the reorder *behaviour* is proven at the Livewire level
  *   in tests/Feature/PageEditorTest.php ("it persists drag-reordering").
  *   The test below only proves the drag UI itself is wired up.
- * - Locked/required Block enforcement (Page Definitions): that
+ * - Locked/required Section enforcement (Page Definitions): that
  *   subsystem does not exist in this release - see the completion report.
  */
 beforeEach(function () {
-    config(['inlay.blocks' => [
+    config(['inlay.sections' => [
         'hero' => BrowserHeroSection::class,
         'faq' => TestFaqSection::class,
     ]]);
@@ -44,37 +44,37 @@ it('creates a page from the index and opens its editor', function () {
         ->status->toBe(PageStatus::Draft);
 });
 
-it('opens the block picker, searches, and adds a block grouped by category', function () {
+it('opens the section picker, searches, and adds a section grouped by category', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
 
     $editor = visit("/inlay/pages/{$page->id}/edit");
 
     $editor->click('@open-picker')
         ->assertVisible('@picker-search')
-        ->assertSee('Headers') // BrowserHeroSection's #[BlockMeta] category
-        ->assertSee('Uncategorised') // TestFaqSection has no #[BlockMeta]
+        ->assertSee('Headers') // BrowserHeroSection's #[SectionMeta] category
+        ->assertSee('Uncategorised') // TestFaqSection has no #[SectionMeta]
         // Regression check: opening the picker evaluates the "recent
-        // blocks" Alpine expression even with an empty recent list - a
+        // sections" Alpine expression even with an empty recent list - a
         // manual review caught this throwing a ReferenceError because the
         // method it called was never actually implemented.
         ->assertNoJavaScriptErrors();
 
     $editor->fill('@picker-search', 'Hero')
-        ->assertVisible('@picker-block-hero')
-        ->assertMissing('@picker-block-faq')
+        ->assertVisible('@picker-section-hero')
+        ->assertMissing('@picker-section-faq')
         // Regression check: a search that DOES match something must not
         // also show the "no results" message (a real bug found during
         // manual review - the message's own x-show read the wrong
         // element's descendants and reported zero matches unconditionally).
         ->assertMissing('.inlay-picker__no-results');
 
-    $editor->click('@picker-block-hero')->assertMissing('@picker-search');
+    $editor->click('@picker-section-hero')->assertMissing('@picker-search');
 
     $section = $page->sections()->sole();
     expect($section->handle)->toBe('hero');
 });
 
-it('selects a block, edits a setting, and shows conditional visibility', function () {
+it('selects a section, edits a setting, and shows conditional visibility', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -96,7 +96,7 @@ it('selects a block, edits a setting, and shows conditional visibility', functio
         ->assertMissing('@setting-ctaLabel');
 });
 
-it('duplicates, shows drag connectivity, and deletes a block', function () {
+it('duplicates, shows drag connectivity, and deletes a section', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create(['handle' => 'hero', 'order' => 0, 'settings' => []]);
 
@@ -121,8 +121,8 @@ it('duplicates, shows drag connectivity, and deletes a block', function () {
     // contextual sidebar - the tree itself is a separate pane now, not
     // visible alongside it, so interacting with tree rows again means
     // going back first, exactly as a real editor would.
-    $editor->assertVisible('@back-to-blocks')
-        ->click('@back-to-blocks');
+    $editor->assertVisible('@back-to-sections')
+        ->click('@back-to-sections');
 
     // Proves the drag UI is connected (both rows are draggable handles
     // wired to the same Alpine component that calls $wire.updateOrder()) -

@@ -13,7 +13,7 @@ use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => [
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
     ]]);
 });
@@ -41,7 +41,7 @@ it('snapshots fully-resolved effective settings for every section and marks the 
         ->and($page->fresh()->status)->toBe(PageStatus::Published);
 });
 
-it('does not change an already-published revision when the block default changes afterward', function () {
+it('does not change an already-published revision when the section default changes afterward', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
 
@@ -60,22 +60,22 @@ it('snapshots the active Page Definition handle for audit context', function () 
     expect($revision->snapshot['definition'])->toBe('default');
 });
 
-it('blocks publishing a page that violates its Page Definition', function () {
-    config(['inlay.blocks' => [
+it('sections publishing a page that violates its Page Definition', function () {
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
     ]]);
     app(PageDefinitionRegistry::class)->register(TestCollectionPageDefinition::class);
 
     $page = Page::create(['title' => 'Home', 'definition' => 'test-collection-page-definition']);
-    // Required block (test-hero) is missing entirely.
+    // Required section (test-hero) is missing entirely.
     $page->sections()->create(['handle' => 'test-faq', 'order' => 0, 'settings' => []]);
 
     app(PublishPage::class)->execute($page);
 })->throws(PageDefinitionViolationException::class);
 
-it('blocks publishing a page containing a disallowed block', function () {
-    config(['inlay.blocks' => [
+it('sections publishing a page containing a disallowed section', function () {
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
         'test-cta' => TestCtaSection::class,
@@ -89,15 +89,15 @@ it('blocks publishing a page containing a disallowed block', function () {
     app(PublishPage::class)->execute($page);
 })->throws(PageDefinitionViolationException::class);
 
-it('blocks publishing a page whose Page Definition no longer resolves', function () {
+it('sections publishing a page whose Page Definition no longer resolves', function () {
     $page = Page::create(['title' => 'Home', 'definition' => 'no-longer-registered']);
 
     app(PublishPage::class)->execute($page);
 })->throws(PageDefinitionViolationException::class);
 
-it('blocks publishing a page containing a block that is no longer registered', function () {
+it('sections publishing a page containing a section that is no longer registered', function () {
     $page = Page::create(['title' => 'Home']);
-    $page->sections()->create(['handle' => 'no-longer-registered-block', 'order' => 0, 'settings' => []]);
+    $page->sections()->create(['handle' => 'no-longer-registered-section', 'order' => 0, 'settings' => []]);
 
     app(PublishPage::class)->execute($page);
 })->throws(PageDefinitionViolationException::class);

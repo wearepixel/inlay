@@ -16,13 +16,13 @@ use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
 
 /**
- * Renders each registered block through Laravel's real view engine -
- * a class-based block through a genuine, compiled Blade component tag
+ * Renders each registered section through Laravel's real view engine -
+ * a class-based section through a genuine, compiled Blade component tag
  * (<x-dynamic-component> resolved via a registered alias, per the mechanism
  * proven in tests/Feature/RendererMechanismSpikeTest.php and documented in
- * docs/v1-implementation-specification.md §5); a single-file block
+ * docs/v1-implementation-specification.md §5); a single-file section
  * through View::file() against its own Blade file directly. Both paths are
- * real Blade compilation, never manual `new $blockClass(...)`
+ * real Blade compilation, never manual `new $sectionClass(...)`
  * construction - which is what lets either kind's own view freely nest a
  * genuine, hydrating Livewire component with zero awareness on the
  * package's part.
@@ -30,7 +30,7 @@ use WeArePixel\Inlay\Schema\Settings;
 final class SectionRenderer
 {
     public function __construct(
-        private readonly BlockRegistry $registry,
+        private readonly SectionRegistry $registry,
     ) {}
 
     /**
@@ -41,7 +41,7 @@ final class SectionRenderer
      *
      * `$context` is host-supplied, request-specific data with no schema
      * Inlay understands (the collection currently being viewed, the
-     * authenticated customer) - a block whose Blade view declares a
+     * authenticated customer) - a section whose Blade view declares a
      * matching property picks it up the same way it already picks up an
      * ordinary container-resolvable dependency (docs/v1-implementation-
      * specification.md §9). Inlay itself never inspects or validates its
@@ -49,14 +49,14 @@ final class SectionRenderer
      * snapshot - PublishPage resolves and freezes $settings alone.
      *
      * $settings and $context are kept as two explicit, never-merged-blind
-     * concepts rather than one combined array: if a block declares a
+     * concepts rather than one combined array: if a section declares a
      * setting with the same name as a $context key, that's a genuine
      * developer naming conflict with no correct silent resolution (does
      * the persisted setting win, or the live context - a wrong guess
      * either way is a real bug that would only surface once someone
      * actually supplies that context), so it fails loudly here instead -
      * see assertNoSettingsContextCollision(). This check runs outside the
-     * per-block try/catch below on purpose: it is a configuration error,
+     * per-section try/catch below on purpose: it is a configuration error,
      * not a malformed-content problem the renderer should quietly work
      * around and log.
      *
@@ -76,9 +76,9 @@ final class SectionRenderer
                 $definition = $this->registry->definition($section['handle'] ?? '');
                 $settings = $this->resolveEffectiveSettings($definition, $section['settings'] ?? []);
             } catch (Throwable $exception) {
-                // A malformed or unresolvable block must not take down
-                // every other block on the page.
-                Log::warning('inlay: skipped a block that failed to render', [
+                // A malformed or unresolvable section must not take down
+                // every other section on the page.
+                Log::warning('inlay: skipped a section that failed to render', [
                     'handle' => $section['handle'] ?? null,
                     'exception' => $exception->getMessage(),
                 ]);
@@ -89,14 +89,14 @@ final class SectionRenderer
             $this->assertNoSettingsContextCollision($definition, $settings, $context);
 
             try {
-                $html .= $this->renderBlock($definition, array_merge($context, $settings));
+                $html .= $this->renderType($definition, array_merge($context, $settings));
             } catch (Throwable $exception) {
                 // Actual Blade construction/rendering can still fail here
                 // even with a schema-valid settings array (e.g. settings
                 // that resolve fine but don't satisfy a stricter native
                 // type Blade's own component instantiation enforces) -
                 // isolated exactly like a resolution failure above.
-                Log::warning('inlay: skipped a block that failed to render', [
+                Log::warning('inlay: skipped a section that failed to render', [
                     'handle' => $section['handle'] ?? null,
                     'exception' => $exception->getMessage(),
                 ]);
@@ -108,7 +108,7 @@ final class SectionRenderer
 
     /**
      * Renders one section and lets any failure propagate, for callers that
-     * need to report a broken block rather than skip it.
+     * need to report a broken section rather than skip it.
      *
      * @param  array{handle?: string, settings?: array<string, mixed>}  $section
      */
@@ -118,27 +118,27 @@ final class SectionRenderer
     }
 
     /**
-     * Renders a block definition that need not be registered - used to preview
-     * an agent-authored block before it is saved.
+     * Renders a section definition that need not be registered - used to preview
+     * an agent-authored section before it is saved.
      *
      * @param  array<string, mixed>  $stored
      */
-    public function renderDefinition(BlockDefinition $definition, array $stored = []): string
+    public function renderDefinition(Definition $definition, array $stored = []): string
     {
-        return $this->renderBlock($definition, $this->resolveEffectiveSettings($definition, $stored));
+        return $this->renderType($definition, $this->resolveEffectiveSettings($definition, $stored));
     }
 
     /**
      * @param  array<string, mixed>  $settings
      * @param  array<string, mixed>  $context
      */
-    private function assertNoSettingsContextCollision(BlockDefinition $definition, array $settings, array $context): void
+    private function assertNoSettingsContextCollision(Definition $definition, array $settings, array $context): void
     {
         $colliding = array_intersect(array_keys($settings), array_keys($context));
 
         if ($colliding !== []) {
             throw new RuntimeException(sprintf(
-                'Inlay: block [%s] declares setting(s) [%s] that collide with runtime $context key(s) of the same '
+                'Inlay: section [%s] declares setting(s) [%s] that collide with runtime $context key(s) of the same '
                 .'name. Persisted settings and host-supplied context must never share a name - rename one side '
                 .'rather than relying on either silently winning.',
                 $definition->handle,
@@ -157,7 +157,7 @@ final class SectionRenderer
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    public function resolveEffectiveSettings(BlockDefinition $definition, array $stored): array
+    public function resolveEffectiveSettings(Definition $definition, array $stored): array
     {
         return $this->resolveEffective($definition->settings, $definition->handle, $stored, raw: false);
     }
@@ -173,13 +173,13 @@ final class SectionRenderer
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    public function resolveEffectiveRawSettings(BlockDefinition $definition, array $stored): array
+    public function resolveEffectiveRawSettings(Definition $definition, array $stored): array
     {
         return $this->resolveEffective($definition->settings, $definition->handle, $stored, raw: true);
     }
 
     /**
-     * The same resolution for a schema that is not a block's, such as a
+     * The same resolution for a schema that is not a section's, such as a
      * site settings group. $owner only identifies the schema in log context.
      *
      * @param  array<string, mixed>  $stored
@@ -210,7 +210,7 @@ final class SectionRenderer
     }
 
     /**
-     * A default declared as a plain value (a single-file block's '' image, a
+     * A default declared as a plain value (a single-file section's '' image, a
      * repeater's array of items) rather than the value object a stored
      * setting hydrates to.
      */
@@ -318,7 +318,7 @@ final class SectionRenderer
         }
 
         Log::warning('inlay: stored value no longer matches a valid enum case, using the constructor default', [
-            'block' => $owner,
+            'section' => $owner,
             'setting' => $setting->name,
             'enum' => $setting->enumClass,
             'value' => $value,
@@ -350,7 +350,7 @@ final class SectionRenderer
      * ImageValue, and only when there's actually a path to resolve - a
      * setting explicitly declared nullable (`?ImageValue $x = null`) gets a
      * real null for "no image" rather than an always-truthy empty instance,
-     * matching what a block author would naturally write `@if ($x)` for.
+     * matching what a section author would naturally write `@if ($x)` for.
      */
     private function hydrateImage(Setting $setting, mixed $value, bool $raw): string|ImageValue|null
     {
@@ -370,29 +370,29 @@ final class SectionRenderer
     /**
      * @param  array<string, mixed>  $settings
      */
-    private function renderBlock(BlockDefinition $definition, array $settings): string
+    private function renderType(Definition $definition, array $settings): string
     {
         return match ($definition->sourceType) {
-            BlockSourceType::ClassBased => $this->renderClassBasedBlock($definition->sourceIdentifier, $settings),
-            BlockSourceType::SingleFile => $this->renderSingleFileBlock($definition->sourceIdentifier, $settings),
-            BlockSourceType::Declarative => app(DeclarativeRenderer::class)->render($definition->template ?? [], $settings),
+            SourceType::ClassBased => $this->renderClassBased($definition->sourceIdentifier, $settings),
+            SourceType::SingleFile => $this->renderSingleFile($definition->sourceIdentifier, $settings),
+            SourceType::Declarative => app(DeclarativeRenderer::class)->render($definition->template ?? [], $settings),
         };
     }
 
     /**
-     * @param  class-string  $blockClass
+     * @param  class-string  $sectionClass
      * @param  array<string, mixed>  $settings
      */
-    private function renderClassBasedBlock(string $blockClass, array $settings): string
+    private function renderClassBased(string $sectionClass, array $settings): string
     {
-        $alias = 'inlay-'.md5($blockClass);
+        $alias = 'inlay-'.md5($sectionClass);
 
         // <x-dynamic-component> does not accept a fully-qualified class name
         // directly (confirmed against this package's pinned Laravel version -
         // see the spike test); it must be resolved through a registered
         // component alias instead. Registering is idempotent and cheap enough
         // to call on every render.
-        Blade::component($alias, $blockClass);
+        Blade::component($alias, $sectionClass);
 
         $bindings = collect(array_keys($settings))
             ->map(fn (string $key) => ":{$key}=\"\$settings['{$key}']\"")
@@ -405,12 +405,12 @@ final class SectionRenderer
         // application, but the memoised compiler snapshots whatever aliases
         // existed at the *first* dynamic-component render ever, in that
         // process, and never refreshes, so an alias registered afterward
-        // (a second block's class, a fresh application boot in a test
-        // suite, a queued worker that renders a block type it hasn't
+        // (a second section's class, a fresh application boot in a test
+        // suite, a queued worker that renders a section type it hasn't
         // seen yet) silently fails to resolve. Confirmed empirically by this
         // package's own spike (tests/Feature/RendererMechanismSpikeTest.php)
         // failing only when run after another test had already rendered a
-        // different aliased block in the same process.
+        // different aliased section in the same process.
         //
         // The alias is interpolated directly as a literal tag name instead
         // (<x-{$alias}>), which Blade compiles as an ordinary, non-dynamic
@@ -431,7 +431,7 @@ final class SectionRenderer
     }
 
     /**
-     * A single-file block has no class or alias to render through - its
+     * A single-file section has no class or alias to render through - its
      * own Blade file is rendered directly, via Laravel's real view engine
      * (View::file() compiles an arbitrary file path exactly like a
      * registered view). $settings are extracted into the view's scope by
@@ -440,7 +440,7 @@ final class SectionRenderer
      *
      * @param  array<string, mixed>  $settings
      */
-    private function renderSingleFileBlock(string $bladeFilePath, array $settings): string
+    private function renderSingleFile(string $bladeFilePath, array $settings): string
     {
         return View::file($bladeFilePath, $settings)->render();
     }

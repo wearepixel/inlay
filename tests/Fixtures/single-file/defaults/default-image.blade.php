@@ -1,10 +1,10 @@
 <?php
 
 use WeArePixel\Inlay\Schema\Settings;
-use WeArePixel\Inlay\SingleFile\Block;
+use WeArePixel\Inlay\SingleFile\Section;
 
-block(
-    Block::make('default-image')
+section(
+    Section::make('default-image')
         ->settings(
             Settings::make()
                 ->image('photo')->label('Photo')->default('')

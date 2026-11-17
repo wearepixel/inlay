@@ -2,7 +2,7 @@
     Inlay's own inline SVG icon set - no build step, no CDN, no icon font.
     A fixed, hand-picked set of paths keyed by name; $name is always a
     literal string from the package's own views, never user- or
-    block-supplied, so echoing its path unescaped carries no injection risk.
+    section-supplied, so echoing its path unescaped carries no injection risk.
 --}}
 @props(['name', 'size' => 16])
 @php

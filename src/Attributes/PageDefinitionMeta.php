@@ -8,7 +8,7 @@ use Attribute;
 
 /**
  * Optional class-level metadata for a PageDefinition, in the same spirit as
- * #[BlockMeta] for a Block - a definition with no #[PageDefinitionMeta]
+ * #[SectionMeta] for a Section - a definition with no #[PageDefinitionMeta]
  * still registers normally, falling back to a handle/label derived from its
  * class name (docs/inlay/v1/page-definitions).
  */

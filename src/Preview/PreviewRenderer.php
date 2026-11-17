@@ -9,7 +9,7 @@ use Illuminate\Support\HtmlString;
 use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Models\PageSection;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 
 /**
@@ -22,7 +22,7 @@ final class PreviewRenderer
     public function __construct(
         private readonly SectionRenderer $renderer,
         private readonly InlayManager $inlay,
-        private readonly BlockRegistry $blocks,
+        private readonly SectionRegistry $sections,
     ) {}
 
     /**
@@ -72,8 +72,8 @@ final class PreviewRenderer
                 continue;
             }
 
-            $label = $this->blocks->hasHandle($section['handle'])
-                ? $this->blocks->definition($section['handle'])->name
+            $label = $this->sections->hasHandle($section['handle'])
+                ? $this->sections->definition($section['handle'])->name
                 : $section['handle'];
 
             $html .= sprintf(

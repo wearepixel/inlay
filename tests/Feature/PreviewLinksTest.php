@@ -9,7 +9,7 @@ use WeArePixel\Inlay\Preview\PreviewLinks;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => ['test-hero' => TestHeroSection::class]]);
+    config(['inlay.sections' => ['test-hero' => TestHeroSection::class]]);
     Inlay::previewView('host-preview');
     Inlay::previewLinkRoutes();
 

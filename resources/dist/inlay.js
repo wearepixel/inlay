@@ -6,8 +6,8 @@
 document.addEventListener("alpine:init", () => {
   /**
    * The contextual sidebar's whole client-side state: which pane is
-   * showing (the block tree, a selected block's settings, or
-   * version history), plus the block tree's drag-to-reorder and
+   * showing (the section tree, a selected section's settings, or
+   * version history), plus the section tree's drag-to-reorder and
    * keyboard navigation. All one Alpine component (rather than tree state
    * and pane-switching state living in separate x-data scopes) so
    * pane-switching methods can reach the tree's own $refs and focus
@@ -16,7 +16,7 @@ document.addEventListener("alpine:init", () => {
    * Switching panes is deliberately client-only where nothing server-side
    * needs to change - going back to the tree, or the tree/settings split
    * itself, doesn't touch selectedSectionId, so it never round-trips.
-   * Server-driven changes to *which* block is selected (adding,
+   * Server-driven changes to *which* section is selected (adding,
    * duplicating, an external session's delete, restoring a revision) still
    * have to come from the server - see the section-selected,
    * selection-cleared, and history-toggled events this listens for,
@@ -171,7 +171,7 @@ document.addEventListener("alpine:init", () => {
 
       /**
        * Called both optimistically (a tree row's own click handler, the
-       * instant a block with an already-known id is clicked - no need to
+       * instant a section with an already-known id is clicked - no need to
        * wait on the network round trip just to flip which pane is visible)
        * and via the section-selected event (addSection/duplicateSection,
        * whose new id doesn't exist until the server creates it).
@@ -188,11 +188,11 @@ document.addEventListener("alpine:init", () => {
 
       /**
        * Page-level settings (title, public path, metadata, homepage,
-       * publishing info) are a distinct context from a block's own
-       * settings - reachable from the header regardless of which block, if
+       * publishing info) are a distinct context from a section's own
+       * settings - reachable from the header regardless of which section, if
        * any, is currently selected - so this never touches
        * lastSelectedId, and backToTree() returns to the tree exactly as it
-       * would from a block's settings.
+       * would from a section's settings.
        */
       showPageSettings() {
         this.view = "page-settings";
@@ -200,7 +200,7 @@ document.addEventListener("alpine:init", () => {
 
       /**
        * Distinct from backToTree(): this responds to the server telling us
-       * the previously-selected block is simply gone (deleted, or a
+       * the previously-selected section is simply gone (deleted, or a
        * revision restore replaced every section), so there is no id left to
        * remember or focus - selecting it in the tree afterwards is
        * meaningless once it no longer exists.
@@ -220,7 +220,7 @@ document.addEventListener("alpine:init", () => {
 
       /**
        * The picker has its own window-level Escape handler that closes it
-       * (see inlayBlockPicker) - this defers to that first, so Escape
+       * (see inlaySectionPicker) - this defers to that first, so Escape
        * closes the picker before it ever navigates the sidebar out of
        * settings, exactly as it would if they were unrelated.
        */
@@ -329,25 +329,25 @@ document.addEventListener("alpine:init", () => {
   );
 
   /**
-   * The block picker: instant client-side search (matching name,
+   * The section picker: instant client-side search (matching name,
    * description, category, and keywords - see data-search on each card),
    * keyboard navigation across the currently-visible cards, and a small
    * "recently added" list persisted in localStorage per browser.
    */
-  Alpine.data("inlayBlockPicker", (blocksLookup = {}) => ({
+  Alpine.data("inlaySectionPicker", (sectionsLookup = {}) => ({
     query: "",
     highlighted: null,
     recent: [],
-    blocksLookup,
+    sectionsLookup,
 
     init() {
-      this.recent = this.loadRecent().filter((slug) => this.blocksLookup[slug]);
+      this.recent = this.loadRecent().filter((slug) => this.sectionsLookup[slug]);
     },
 
-    recentBlocks() {
+    recentSections() {
       return this.recent.map((slug) => ({
         slug,
-        ...this.blocksLookup[slug],
+        ...this.sectionsLookup[slug],
       }));
     },
 
@@ -358,7 +358,7 @@ document.addEventListener("alpine:init", () => {
     /**
      * Wraps the first match of the current query in <mark> so a card
      * visibly shows *why* it survived the filter, not just that it did.
-     * text is always a block's own developer-supplied label (never
+     * text is always a section's own developer-supplied label (never
      * user/editor input), but it's still escaped before the <mark> tags are
      * spliced in, since x-html renders whatever this returns as real markup.
      */
@@ -409,7 +409,7 @@ document.addEventListener("alpine:init", () => {
 
     visibleCards() {
       return Array.from(
-        this.$el.querySelectorAll('[data-test^="picker-block-"]'),
+        this.$el.querySelectorAll('[data-test^="picker-section-"]'),
       ).filter((el) => el.offsetParent !== null);
     },
 
@@ -427,7 +427,7 @@ document.addEventListener("alpine:init", () => {
           : (currentIndex + direction + cards.length) % cards.length;
 
       this.highlighted = cards[nextIndex];
-      this.highlighted.scrollIntoView({ block: "nearest" });
+      this.highlighted.scrollIntoView({ section: "nearest" });
     },
 
     chooseHighlighted() {
@@ -441,13 +441,13 @@ document.addEventListener("alpine:init", () => {
       );
 
       this.recent = recent;
-      localStorage.setItem("inlay-recent-blocks", JSON.stringify(recent));
+      localStorage.setItem("inlay-recent-sections", JSON.stringify(recent));
     },
 
     loadRecent() {
       try {
         const stored = JSON.parse(
-          localStorage.getItem("inlay-recent-blocks") || "[]",
+          localStorage.getItem("inlay-recent-sections") || "[]",
         );
 
         return Array.isArray(stored) ? stored : [];
@@ -459,7 +459,7 @@ document.addEventListener("alpine:init", () => {
 
   /**
    * A named settings-inspector group's collapsed/expanded state, remembered
-   * per group name across the whole admin (not per page or per block
+   * per group name across the whole admin (not per page or per section
    * instance - a developer's own naming convention, e.g. always calling
    * the advanced group "Advanced", is what makes that a sensible scope).
    */

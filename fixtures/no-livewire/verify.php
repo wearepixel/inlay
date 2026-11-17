@@ -23,7 +23,7 @@ use WeArePixel\Inlay\Actions\PublishPage;
 use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\InlayServiceProvider;
 use WeArePixel\Inlay\Models\Page;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\View\Components\RenderPage;
 
 if (! is_file(__DIR__.'/vendor/autoload.php')) {
@@ -149,10 +149,10 @@ check("the package's migrations run", function (): bool {
         && Schema::hasTable('page_revisions');
 });
 
-check('a single-file block registers', function (): bool {
-    Inlay::singleFileBlock(__DIR__.'/blocks/hero.blade.php');
+check('a single-file section registers', function (): bool {
+    Inlay::singleFileSection(__DIR__.'/sections/hero.blade.php');
 
-    return app(BlockRegistry::class)->hasHandle('no-livewire-hero');
+    return app(SectionRegistry::class)->hasHandle('no-livewire-hero');
 });
 
 check('a page publishes and renders through <x-inlay::render>', function (): bool {

@@ -1,10 +1,10 @@
 <?php
 
 use WeArePixel\Inlay\Schema\Settings;
-use WeArePixel\Inlay\SingleFile\Block;
+use WeArePixel\Inlay\SingleFile\Section;
 
-block(
-    Block::make('default-items')
+section(
+    Section::make('default-items')
         ->settings(
             Settings::make()
                 ->repeater('items', Settings::make()

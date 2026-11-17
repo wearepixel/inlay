@@ -133,7 +133,7 @@
       }
 
       if (selected && event.data.scroll) {
-        selected.firstElementChild?.scrollIntoView({ block: "start", behavior: "smooth" });
+        selected.firstElementChild?.scrollIntoView({ section: "start", behavior: "smooth" });
       }
 
       update();

@@ -10,12 +10,12 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use WeArePixel\Inlay\Console\InstallCommand;
 use WeArePixel\Inlay\Contracts\Screenshotter;
-use WeArePixel\Inlay\Declarative\DeclarativeBlocks;
+use WeArePixel\Inlay\Declarative\DeclarativeSections;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Screenshots\BrowsershotScreenshotter;
 use WeArePixel\Inlay\SiteSettings\SiteSettingsRegistry;
-use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\LivewireRequirement;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\View\Components\RenderPage;
 
 final class InlayServiceProvider extends ServiceProvider
@@ -24,11 +24,11 @@ final class InlayServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/inlay.php', 'inlay');
 
-        $this->app->singleton(BlockRegistry::class, function () {
-            $registry = BlockRegistry::fromConfig();
+        $this->app->singleton(SectionRegistry::class, function () {
+            $registry = SectionRegistry::fromConfig();
             $registry->useDeclarativeLoader(
-                fn () => app(DeclarativeBlocks::class)->definitions(),
-                fn () => DeclarativeBlocks::enabled() ? DeclarativeBlocks::version() : 0,
+                fn () => app(DeclarativeSections::class)->definitions(),
+                fn () => DeclarativeSections::enabled() ? DeclarativeSections::version() : 0,
             );
 
             return $registry;
@@ -56,7 +56,7 @@ final class InlayServiceProvider extends ServiceProvider
         }
 
         $this->app['events']->listen(RequestHandled::class, function () {
-            $this->app->make(BlockRegistry::class)->forgetDeclarative();
+            $this->app->make(SectionRegistry::class)->forgetDeclarative();
             $this->app->make(SiteSettingsRegistry::class)->forgetResolved();
         });
 

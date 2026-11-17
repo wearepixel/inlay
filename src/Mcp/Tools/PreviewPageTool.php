@@ -31,12 +31,12 @@ inlay-replace-sections) it previews that proposed composition instead - use this
 before committing to it.
 
 Returns, for every section: its headings, links, images and visible text as rendered, the content
-still coming from block defaults (usually placeholder copy you should replace), and problems such as
-missing alt text, empty links or a block that failed to render. Also returns a signed preview link,
+still coming from section defaults (usually placeholder copy you should replace), and problems such as
+missing alt text, empty links or a section that failed to render. Also returns a signed preview link,
 and desktop and mobile screenshots when the site has screenshots enabled.
 
 When matching a design (e.g. a Figma frame), compare the screenshots against it and iterate.
-Differences in spacing, colour or typography usually come from the block's own styling, which you
+Differences in spacing, colour or typography usually come from the section's own styling, which you
 cannot change - report them rather than trying to work around them with content.
 TEXT)]
 final class PreviewPageTool extends InlayTool
@@ -54,7 +54,7 @@ final class PreviewPageTool extends InlayTool
 
         if ($sections !== null) {
             if (! is_array($sections)) {
-                return Response::error('"sections" must be a list of {"block": ..., "settings": {...}} objects.');
+                return Response::error('"sections" must be a list of {"section": ..., "settings": {...}} objects.');
             }
 
             $errors = $replace->validate($page, $sections);
@@ -64,8 +64,8 @@ final class PreviewPageTool extends InlayTool
             }
 
             $proposed = array_map(fn (array $section) => [
-                'handle' => $section['block'],
-                'settings' => $replace->storable($section['block'], $section['settings'] ?? []),
+                'handle' => $section['section'],
+                'settings' => $replace->storable($section['section'], $section['settings'] ?? []),
             ], $sections);
         }
 

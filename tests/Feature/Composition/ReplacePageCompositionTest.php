@@ -13,11 +13,11 @@ use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => [
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
     ]]);
-    Inlay::singleFileBlock(__DIR__.'/../../Fixtures/single-file/composition/promo.blade.php');
+    Inlay::singleFileSection(__DIR__.'/../../Fixtures/single-file/composition/promo.blade.php');
     // Required + locked + default: test-hero. Allowed: test-hero, test-faq.
     app(PageDefinitionRegistry::class)->register(TestCollectionPageDefinition::class);
 });
@@ -50,8 +50,8 @@ it('replaces every section in the given order, storing only the settings supplie
     $page->sections()->create(['handle' => 'test-faq', 'order' => 0, 'settings' => []]);
 
     replaceComposition($page, [
-        ['block' => 'promo', 'settings' => ['heading' => 'Hello', 'cta' => ['label' => 'Go', 'url' => '/go']]],
-        ['block' => 'test-hero'],
+        ['section' => 'promo', 'settings' => ['heading' => 'Hello', 'cta' => ['label' => 'Go', 'url' => '/go']]],
+        ['section' => 'test-hero'],
     ]);
 
     expect(storedComposition($page))->toBe([
@@ -65,44 +65,44 @@ it('leaves the page untouched when any section is invalid', function () {
     $page->sections()->create(['handle' => 'test-faq', 'order' => 0, 'settings' => []]);
 
     $errors = compositionErrors($page, [
-        ['block' => 'promo', 'settings' => ['heading' => 'Fine']],
-        ['block' => 'does-not-exist'],
+        ['section' => 'promo', 'settings' => ['heading' => 'Fine']],
+        ['section' => 'does-not-exist'],
     ]);
 
-    expect($errors)->toBe(['sections.1.block: No block is registered with the handle "does-not-exist".'])
+    expect($errors)->toBe(['sections.1.section: No section is registered with the handle "does-not-exist".'])
         ->and(storedComposition($page))->toBe([['test-faq', []]]);
 });
 
-it('rejects a block the page definition does not allow', function () {
+it('rejects a section the page definition does not allow', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
     $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
 
     $errors = compositionErrors($page, [
-        ['block' => 'test-hero'],
-        ['block' => 'promo'],
+        ['section' => 'test-hero'],
+        ['section' => 'promo'],
     ]);
 
-    expect($errors[0])->toStartWith('sections.1.block: Promo is not allowed on Test Collection Page')
+    expect($errors[0])->toStartWith('sections.1.section: Promo is not allowed on Test Collection Page')
         ->and(storedComposition($page))->toBe([['test-hero', []]]);
 });
 
-it('rejects moving a locked block from its current position', function () {
+it('rejects moving a locked section from its current position', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
     $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
 
     $errors = compositionErrors($page, [
-        ['block' => 'test-faq'],
-        ['block' => 'test-hero'],
+        ['section' => 'test-faq'],
+        ['section' => 'test-hero'],
     ]);
 
     expect($errors[0])->toStartWith('sections.0: Hero is locked at position 0')
         ->and(storedComposition($page))->toBe([['test-hero', []]]);
 });
 
-it('rejects a composition that leaves out a required block', function () {
+it('rejects a composition that leaves out a required section', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
 
-    $errors = compositionErrors($page, [['block' => 'test-faq']]);
+    $errors = compositionErrors($page, [['section' => 'test-faq']]);
 
     expect($errors)->toBe(['sections: Hero is required by Test Collection Page. Add a "test-hero" section.'])
         ->and($page->sections()->count())->toBe(0);
@@ -111,7 +111,7 @@ it('rejects a composition that leaves out a required block', function () {
 it('rejects every change when the page definition no longer resolves', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'no-longer-registered']);
 
-    $errors = compositionErrors($page, [['block' => 'promo']]);
+    $errors = compositionErrors($page, [['section' => 'promo']]);
 
     expect($errors[0])->toStartWith('definition:')
         ->and($page->sections()->count())->toBe(0);
@@ -120,7 +120,7 @@ it('rejects every change when the page definition no longer resolves', function 
 it('reports each settings problem with its dotted path', function (array $settings, string $expectedPath) {
     $page = Page::create(['title' => 'Landing']);
 
-    $errors = compositionErrors($page, [['block' => 'promo', 'settings' => $settings]]);
+    $errors = compositionErrors($page, [['section' => 'promo', 'settings' => $settings]]);
 
     expect($errors)->toHaveCount(1)
         ->and($errors[0])->toStartWith($expectedPath.': ')
@@ -150,7 +150,7 @@ it('accepts an image path that exists on the configured disk', function () {
     Storage::disk('public')->put('inlay/hero.png', 'png');
     $page = Page::create(['title' => 'Landing']);
 
-    replaceComposition($page, [['block' => 'promo', 'settings' => ['photo' => 'inlay/hero.png']]]);
+    replaceComposition($page, [['section' => 'promo', 'settings' => ['photo' => 'inlay/hero.png']]]);
 
     expect(storedComposition($page))->toBe([['promo', ['photo' => 'inlay/hero.png']]]);
 });
@@ -159,7 +159,7 @@ it('stores repeater and group values in their coerced shape', function () {
     $page = Page::create(['title' => 'Landing']);
 
     replaceComposition($page, [[
-        'block' => 'promo',
+        'section' => 'promo',
         'settings' => [
             'columns' => '4',
             'items' => [['title' => 'One', 'link' => ['url' => 'https://example.com', 'label' => 'More']]],
@@ -178,7 +178,7 @@ it('strips script, event handlers and dangerous links from rich text before stor
     $page = Page::create(['title' => 'Landing']);
 
     replaceComposition($page, [[
-        'block' => 'promo',
+        'section' => 'promo',
         'settings' => ['body' => '<p onclick="steal()">Hello <strong>there</strong> <a href="javascript:alert(1)">bad</a> <a href="/menu">menu</a></p><script>alert(1)</script><img src=x onerror="alert(1)">'],
     ]]);
 
@@ -194,28 +194,28 @@ it('strips script, event handlers and dangerous links from rich text before stor
 it('treats a null inside a repeater item as "use the default"', function () {
     $page = Page::create(['title' => 'Landing']);
 
-    replaceComposition($page, [['block' => 'promo', 'settings' => ['items' => [['title' => 'One', 'link' => null]]]]]);
+    replaceComposition($page, [['section' => 'promo', 'settings' => ['items' => [['title' => 'One', 'link' => null]]]]]);
 
     expect(storedComposition($page)[0][1]['items'])->toBe([['title' => 'One']]);
 });
 
 it('stores an int-backed enum select whether it arrives as an int or a numeric string', function (int|string $value) {
-    Inlay::singleFileBlock(__DIR__.'/../../Fixtures/single-file/composition/ranked.blade.php');
+    Inlay::singleFileSection(__DIR__.'/../../Fixtures/single-file/composition/ranked.blade.php');
     $page = Page::create(['title' => 'Landing']);
 
-    replaceComposition($page, [['block' => 'ranked', 'settings' => ['priority' => $value]]]);
+    replaceComposition($page, [['section' => 'ranked', 'settings' => ['priority' => $value]]]);
 
     expect(storedComposition($page)[0][1])->toBe(['priority' => 2]);
 })->with([2, '2']);
 
-it('refuses to replace a page that still holds a section whose block is no longer registered', function () {
+it('refuses to replace a page that still holds a section whose section is no longer registered', function () {
     $page = Page::create(['title' => 'Landing']);
-    $page->sections()->create(['handle' => 'retired-block', 'order' => 0, 'settings' => ['heading' => 'Keep me']]);
+    $page->sections()->create(['handle' => 'retired-section', 'order' => 0, 'settings' => ['heading' => 'Keep me']]);
 
-    $errors = compositionErrors($page, [['block' => 'promo']]);
+    $errors = compositionErrors($page, [['section' => 'promo']]);
 
-    expect($errors[0])->toStartWith('sections.0: The saved section at index 0 uses "retired-block"')
-        ->and(storedComposition($page))->toBe([['retired-block', ['heading' => 'Keep me']]]);
+    expect($errors[0])->toStartWith('sections.0: The saved section at index 0 uses "retired-section"')
+        ->and(storedComposition($page))->toBe([['retired-section', ['heading' => 'Keep me']]]);
 });
 
 it('refuses an existing file that is outside the inlay image folder', function () {
@@ -223,7 +223,7 @@ it('refuses an existing file that is outside the inlay image folder', function (
     Storage::disk('public')->put('private/contract.png', 'png');
     $page = Page::create(['title' => 'Landing']);
 
-    $errors = compositionErrors($page, [['block' => 'promo', 'settings' => ['photo' => 'private/contract.png']]]);
+    $errors = compositionErrors($page, [['section' => 'promo', 'settings' => ['photo' => 'private/contract.png']]]);
 
     expect($errors)->toBe(['sections.0.settings.photo: Must be a relative path on the Inlay disk, as returned by inlay-upload-image.']);
 });
@@ -234,7 +234,7 @@ it('accepts a root-relative image the application serves from its public directo
     $page = Page::create(['title' => 'Landing']);
 
     try {
-        replaceComposition($page, [['block' => 'promo', 'settings' => ['photo' => '/inlay-test-image.png']]]);
+        replaceComposition($page, [['section' => 'promo', 'settings' => ['photo' => '/inlay-test-image.png']]]);
     } finally {
         @unlink($file);
     }

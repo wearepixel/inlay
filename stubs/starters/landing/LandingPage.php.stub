@@ -6,26 +6,26 @@ namespace App\Inlay;
 
 use WeArePixel\Inlay\Attributes\PageDefinitionMeta;
 use WeArePixel\Inlay\Pages\PageDefinition;
-use WeArePixel\Inlay\Support\BlockHandle;
+use WeArePixel\Inlay\Support\SectionHandle;
 
 #[PageDefinitionMeta(handle: 'landing-page', label: 'Landing page', description: 'A campaign or product landing page that opens with a hero.')]
 final class LandingPage extends PageDefinition
 {
-    public function allowedBlocks(): array
+    public function allowedSections(): array
     {
-        return array_map(BlockHandle::make(...), [
+        return array_map(SectionHandle::make(...), [
             'hero', 'logo-cloud', 'feature-grid', 'split-media', 'stats',
             'testimonials', 'pricing', 'faq', 'cta-band', 'rich-text',
         ]);
     }
 
-    public function requiredBlocks(): array
+    public function requiredSections(): array
     {
-        return [BlockHandle::make('hero')];
+        return [SectionHandle::make('hero')];
     }
 
-    public function defaultBlocks(): array
+    public function defaultSections(): array
     {
-        return array_map(BlockHandle::make(...), ['hero', 'feature-grid', 'cta-band']);
+        return array_map(SectionHandle::make(...), ['hero', 'feature-grid', 'cta-band']);
     }
 }

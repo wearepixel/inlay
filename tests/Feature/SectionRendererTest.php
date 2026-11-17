@@ -5,13 +5,13 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use WeArePixel\Inlay\Facades\Inlay;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Tests\Fixtures\TestContextAwareSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 it('renders each section through its own Blade view with resolved effective settings', function () {
-    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         ['handle' => 'test-hero', 'settings' => ['heading' => 'Welcome', 'layout' => 'image-left']],
@@ -25,10 +25,10 @@ it('renders each section through its own Blade view with resolved effective sett
         ->toContain('flex-row"');
 });
 
-it('skips a section whose settings fail to construct its block instead of failing the whole page', function () {
+it('skips a section whose settings fail to construct its section instead of failing the whole page', function () {
     Log::spy();
 
-    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         // Simulates a bypass of PageEditor's validation reaching the
@@ -50,7 +50,7 @@ it('skips a section whose settings fail to construct its block instead of failin
 it('skips a section with an unregistered handle instead of failing the whole page', function () {
     Log::spy();
 
-    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         ['handle' => 'not-registered', 'settings' => []],
@@ -63,7 +63,7 @@ it('skips a section with an unregistered handle instead of failing the whole pag
 });
 
 it('hydrates a stored Image path into an ImageValue that resolves to a real Storage URL', function () {
-    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         ['handle' => 'test-hero', 'settings' => ['heading' => 'Welcome', 'layout' => 'image-right', 'photo' => 'inlay/photo.png']],
@@ -73,7 +73,7 @@ it('hydrates a stored Image path into an ImageValue that resolves to a real Stor
 });
 
 it('leaves a nullable Image field genuinely null when no photo is set, not an always-truthy empty value', function () {
-    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         ['handle' => 'test-hero', 'settings' => ['heading' => 'Welcome', 'layout' => 'image-right']],
@@ -82,8 +82,8 @@ it('leaves a nullable Image field genuinely null when no photo is set, not an al
     expect($html)->not->toContain('data-test="photo"');
 });
 
-it('passes host-supplied context into a block property the schema does not declare as a setting', function () {
-    $renderer = new SectionRenderer(new BlockRegistry(['context-aware' => TestContextAwareSection::class]));
+it('passes host-supplied context into a section property the schema does not declare as a setting', function () {
+    $renderer = new SectionRenderer(new SectionRegistry(['context-aware' => TestContextAwareSection::class]));
 
     $html = $renderer->render(
         [['handle' => 'context-aware', 'settings' => ['heading' => 'Welcome']]],
@@ -96,7 +96,7 @@ it('passes host-supplied context into a block property the schema does not decla
 });
 
 it('renders identically with no context supplied, since context is always optional', function () {
-    $renderer = new SectionRenderer(new BlockRegistry(['context-aware' => TestContextAwareSection::class]));
+    $renderer = new SectionRenderer(new SectionRegistry(['context-aware' => TestContextAwareSection::class]));
 
     $html = $renderer->render([['handle' => 'context-aware', 'settings' => ['heading' => 'Welcome']]]);
 
@@ -106,7 +106,7 @@ it('renders identically with no context supplied, since context is always option
 });
 
 it('throws a clear exception when a context key collides with a declared setting name, rather than silently picking one', function () {
-    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
 
     $renderer->render(
         [['handle' => 'test-hero', 'settings' => ['heading' => 'From settings']]],
@@ -117,7 +117,7 @@ it('throws a clear exception when a context key collides with a declared setting
 it('falls back to the constructor default and keeps rendering when a stored enum value no longer matches a real case', function () {
     Log::spy();
 
-    $renderer = new SectionRenderer(new BlockRegistry(['test-hero' => TestHeroSection::class]));
+    $renderer = new SectionRenderer(new SectionRegistry(['test-hero' => TestHeroSection::class]));
 
     $html = $renderer->render([
         ['handle' => 'test-hero', 'settings' => ['heading' => 'Orphaned layout', 'layout' => 'no-longer-a-case']],
@@ -132,8 +132,8 @@ it('falls back to the constructor default and keeps rendering when a stored enum
     );
 });
 
-it('hydrates repeater items that come from the block default the same way as stored items', function () {
-    Inlay::singleFileBlock(__DIR__.'/../Fixtures/single-file/defaults/default-items.blade.php');
+it('hydrates repeater items that come from the section default the same way as stored items', function () {
+    Inlay::singleFileSection(__DIR__.'/../Fixtures/single-file/defaults/default-items.blade.php');
 
     $fromDefault = app(SectionRenderer::class)->renderSection(['handle' => 'default-items', 'settings' => []]);
     $fromStored = app(SectionRenderer::class)->renderSection(['handle' => 'default-items', 'settings' => [
@@ -145,7 +145,7 @@ it('hydrates repeater items that come from the block default the same way as sto
 });
 
 it('hydrates an image or link default declared as a plain value', function () {
-    Inlay::singleFileBlock(__DIR__.'/../Fixtures/single-file/defaults/default-image.blade.php');
+    Inlay::singleFileSection(__DIR__.'/../Fixtures/single-file/defaults/default-image.blade.php');
 
     expect(app(SectionRenderer::class)->renderSection(['handle' => 'default-image', 'settings' => []]))
         ->toContain('no-photo|/go');

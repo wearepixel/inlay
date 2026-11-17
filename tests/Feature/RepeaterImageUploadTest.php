@@ -15,7 +15,7 @@ use WeArePixel\Inlay\Tests\Fixtures\TestCardsSection;
 beforeEach(fn () => Storage::fake('public'));
 
 it('stores an image uploaded into a repeater item on that item', function () {
-    config(['inlay.blocks' => ['test-cards' => TestCardsSection::class]]);
+    config(['inlay.sections' => ['test-cards' => TestCardsSection::class]]);
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-cards',
@@ -50,7 +50,7 @@ it('stores an image uploaded into a site settings repeater item on that item', f
 });
 
 it('shows the thumbnail of an image inside a repeater item', function () {
-    config(['inlay.blocks' => ['test-cards' => TestCardsSection::class]]);
+    config(['inlay.sections' => ['test-cards' => TestCardsSection::class]]);
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-cards',

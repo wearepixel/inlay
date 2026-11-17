@@ -29,7 +29,7 @@ Creates a new DRAFT page. Nothing is public until it is published.
 BEFORE CALLING: check inlay-list-pages so you do not duplicate a page, and inlay-list-page-types
 to choose its type (fixed once created; omit it for an unrestricted page).
 
-Without "sections" the page starts with its type's default blocks. With "sections" (same format as
+Without "sections" the page starts with its type's default sections. With "sections" (same format as
 inlay-replace-sections) the page is created with exactly that composition, and nothing is created
 at all if any section is invalid.
 

@@ -15,10 +15,10 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinition;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Schema\Settings;
-use WeArePixel\Inlay\SingleFile\BlockLoader;
+use WeArePixel\Inlay\SingleFile\SingleFileLoader;
 use WeArePixel\Inlay\SiteSettings\SiteSettingsRegistry;
-use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\LivewireRequirement;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 
 /**
@@ -72,7 +72,7 @@ final class InlayManager
         $middleware = (array) config('inlay.admin.middleware', ['web']);
 
         // Every admin action after the first page load (add/reorder/delete a
-        // block, persist a setting, publish) is dispatched to Livewire's
+        // section, persist a setting, publish) is dispatched to Livewire's
         // own update endpoint, not back through this route group - so
         // config('inlay.middleware') would otherwise only ever guard the
         // very first GET request. Registering it as Livewire's "persistent"
@@ -311,11 +311,11 @@ final class InlayManager
 
     /**
      * Registers a Page Definition - developer-owned composition policy for
-     * a kind of Page (which Blocks it may contain, which are required or
+     * a kind of Page (which Sections it may contain, which are required or
      * locked, what a new Page of this kind starts with). See
-     * docs/inlay/v1/page-definitions. Every Block reference inside it is
-     * validated immediately against the currently-registered Blocks, so
-     * register Page Definitions after registering Blocks.
+     * docs/inlay/v1/page-definitions. Every Section reference inside it is
+     * validated immediately against the currently-registered Sections, so
+     * register Page Definitions after registering Sections.
      *
      * @param  class-string<PageDefinition>  $definitionClass
      */
@@ -335,32 +335,32 @@ final class InlayManager
     }
 
     /**
-     * Registers a single Blade file as an Inlay block - a second,
+     * Registers a single Blade file as an Inlay section - a second,
      * class-free authoring style compiling into the exact same
-     * BlockDefinition a class + view block resolves to. See
-     * docs/inlay/v1/single-file-blocks for the authoring syntax.
+     * Definition a class + view section resolves to. See
+     * docs/inlay/v1/single-file-sections for the authoring syntax.
      *
-     * @param  string  $path  absolute path to the block's Blade file
+     * @param  string  $path  absolute path to the section's Blade file
      */
-    public function singleFileBlock(string $path): void
+    public function singleFileSection(string $path): void
     {
-        app(BlockRegistry::class)->registerSingleFile(
-            app(BlockLoader::class)->load($path)
+        app(SectionRegistry::class)->registerSingleFile(
+            app(SingleFileLoader::class)->load($path)
         );
     }
 
     /**
      * Registers every *.blade.php file directly inside a directory as a
-     * single-file block, each using its own declared handle (from
-     * block(Block::make($handle)...) inside the file) rather than
+     * single-file section, each using its own declared handle (from
+     * section(Section::make($handle)...) inside the file) rather than
      * its filename - the filename is just a developer-organisation
      * convenience, and deriving the handle from it as well would leave two
      * possible sources of truth for the same thing.
      */
-    public function singleFileBlocks(string $directory): void
+    public function singleFileSections(string $directory): void
     {
         foreach (glob(rtrim($directory, '/').'/*.blade.php') ?: [] as $path) {
-            $this->singleFileBlock($path);
+            $this->singleFileSection($path);
         }
     }
 
@@ -413,7 +413,7 @@ final class InlayManager
     }
 
     /**
-     * A site setting by "group.field", hydrated like a block setting.
+     * A site setting by "group.field", hydrated like a section setting.
      * Nested values can be reached with more dots, e.g. "header.cta.url".
      */
     public function setting(string $key, mixed $default = null): mixed

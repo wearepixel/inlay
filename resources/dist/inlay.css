@@ -688,12 +688,12 @@
 }
 
 /* Mobile panel switcher - hidden entirely above the narrow-screen
-   breakpoint, see the @media block below. */
+   breakpoint, see the @media section below. */
 .inlay-mobile-tabs {
   display: none;
 }
 
-/* Block tree */
+/* Section tree */
 
 .inlay-tree {
   list-style: none;
@@ -957,11 +957,11 @@
 }
 
 /*
- * Block picker - a left-anchored drawer rather than a centered dialog.
+ * Section picker - a left-anchored drawer rather than a centered dialog.
  * The Add flow already needs a real dialog (it's modal - a scrim over the
  * whole editor, Escape closes it, focus starts in its search field), so a
  * left drawer costs nothing extra in JavaScript over a centered one: same
- * Alpine component (inlayBlockPicker), same keyboard handlers, same
+ * Alpine component (inlaySectionPicker), same keyboard handlers, same
  * focus-on-open. It's purely a positioning choice, made here in CSS - and
  * anchoring it to the same edge the contextual sidebar occupies makes the
  * picker read as an extension of that sidebar (the thing you're about to
@@ -1059,7 +1059,7 @@
   gap: 10px;
   /* A fixed height (rather than letting a two-line description grow the
      card) keeps every row in the grid the same size regardless of which
-     blocks happen to be visible - a ragged grid reads as unfinished. */
+     sections happen to be visible - a ragged grid reads as unfinished. */
   height: 58px;
   padding: 8px 10px;
   border: 1px solid var(--inlay-border);
@@ -1602,7 +1602,7 @@
   color: var(--inlay-published);
 }
 
-/* Recent blocks (picker) */
+/* Recent sections (picker) */
 
 .inlay-picker__recent-title {
   padding: 12px 8px 6px;
@@ -1621,7 +1621,7 @@
   }
 }
 
-/* Small screen: one panel at a time (block tree/settings/history, or
+/* Small screen: one panel at a time (section tree/settings/history, or
    preview) via the segmented control in the topbar, rather than squeezing
    both into unusably narrow columns. Both panels stay in the DOM - only
    .inlay-mobile-hide's display:none is scoped to this breakpoint - so the
@@ -1660,7 +1660,7 @@
   }
 
   /* Grid semantics aren't useful once only one panel is ever visible at a
-     time - a plain block with each panel independently taking the full
+     time - a plain section with each panel independently taking the full
      height reads just as easily and avoids the empty-track sizing quirks
      of a two-item grid with one item hidden. Still flex:1/min-height:0 from
      the base rule above, so it fills whatever space the (possibly wrapped,

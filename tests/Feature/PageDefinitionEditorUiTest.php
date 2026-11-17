@@ -13,7 +13,7 @@ use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => [
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
         'test-cta' => TestCtaSection::class,
@@ -22,7 +22,7 @@ beforeEach(function () {
     app(PageDefinitionRegistry::class)->register(TestCollectionPageDefinition::class);
 });
 
-it('shows a locked indicator and no enabled delete control for a locked block', function () {
+it('shows a locked indicator and no enabled delete control for a locked section', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
     $section = $page->sections()->create(['handle' => 'test-hero', 'order' => 0, 'settings' => []]);
 
@@ -32,15 +32,15 @@ it('shows a locked indicator and no enabled delete control for a locked block', 
         ->assertDontSeeHtml("delete-{$section->id}\"");
 });
 
-it('shows a required indicator for a required, not-locked block', function () {
+it('shows a required indicator for a required, not-locked section', function () {
     final class RequiredNotLockedForUiTest extends PageDefinition
     {
-        public function allowedBlocks(): array
+        public function allowedSections(): array
         {
             return [TestHeroSection::class];
         }
 
-        public function requiredBlocks(): array
+        public function requiredSections(): array
         {
             return [TestHeroSection::class];
         }
@@ -52,17 +52,17 @@ it('shows a required indicator for a required, not-locked block', function () {
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->assertSeeHtml("required-{$section->id}")
-        ->assertSeeHtml("delete-disabled-{$section->id}"); // final instance of a required block
+        ->assertSeeHtml("delete-disabled-{$section->id}"); // final instance of a required section
 });
 
 it('shows the standing violation banner with the actual violation message before Publish is even clicked', function () {
     $page = Page::create(['title' => 'Landing', 'definition' => 'test-collection-page-definition']);
-    // Required block (test-hero) missing entirely.
+    // Required section (test-hero) missing entirely.
     $page->sections()->create(['handle' => 'test-faq', 'order' => 0, 'settings' => []]);
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->assertSeeHtml('violation-banner')
-        ->assertSeeHtml('violation-missing_required_block')
+        ->assertSeeHtml('violation-missing_required_section')
         ->assertSee('is required by');
 });
 

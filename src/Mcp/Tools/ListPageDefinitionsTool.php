@@ -19,8 +19,8 @@ use WeArePixel\Inlay\Pages\ResolvedPageDefinition;
 #[Title('List Inlay page types')]
 #[IsReadOnly]
 #[Description(<<<'TEXT'
-Lists the page types (Page Definitions) a new page can be created as. A type decides which blocks
-a page may contain, which are required, which are locked in place, and which blocks a new page
+Lists the page types (Page Definitions) a new page can be created as. A type decides which sections
+a page may contain, which are required, which are locked in place, and which sections a new page
 starts with. A page's type is fixed when it is created - pick it with inlay-create-page.
 TEXT)]
 final class ListPageDefinitionsTool extends InlayTool
@@ -36,10 +36,10 @@ final class ListPageDefinitionsTool extends InlayTool
                 'handle' => $definition->handle,
                 'label' => $definition->label,
                 'description' => $definition->description,
-                'allowed_blocks' => $definition->allowedBlocks ?? 'any',
-                'required_blocks' => $definition->requiredBlocks,
-                'locked_blocks' => $definition->lockedBlocks,
-                'starts_with' => $definition->defaultBlocks,
+                'allowed_sections' => $definition->allowedSections ?? 'any',
+                'required_sections' => $definition->requiredSections,
+                'locked_sections' => $definition->lockedSections,
+                'starts_with' => $definition->defaultSections,
             ], $definitions->all())),
         ]);
     }

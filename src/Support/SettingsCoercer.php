@@ -13,7 +13,7 @@ use WeArePixel\Inlay\Schema\Settings;
  * Forces a value into the shape its FieldType stores, repairing rather than
  * rejecting. Both the admin (whose Livewire properties a client can set to
  * anything) and the MCP tools pass every value through this before storage,
- * so a block's constructor never receives a type it can't accept.
+ * so a section's constructor never receives a type it can't accept.
  */
 final class SettingsCoercer
 {

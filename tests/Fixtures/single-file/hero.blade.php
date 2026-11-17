@@ -1,14 +1,14 @@
 <?php
 
 use WeArePixel\Inlay\Schema\Settings;
-use WeArePixel\Inlay\SingleFile\Block;
+use WeArePixel\Inlay\SingleFile\Section;
 use WeArePixel\Inlay\Tests\Fixtures\SingleFile\SingleFileImageSize;
 
-block(
-    Block::make('single-file-hero')
+section(
+    Section::make('single-file-hero')
         ->name('Hero')
         ->category('Headers')
-        ->description('A single-file hero block.')
+        ->description('A single-file hero section.')
         ->icon('layout-header')
         ->settings(
             Settings::make()

@@ -6,12 +6,12 @@ namespace WeArePixel\Inlay\Tests\Fixtures;
 
 use Illuminate\View\Component;
 use Illuminate\View\View;
-use WeArePixel\Inlay\Attributes\BlockMeta;
-use WeArePixel\Inlay\Contracts\InlayBlock;
+use WeArePixel\Inlay\Attributes\SectionMeta;
+use WeArePixel\Inlay\Contracts\InlaySection;
 use WeArePixel\Inlay\Schema\Settings;
 
-#[BlockMeta(label: 'Quote', category: 'Content', description: 'A quotation.')]
-final class BrowserQuoteSection extends Component implements InlayBlock
+#[SectionMeta(label: 'Quote', category: 'Content', description: 'A quotation.')]
+final class BrowserQuoteSection extends Component implements InlaySection
 {
     public function __construct(
         public string $quote = 'Quote text',

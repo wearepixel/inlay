@@ -43,7 +43,7 @@ final class RestorePageRevision
         return DB::transaction(function () use ($revision, $createdBy) {
             $page = $revision->page;
             $resolvedDefinition = $this->definitions->resolveForPage($page);
-            $lockedHandles = $resolvedDefinition !== null ? $resolvedDefinition->lockedBlocks : [];
+            $lockedHandles = $resolvedDefinition !== null ? $resolvedDefinition->lockedSections : [];
             $lockedPatternBefore = $this->lockedPositionPattern($page, $lockedHandles);
 
             $page->sections()->delete();
@@ -76,11 +76,11 @@ final class RestorePageRevision
                 'meta_description' => $revision->snapshot['meta_description'],
             ]);
 
-            // Ordinary editing can never move a locked block - updateOrder()
+            // Ordinary editing can never move a locked section - updateOrder()
             // rejects it outright - so this is the one path that writes
             // sections directly, bypassing that guard. A revision published
-            // before a Block was locked (or before it was locked in its
-            // current position) can restore content whose locked block has
+            // before a Section was locked (or before it was locked in its
+            // current position) can restore content whose locked section has
             // since shifted; that's treated the same as any other
             // violation - draft-only, publish blocked - rather than
             // silently letting a restore do what a live reorder cannot.
@@ -102,7 +102,7 @@ final class RestorePageRevision
 
     /**
      * The page's sections, in order, reduced to just which positions hold a
-     * locked block's handle (and which one) - comparable before and after a
+     * locked section's handle (and which one) - comparable before and after a
      * restore even though every row's own id changes, since it only cares
      * about relative position and handle, never row identity.
      *

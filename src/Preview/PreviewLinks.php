@@ -38,15 +38,15 @@ final class PreviewLinks
 
     /**
      * @param  array<int, array{handle: string, settings?: array<string, mixed>}>  $sections
-     * @param  array<int, array<string, mixed>>  $draftBlocks  already-validated declarative block definitions the sections may use
+     * @param  array<int, array<string, mixed>>  $draftSections  already-validated declarative section definitions the sections may use
      */
-    public function forComposition(?Page $page, array $sections, array $draftBlocks = []): string
+    public function forComposition(?Page $page, array $sections, array $draftSections = []): string
     {
-        return $this->issue(['page_id' => $page?->getKey(), 'sections' => array_values($sections), 'blocks' => $draftBlocks]);
+        return $this->issue(['page_id' => $page?->getKey(), 'sections' => array_values($sections), 'section_types' => $draftSections]);
     }
 
     /**
-     * @return array{page_id: int|null, sections: array<int, array{handle: string, settings?: array<string, mixed>}>|null, blocks?: array<int, array<string, mixed>>}|null
+     * @return array{page_id: int|null, sections: array<int, array{handle: string, settings?: array<string, mixed>}>|null, section_types?: array<int, array<string, mixed>>}|null
      */
     public function resolve(string $token): ?array
     {
@@ -56,7 +56,7 @@ final class PreviewLinks
     }
 
     /**
-     * @param  array{page_id: mixed, sections: array<int, mixed>|null, blocks?: array<int, mixed>}  $entry
+     * @param  array{page_id: mixed, sections: array<int, mixed>|null, sections?: array<int, mixed>}  $entry
      */
     private function issue(array $entry): string
     {

@@ -9,13 +9,13 @@ use WeArePixel\Inlay\Tests\Fixtures\TestCtaSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
 beforeEach(function () {
-    config(['inlay.blocks' => [
+    config(['inlay.sections' => [
         'test-hero' => TestHeroSection::class,
         'test-cta' => TestCtaSection::class,
     ]]);
 });
 
-it('drops keys not declared in the block definition even if the client injects them via editingProps', function () {
+it('drops keys not declared in the section definition even if the client injects them via editingProps', function () {
     $page = Page::create(['title' => 'Home', 'path' => 'home']);
     $section = $page->sections()->create([
         'handle' => 'test-hero',

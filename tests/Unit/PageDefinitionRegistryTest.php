@@ -5,16 +5,16 @@ declare(strict_types=1);
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinition;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
-use WeArePixel\Inlay\SingleFile\BlockLoader;
-use WeArePixel\Inlay\Support\BlockHandle;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\SingleFile\SingleFileLoader;
+use WeArePixel\Inlay\Support\SectionHandle;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Tests\Fixtures\TestCollectionPageDefinition;
 use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
 use WeArePixel\Inlay\Tests\Fixtures\TestHeroSection;
 
-function makeRegistry(array $blocks = []): PageDefinitionRegistry
+function makeRegistry(array $sectionTypes = []): PageDefinitionRegistry
 {
-    return new PageDefinitionRegistry(new BlockRegistry($blocks));
+    return new PageDefinitionRegistry(new SectionRegistry($sectionTypes));
 }
 
 it('always has the built-in, unrestricted default definition registered', function () {
@@ -24,9 +24,9 @@ it('always has the built-in, unrestricted default definition registered', functi
 
     expect($default->handle)->toBe('default')
         ->and($default->isUnrestricted())->toBeTrue()
-        ->and($default->requiredBlocks)->toBe([])
-        ->and($default->lockedBlocks)->toBe([])
-        ->and($default->defaultBlocks)->toBe([]);
+        ->and($default->requiredSections)->toBe([])
+        ->and($default->lockedSections)->toBe([])
+        ->and($default->defaultSections)->toBe([]);
 });
 
 it('derives a handle and label from the class name when no attribute is given', function () {
@@ -54,7 +54,7 @@ it('uses #[PageDefinitionMeta] overrides when given', function () {
         ->and($resolved->description)->toBe('A constrained Page type for tests.');
 });
 
-it('normalises class-string and BlockHandle references into the same stable handles', function () {
+it('normalises class-string and SectionHandle references into the same stable handles', function () {
     $registry = makeRegistry([
         'test-hero' => TestHeroSection::class,
         'test-faq' => TestFaqSection::class,
@@ -63,26 +63,26 @@ it('normalises class-string and BlockHandle references into the same stable hand
 
     $resolved = $registry->definition('test-collection-page-definition');
 
-    expect($resolved->allowedBlocks)->toContain('test-hero', 'test-faq')
-        ->and($resolved->requiredBlocks)->toBe(['test-hero'])
-        ->and($resolved->lockedBlocks)->toBe(['test-hero'])
-        ->and($resolved->defaultBlocks)->toBe(['test-hero']);
+    expect($resolved->allowedSections)->toContain('test-hero', 'test-faq')
+        ->and($resolved->requiredSections)->toBe(['test-hero'])
+        ->and($resolved->lockedSections)->toBe(['test-hero'])
+        ->and($resolved->defaultSections)->toBe(['test-hero']);
 });
 
-it('folds required, locked, and default blocks into the effective allowed set even if a developer omits them there', function () {
+it('folds required, locked, and default sections into the effective allowed set even if a developer omits them there', function () {
     final class OmitsFromAllowedForTest extends PageDefinition
     {
-        public function allowedBlocks(): array
+        public function allowedSections(): array
         {
             return [];
         }
 
-        public function requiredBlocks(): array
+        public function requiredSections(): array
         {
             return [TestHeroSection::class];
         }
 
-        public function lockedBlocks(): array
+        public function lockedSections(): array
         {
             return [TestHeroSection::class];
         }
@@ -93,7 +93,7 @@ it('folds required, locked, and default blocks into the effective allowed set ev
 
     $resolved = $registry->definition('omits-from-allowed-for-test');
 
-    expect($resolved->allowedBlocks)->toBe(['test-hero']);
+    expect($resolved->allowedSections)->toBe(['test-hero']);
 });
 
 it('rejects a duplicate Page Definition handle', function () {
@@ -106,30 +106,30 @@ it('rejects a duplicate Page Definition handle', function () {
     $registry->register(TestCollectionPageDefinition::class);
 })->throws(InvalidArgumentException::class, 'already registered under it');
 
-it('rejects a definition referencing a block class with no registered handle', function () {
+it('rejects a definition referencing a section class with no registered handle', function () {
     $registry = makeRegistry(); // test-hero/test-faq deliberately not registered
 
     $registry->register(TestCollectionPageDefinition::class);
-})->throws(InvalidArgumentException::class, 'No handle is registered for block class');
+})->throws(InvalidArgumentException::class, 'No handle is registered for section class');
 
-it('rejects a definition referencing a BlockHandle that is not registered', function () {
-    final class UnregisteredBlockHandleForTest extends PageDefinition
+it('rejects a definition referencing a SectionHandle that is not registered', function () {
+    final class UnregisteredSectionHandleForTest extends PageDefinition
     {
-        public function allowedBlocks(): array
+        public function allowedSections(): array
         {
-            return [BlockHandle::make('does-not-exist')];
+            return [SectionHandle::make('does-not-exist')];
         }
     }
 
     $registry = makeRegistry();
 
-    $registry->register(UnregisteredBlockHandleForTest::class);
+    $registry->register(UnregisteredSectionHandleForTest::class);
 })->throws(InvalidArgumentException::class, 'which is not registered');
 
-it('rejects a definition that returns something other than a class-string or BlockHandle', function () {
+it('rejects a definition that returns something other than a class-string or SectionHandle', function () {
     final class RawStringReferenceForTest extends PageDefinition
     {
-        public function allowedBlocks(): array
+        public function allowedSections(): array
         {
             return ['just-a-string'];
         }
@@ -138,12 +138,12 @@ it('rejects a definition that returns something other than a class-string or Blo
     $registry = makeRegistry();
 
     $registry->register(RawStringReferenceForTest::class);
-})->throws(InvalidArgumentException::class, 'must return block class-strings implementing InlayBlock, or BlockHandle instances');
+})->throws(InvalidArgumentException::class, 'must return section class-strings implementing InlaySection, or SectionHandle instances');
 
-it('rejects a locked block that is not also required', function () {
+it('rejects a locked section that is not also required', function () {
     final class LockedNotRequiredForTest extends PageDefinition
     {
-        public function lockedBlocks(): array
+        public function lockedSections(): array
         {
             return [TestHeroSection::class];
         }
@@ -154,20 +154,20 @@ it('rejects a locked block that is not also required', function () {
     $registry->register(LockedNotRequiredForTest::class);
 })->throws(InvalidArgumentException::class, 'without also requiring them');
 
-it('deduplicates repeated references in allowed/required/locked but preserves repeats in defaultBlocks', function () {
+it('deduplicates repeated references in allowed/required/locked but preserves repeats in defaultSections', function () {
     final class RepeatedReferencesForTest extends PageDefinition
     {
-        public function allowedBlocks(): array
+        public function allowedSections(): array
         {
             return [TestHeroSection::class, TestHeroSection::class];
         }
 
-        public function requiredBlocks(): array
+        public function requiredSections(): array
         {
             return [TestHeroSection::class, TestHeroSection::class];
         }
 
-        public function defaultBlocks(): array
+        public function defaultSections(): array
         {
             return [TestHeroSection::class, TestHeroSection::class];
         }
@@ -178,9 +178,9 @@ it('deduplicates repeated references in allowed/required/locked but preserves re
 
     $resolved = $registry->definition('repeated-references-for-test');
 
-    expect($resolved->allowedBlocks)->toBe(['test-hero'])
-        ->and($resolved->requiredBlocks)->toBe(['test-hero'])
-        ->and($resolved->defaultBlocks)->toBe(['test-hero', 'test-hero']);
+    expect($resolved->allowedSections)->toBe(['test-hero'])
+        ->and($resolved->requiredSections)->toBe(['test-hero'])
+        ->and($resolved->defaultSections)->toBe(['test-hero', 'test-hero']);
 });
 
 it('resolves a Page with no definition column value to the built-in default', function () {
@@ -199,22 +199,22 @@ it('returns null for a Page pointing at a definition handle that is no longer re
     expect($registry->resolveForPage($page))->toBeNull();
 });
 
-it('accepts a single-file block referenced via BlockHandle, not just class-based ones', function () {
-    final class UsesBlockHandleForTest extends PageDefinition
+it('accepts a single-file section referenced via SectionHandle, not just class-based ones', function () {
+    final class UsesSectionHandleForTest extends PageDefinition
     {
-        public function allowedBlocks(): array
+        public function allowedSections(): array
         {
-            return [BlockHandle::make('single-file-hero')];
+            return [SectionHandle::make('single-file-hero')];
         }
     }
 
-    $blocks = new BlockRegistry([]);
-    $blocks->registerSingleFile(
-        app(BlockLoader::class)->load(__DIR__.'/../Fixtures/single-file/hero.blade.php')
+    $sectionTypes = new SectionRegistry([]);
+    $sectionTypes->registerSingleFile(
+        app(SingleFileLoader::class)->load(__DIR__.'/../Fixtures/single-file/hero.blade.php')
     );
 
-    $registry = new PageDefinitionRegistry($blocks);
-    $registry->register(UsesBlockHandleForTest::class);
+    $registry = new PageDefinitionRegistry($sectionTypes);
+    $registry->register(UsesSectionHandleForTest::class);
 
-    expect($registry->definition('uses-block-handle-for-test')->allowedBlocks)->toBe(['single-file-hero']);
+    expect($registry->definition('uses-section-handle-for-test')->allowedSections)->toBe(['single-file-hero']);
 });

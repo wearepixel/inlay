@@ -11,15 +11,15 @@ use WeArePixel\Inlay\Composition\SettingsValidator;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Models\PageSection;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
-use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\RichTextSanitizer;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Support\SettingsCoercer;
 
 final class UpdatePageSection
 {
     public function __construct(
-        private readonly BlockRegistry $blocks,
+        private readonly SectionRegistry $sections,
         private readonly PageDefinitionRegistry $definitions,
         private readonly SettingsValidator $validator,
         private readonly SettingsCoercer $coercer,
@@ -29,7 +29,7 @@ final class UpdatePageSection
 
     /**
      * Merges $patch into the section's stored overrides. A null value removes
-     * the override so the field follows the block's default again.
+     * the override so the field follows the section's default again.
      *
      * @param  array<string, mixed>  $patch
      *
@@ -55,17 +55,17 @@ final class UpdatePageSection
             throw new InvalidCompositionException([new CompositionError('section_id', "Section {$sectionId} does not exist on this page. Call inlay-get-page for its section ids.")]);
         }
 
-        if (! $this->blocks->hasHandle($section->handle)) {
-            throw new InvalidCompositionException([new CompositionError('section_id', "Section {$sectionId} uses the unregistered block \"{$section->handle}\" and cannot be edited.")]);
+        if (! $this->sections->hasHandle($section->handle)) {
+            throw new InvalidCompositionException([new CompositionError('section_id', "Section {$sectionId} uses the unregistered section \"{$section->handle}\" and cannot be edited.")]);
         }
 
-        $block = $this->blocks->definition($section->handle);
-        $errors = $this->validator->validate($block->settings, $patch, 'settings');
+        $sectionType = $this->sections->definition($section->handle);
+        $errors = $this->validator->validate($sectionType->settings, $patch, 'settings');
 
         $stored = $section->settings ?? [];
 
         foreach ($patch as $name => $value) {
-            $setting = $block->settings->field((string) $name);
+            $setting = $sectionType->settings->field((string) $name);
 
             if ($setting === null) {
                 continue;
@@ -81,8 +81,8 @@ final class UpdatePageSection
         }
 
         if ($errors === []) {
-            $effective = $this->renderer->resolveEffectiveRawSettings($block, $stored);
-            $errors = $this->validator->validateRequired($block->settings, $effective, 'settings');
+            $effective = $this->renderer->resolveEffectiveRawSettings($sectionType, $stored);
+            $errors = $this->validator->validateRequired($sectionType->settings, $effective, 'settings');
         }
 
         if ($errors !== []) {

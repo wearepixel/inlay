@@ -20,7 +20,7 @@ use WeArePixel\Inlay\Mcp\InlayTool;
 #[Title('Upload an image for Inlay')]
 #[Description(<<<'TEXT'
 Uploads an image (JPEG, PNG, WebP or GIF, base64-encoded) so it can be used in an image setting.
-Returns a "path": put that path in the block's image setting. Export images at the size they are
+Returns a "path": put that path in the section's image setting. Export images at the size they are
 displayed - for example from a Figma frame - rather than uploading a much larger original. SVG is not
 accepted.
 TEXT)]

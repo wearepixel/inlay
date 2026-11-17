@@ -111,7 +111,7 @@ final class Page extends Model
      * Inlay's own routing uses the latest revision's own snapshotted title
      * instead (see PagesController), so editing this never changes what a
      * live visitor sees until the next publish - the same guarantee already
-     * in place for Block settings, extended to Page-level metadata.
+     * in place for Section settings, extended to Page-level metadata.
      */
     public function effectiveMetaTitle(): string
     {

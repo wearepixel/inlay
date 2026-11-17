@@ -10,14 +10,15 @@ use DOMXPath;
 use Illuminate\Support\Str;
 use Throwable;
 use WeArePixel\Inlay\Schema\FieldType;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Schema\Setting;
+use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
 
 /**
  * Describes what a composition will actually render, section by section,
  * so an agent can check its work without seeing the page: the text,
- * headings, links and images each block produced, the content still coming
- * from block defaults, and anything that failed or looks unfinished.
+ * headings, links and images each section produced, the content still coming
+ * from section defaults, and anything that failed or looks unfinished.
  */
 final class CompositionReport
 {
@@ -26,7 +27,7 @@ final class CompositionReport
     private const TEXT_EXCERPT_LENGTH = 400;
 
     public function __construct(
-        private readonly BlockRegistry $blocks,
+        private readonly SectionRegistry $sections,
         private readonly SectionRenderer $renderer,
     ) {}
 
@@ -45,7 +46,7 @@ final class CompositionReport
             $h1Count += count(array_filter($entry['outline']['headings'] ?? [], fn (array $heading) => $heading['level'] === 1));
 
             foreach ($entry['problems'] as $problem) {
-                $warnings[] = "Section {$index} ({$entry['block']}): {$problem}";
+                $warnings[] = "Section {$index} ({$entry['section']}): {$problem}";
             }
 
             $report[] = $entry;
@@ -66,15 +67,15 @@ final class CompositionReport
     {
         $handle = $section['handle'];
         $stored = $section['settings'] ?? [];
-        $entry = ['index' => $index, 'id' => $section['id'] ?? null, 'block' => $handle, 'problems' => []];
+        $entry = ['index' => $index, 'id' => $section['id'] ?? null, 'section' => $handle, 'problems' => []];
 
-        if (! $this->blocks->hasHandle($handle)) {
-            $entry['problems'][] = 'This block is not registered and will not render.';
+        if (! $this->sections->hasHandle($handle)) {
+            $entry['problems'][] = 'This section is not registered and will not render.';
 
             return $entry;
         }
 
-        $definition = $this->blocks->definition($handle);
+        $definition = $this->sections->definition($handle);
         $entry['name'] = $definition->name;
         $entry['defaults_in_use'] = $this->defaultsInUse($definition->settings->fields(), $stored);
 
@@ -93,7 +94,7 @@ final class CompositionReport
     }
 
     /**
-     * @param  array<int, \WeArePixel\Inlay\Schema\Setting>  $fields
+     * @param  array<int, Setting>  $fields
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */

@@ -7,14 +7,14 @@ namespace WeArePixel\Inlay\Pages;
 use InvalidArgumentException;
 use ReflectionClass;
 use WeArePixel\Inlay\Attributes\PageDefinitionMeta;
-use WeArePixel\Inlay\Contracts\InlayBlock;
+use WeArePixel\Inlay\Contracts\InlaySection;
 use WeArePixel\Inlay\Models\Page;
-use WeArePixel\Inlay\Support\BlockHandle;
-use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\SectionHandle;
+use WeArePixel\Inlay\Support\SectionRegistry;
 
 /**
  * Resolves a registered PageDefinition class into a ResolvedPageDefinition -
- * every Block reference normalised to its stable registered handle, and
+ * every Section reference normalised to its stable registered handle, and
  * validated immediately at registration time rather than the first time a
  * Page happens to use it. The built-in, unrestricted DefaultPageDefinition
  * is always registered, so a developer who never calls
@@ -29,7 +29,7 @@ final class PageDefinitionRegistry
      */
     private array $definitions = [];
 
-    public function __construct(private readonly BlockRegistry $blocks)
+    public function __construct(private readonly SectionRegistry $sections)
     {
         $this->register(DefaultPageDefinition::class);
     }
@@ -100,11 +100,11 @@ final class PageDefinitionRegistry
         $handle = $meta->handle ?? str($reflection->getShortName())->kebab()->toString();
         $label = $meta->label ?? str($reflection->getShortName())->headline()->toString();
 
-        $locked = $this->normalizeHandles($definitionClass, 'lockedBlocks', $instance->lockedBlocks());
-        $required = $this->normalizeHandles($definitionClass, 'requiredBlocks', $instance->requiredBlocks());
-        $default = $this->normalizeHandles($definitionClass, 'defaultBlocks', $instance->defaultBlocks(), allowDuplicates: true);
+        $locked = $this->normalizeHandles($definitionClass, 'lockedSections', $instance->lockedSections());
+        $required = $this->normalizeHandles($definitionClass, 'requiredSections', $instance->requiredSections());
+        $default = $this->normalizeHandles($definitionClass, 'defaultSections', $instance->defaultSections(), allowDuplicates: true);
 
-        // A locked Block is always also required
+        // A locked Section is always also required
         // (docs/inlay/v1/page-definitions#locked) - rejecting the
         // contradiction here is preferred over silently normalising it in
         // either direction, per the same
@@ -114,21 +114,21 @@ final class PageDefinitionRegistry
 
         if ($lockedNotRequired !== []) {
             throw new InvalidArgumentException(
-                "Page Definition [{$definitionClass}] locks block(s) [".implode(', ', $lockedNotRequired).'] '.
-                'without also requiring them. A locked block must always be required - list it in requiredBlocks() too.'
+                "Page Definition [{$definitionClass}] locks section(s) [".implode(', ', $lockedNotRequired).'] '.
+                'without also requiring them. A locked section must always be required - list it in requiredSections() too.'
             );
         }
 
-        $allowedRaw = $instance->allowedBlocks();
+        $allowedRaw = $instance->allowedSections();
 
-        // A required or locked (or default) Block is always also allowed,
+        // A required or locked (or default) Section is always also allowed,
         // whether or not the definition separately lists it in
-        // allowedBlocks() - so a developer never has to restate the same
+        // allowedSections() - so a developer never has to restate the same
         // handle in two places just to satisfy this guarantee.
         $allowed = $allowedRaw === null
             ? null
             : array_values(array_unique([
-                ...$this->normalizeHandles($definitionClass, 'allowedBlocks', $allowedRaw),
+                ...$this->normalizeHandles($definitionClass, 'allowedSections', $allowedRaw),
                 ...$required,
                 ...$locked,
                 ...$default,
@@ -139,23 +139,23 @@ final class PageDefinitionRegistry
             label: $label,
             description: $meta->description,
             icon: $meta->icon,
-            allowedBlocks: $allowed,
-            requiredBlocks: $required,
-            lockedBlocks: $locked,
-            defaultBlocks: $default,
+            allowedSections: $allowed,
+            requiredSections: $required,
+            lockedSections: $locked,
+            defaultSections: $default,
             definitionClass: $definitionClass,
         );
     }
 
     /**
-     * Normalises a PageDefinition method's Block references into stable,
+     * Normalises a PageDefinition method's Section references into stable,
      * verified handles - never accepting a bare, untyped string, which
-     * BlockHandle exists specifically to rule out (docs/inlay/v1/page-definitions).
+     * SectionHandle exists specifically to rule out (docs/inlay/v1/page-definitions).
      *
      * $references is intentionally typed as `mixed` element-wise, not the
-     * `class-string<InlayBlock>|BlockHandle` the public API documents and
+     * `class-string<InlaySection>|SectionHandle` the public API documents and
      * expects - PHP does not enforce an array's element types at runtime,
-     * so a PageDefinition subclass overriding e.g. allowedBlocks() can
+     * so a PageDefinition subclass overriding e.g. allowedSections() can
      * still hand back anything at all despite the declared return type;
      * the match() below is exactly the runtime check that catches it, and
      * a stricter phpdoc here would tell PHPStan to treat that check as
@@ -170,18 +170,18 @@ final class PageDefinitionRegistry
 
         foreach ($references as $reference) {
             $handle = match (true) {
-                $reference instanceof BlockHandle => $reference->value,
-                is_string($reference) && is_a($reference, InlayBlock::class, true) => $this->blocks->handleForClass($reference),
+                $reference instanceof SectionHandle => $reference->value,
+                is_string($reference) && is_a($reference, InlaySection::class, true) => $this->sections->handleForClass($reference),
                 default => throw new InvalidArgumentException(
-                    "Page Definition [{$definitionClass}]::{$method}() must return block class-strings implementing ".
-                    'InlayBlock, or BlockHandle instances - got '.
+                    "Page Definition [{$definitionClass}]::{$method}() must return section class-strings implementing ".
+                    'InlaySection, or SectionHandle instances - got '.
                     (is_string($reference) ? "string [{$reference}]" : get_debug_type($reference)).'.'
                 ),
             };
 
-            if (! $this->blocks->hasHandle($handle)) {
+            if (! $this->sections->hasHandle($handle)) {
                 throw new InvalidArgumentException(
-                    "Page Definition [{$definitionClass}]::{$method}() references block [{$handle}], which is not registered."
+                    "Page Definition [{$definitionClass}]::{$method}() references section [{$handle}], which is not registered."
                 );
             }
 

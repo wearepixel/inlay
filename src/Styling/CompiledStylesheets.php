@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Cache;
 
 /**
  * The classes and theme variables the site's compiled CSS actually defines.
- * Agent-authored blocks may only use these, so every class an agent writes
+ * Agent-authored sections may only use these, so every class an agent writes
  * is guaranteed to be styled, and nothing outside the site's design system
  * (arbitrary values, another framework, inline styles) can get in.
  */
@@ -59,7 +59,7 @@ final class CompiledStylesheets
     }
 
     /**
-     * Denied utilities (by default `fixed`, which lets a block overlay the
+     * Denied utilities (by default `fixed`, which lets a section overlay the
      * whole page) are refused with any variant, even when the CSS defines them.
      */
     public function allows(string $class): bool
