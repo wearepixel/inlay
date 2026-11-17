@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Support\ImageValue;
 use WeArePixel\Inlay\Support\SettingsCoercer;
 
 /**
@@ -147,7 +148,17 @@ final class SettingsValidator
             return [];
         }
 
-        if (! str_starts_with($value, 'inlay/') || str_contains($value, '..') || str_contains($value, ':')) {
+        if (str_contains($value, '..') || str_contains($value, ':')) {
+            return [new CompositionError($path, 'Must be a relative path on the Inlay disk, as returned by inlay-upload-image.')];
+        }
+
+        if ((new ImageValue($value))->isPublicPath()) {
+            return is_file(public_path(ltrim($value, '/')))
+                ? []
+                : [new CompositionError($path, "No file exists at \"{$value}\" in the application's public directory.")];
+        }
+
+        if (! str_starts_with($value, 'inlay/')) {
             return [new CompositionError($path, 'Must be a relative path on the Inlay disk, as returned by inlay-upload-image.')];
         }
 

@@ -139,6 +139,9 @@ it('reports each settings problem with its dotted path', function (array $settin
     'group wrong type' => [['badge' => ['text' => ['nope']]], 'sections.0.settings.badge.text'],
     'missing image' => [['photo' => 'inlay/missing.png'], 'sections.0.settings.photo'],
     'image path traversal' => [['photo' => '../.env'], 'sections.0.settings.photo'],
+    'public image traversal' => [['photo' => '/images/../../.env'], 'sections.0.settings.photo'],
+    'protocol-relative image' => [['photo' => '//evil.example/x.png'], 'sections.0.settings.photo'],
+    'missing public image' => [['photo' => '/images/missing.png'], 'sections.0.settings.photo'],
     'infinite number' => [['columns' => '1e999'], 'sections.0.settings.columns'],
 ]);
 
@@ -223,4 +226,18 @@ it('refuses an existing file that is outside the inlay image folder', function (
     $errors = compositionErrors($page, [['block' => 'promo', 'settings' => ['photo' => 'private/contract.png']]]);
 
     expect($errors)->toBe(['sections.0.settings.photo: Must be a relative path on the Inlay disk, as returned by inlay-upload-image.']);
+});
+
+it('accepts a root-relative image the application serves from its public directory', function () {
+    $file = public_path('inlay-test-image.png');
+    file_put_contents($file, 'png');
+    $page = Page::create(['title' => 'Landing']);
+
+    try {
+        replaceComposition($page, [['block' => 'promo', 'settings' => ['photo' => '/inlay-test-image.png']]]);
+    } finally {
+        @unlink($file);
+    }
+
+    expect(storedComposition($page)[0][1]['photo'])->toBe('/inlay-test-image.png');
 });
