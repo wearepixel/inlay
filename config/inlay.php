@@ -26,6 +26,20 @@ return [
     'admin' => [
         'prefix' => 'inlay',
         'middleware' => ['web'],
+
+        /*
+        | 'ability' - a Gate ability every admin screen checks for itself, on
+        | the first load and on every Livewire action after it, receiving the
+        | Page where there is one. Unlike the middleware above, it still
+        | applies when a host mounts Inlay's components on its own routes.
+        | null leaves access to the middleware alone.
+        |
+        | 'layout' - a Blade component name (e.g. 'layouts.admin') to render
+        | the admin inside instead of Inlay's own shell. It receives $slot and
+        | $title. null uses Inlay's own layout.
+        */
+        'ability' => null,
+        'layout' => null,
     ],
 
     /*

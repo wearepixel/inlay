@@ -8,7 +8,7 @@
 >
     <div class="inlay-topbar">
         <div>
-            <a href="{{ route('inlay.admin.pages.index') }}" class="inlay-eyebrow" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"><x-inlay::icon name="arrow-left" :size="11" /> All pages</a>
+            <a href="{{ \WeArePixel\Inlay\Facades\Inlay::adminUrl('pages.index') }}" class="inlay-eyebrow" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"><x-inlay::icon name="arrow-left" :size="11" /> All pages</a>
             <h1>{{ $page->title }}</h1>
         </div>
         <div

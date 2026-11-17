@@ -10,9 +10,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use RuntimeException;
 use Throwable;
-use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Declarative\DeclarativeRenderer;
+use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
+use WeArePixel\Inlay\Schema\Settings;
 
 /**
  * Renders each registered block through Laravel's real view engine -
@@ -158,7 +159,7 @@ final class SectionRenderer
      */
     public function resolveEffectiveSettings(BlockDefinition $definition, array $stored): array
     {
-        return $this->resolveEffective($definition, $stored, raw: false);
+        return $this->resolveEffective($definition->settings, $definition->handle, $stored, raw: false);
     }
 
     /**
@@ -174,21 +175,33 @@ final class SectionRenderer
      */
     public function resolveEffectiveRawSettings(BlockDefinition $definition, array $stored): array
     {
-        return $this->resolveEffective($definition, $stored, raw: true);
+        return $this->resolveEffective($definition->settings, $definition->handle, $stored, raw: true);
+    }
+
+    /**
+     * The same resolution for a schema that is not a block's, such as a
+     * site settings group. $owner only identifies the schema in log context.
+     *
+     * @param  array<string, mixed>  $stored
+     * @return array<string, mixed>
+     */
+    public function resolveSchemaSettings(Settings $schema, string $owner, array $stored, bool $raw = false): array
+    {
+        return $this->resolveEffective($schema, $owner, $stored, $raw);
     }
 
     /**
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    private function resolveEffective(BlockDefinition $definition, array $stored, bool $raw): array
+    private function resolveEffective(Settings $schema, string $owner, array $stored, bool $raw): array
     {
         $effective = [];
 
-        foreach ($definition->settings->fields() as $setting) {
+        foreach ($schema->fields() as $setting) {
             $effective[$setting->name] = match (true) {
-                array_key_exists($setting->name, $stored) => $this->resolveValue($definition, $setting, $stored[$setting->name], $raw),
-                ! $raw && $this->hasPlainDefault($setting) => $this->resolveValue($definition, $setting, $setting->default, false),
+                array_key_exists($setting->name, $stored) => $this->resolveValue($owner, $setting, $stored[$setting->name], $raw),
+                ! $raw && $this->hasPlainDefault($setting) => $this->resolveValue($owner, $setting, $setting->default, false),
                 default => $this->normaliseDefault($setting, $raw),
             };
         }
@@ -231,10 +244,10 @@ final class SectionRenderer
         return $setting->default;
     }
 
-    private function resolveValue(BlockDefinition $definition, Setting $setting, mixed $value, bool $raw): mixed
+    private function resolveValue(string $owner, Setting $setting, mixed $value, bool $raw): mixed
     {
         if ($setting->type === FieldType::Select && $setting->enumClass !== null) {
-            $enum = $this->hydrateEnum($definition, $setting, $value);
+            $enum = $this->hydrateEnum($owner, $setting, $value);
 
             return $raw && $enum instanceof BackedEnum ? $enum->value : $enum;
         }
@@ -251,13 +264,13 @@ final class SectionRenderer
 
         if ($setting->type === FieldType::Repeater && $setting->itemSchema !== null && is_array($value)) {
             return array_map(
-                fn (mixed $item): array => $this->resolveNestedEffectiveSettings($definition, $setting, is_array($item) ? $item : [], $raw),
+                fn (mixed $item): array => $this->resolveNestedEffectiveSettings($owner, $setting, is_array($item) ? $item : [], $raw),
                 $value,
             );
         }
 
         if ($setting->type === FieldType::Group && $setting->itemSchema !== null) {
-            return $this->resolveNestedEffectiveSettings($definition, $setting, is_array($value) ? $value : [], $raw);
+            return $this->resolveNestedEffectiveSettings($owner, $setting, is_array($value) ? $value : [], $raw);
         }
 
         return $value;
@@ -267,7 +280,7 @@ final class SectionRenderer
      * @param  array<string, mixed>  $stored
      * @return array<string, mixed>
      */
-    private function resolveNestedEffectiveSettings(BlockDefinition $definition, Setting $setting, array $stored, bool $raw): array
+    private function resolveNestedEffectiveSettings(string $owner, Setting $setting, array $stored, bool $raw): array
     {
         $itemSchema = $setting->itemSchema;
 
@@ -277,7 +290,7 @@ final class SectionRenderer
             $default = $nested->hasNestedDefault ? $nested->nestedDefault : null;
 
             $effective[$nested->name] = array_key_exists($nested->name, $stored)
-                ? $this->resolveValue($definition, $nested, $stored[$nested->name], $raw)
+                ? $this->resolveValue($owner, $nested, $stored[$nested->name], $raw)
                 : $default;
         }
 
@@ -290,7 +303,7 @@ final class SectionRenderer
      * falls back to the constructor default and logs a structured warning
      * for public rendering - docs/v1-implementation-specification.md §10.
      */
-    private function hydrateEnum(BlockDefinition $definition, Setting $setting, mixed $value): mixed
+    private function hydrateEnum(string $owner, Setting $setting, mixed $value): mixed
     {
         if ($value instanceof BackedEnum) {
             return $value;
@@ -305,7 +318,7 @@ final class SectionRenderer
         }
 
         Log::warning('inlay: stored value no longer matches a valid enum case, using the constructor default', [
-            'block' => $definition->handle,
+            'block' => $owner,
             'setting' => $setting->name,
             'enum' => $setting->enumClass,
             'value' => $value,

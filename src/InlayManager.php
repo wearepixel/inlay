@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace WeArePixel\Inlay;
 
+use Closure;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\HtmlString;
 use Livewire\Livewire;
@@ -12,7 +14,9 @@ use RuntimeException;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinition;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
+use WeArePixel\Inlay\Schema\Settings;
 use WeArePixel\Inlay\SingleFile\BlockLoader;
+use WeArePixel\Inlay\SiteSettings\SiteSettingsRegistry;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\LivewireRequirement;
 use WeArePixel\Inlay\Support\SectionRenderer;
@@ -26,6 +30,9 @@ use WeArePixel\Inlay\Support\SectionRenderer;
 final class InlayManager
 {
     private ?string $previewView = null;
+
+    /** @var (Closure(string, mixed...): ?string)|null */
+    private ?Closure $adminUrlResolver = null;
 
     private bool $pageRoutesRegistered = false;
 
@@ -355,6 +362,71 @@ final class InlayManager
         foreach (glob(rtrim($directory, '/').'/*.blade.php') ?: [] as $path) {
             $this->singleFileBlock($path);
         }
+    }
+
+    /**
+     * Aborts with a 403 unless the current user has
+     * config('inlay.admin.ability'). Does nothing when no ability is set.
+     */
+    public function authorizeAdmin(?Page $page = null): void
+    {
+        $ability = config('inlay.admin.ability');
+
+        if (! is_string($ability) || $ability === '') {
+            return;
+        }
+
+        abort_unless(Gate::allows($ability, $page === null ? [] : [$page]), 403);
+    }
+
+    /**
+     * Points the admin's own links (back to the page list, into the editor,
+     * to site settings) at a host's routes when it mounts Inlay's components
+     * itself. The resolver receives the screen ('pages.index',
+     * 'pages.create', 'pages.edit', 'settings') and its parameter (a Page,
+     * or a settings group handle), and returns null to keep Inlay's route.
+     *
+     * @param  (Closure(string, mixed...): ?string)|null  $resolver
+     */
+    public function adminUrlsUsing(?Closure $resolver): void
+    {
+        $this->adminUrlResolver = $resolver;
+    }
+
+    public function adminUrl(string $screen, mixed ...$parameters): string
+    {
+        $custom = $this->adminUrlResolver !== null
+            ? ($this->adminUrlResolver)($screen, ...$parameters)
+            : null;
+
+        return $custom ?? route("inlay.admin.{$screen}", array_values(array_filter($parameters, fn (mixed $parameter) => $parameter !== null)));
+    }
+
+    /**
+     * Registers a group of site-wide content (contact details, header
+     * links) editable under Settings in the admin and read anywhere with
+     * Inlay::setting('handle.field').
+     */
+    public function siteSettings(string $handle, Settings $schema, ?string $label = null): void
+    {
+        app(SiteSettingsRegistry::class)->register($handle, $schema, $label);
+    }
+
+    /**
+     * A site setting by "group.field", hydrated like a block setting.
+     * Nested values can be reached with more dots, e.g. "header.cta.url".
+     */
+    public function setting(string $key, mixed $default = null): mixed
+    {
+        return app(SiteSettingsRegistry::class)->value($key, $default);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function settings(string $handle): array
+    {
+        return app(SiteSettingsRegistry::class)->values($handle);
     }
 
     /** Cache-busting token for a resources/dist asset, keyed to its own mtime. */

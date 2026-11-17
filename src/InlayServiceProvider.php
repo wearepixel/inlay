@@ -13,6 +13,7 @@ use WeArePixel\Inlay\Contracts\Screenshotter;
 use WeArePixel\Inlay\Declarative\DeclarativeBlocks;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Screenshots\BrowsershotScreenshotter;
+use WeArePixel\Inlay\SiteSettings\SiteSettingsRegistry;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\LivewireRequirement;
 use WeArePixel\Inlay\View\Components\RenderPage;
@@ -33,6 +34,7 @@ final class InlayServiceProvider extends ServiceProvider
             return $registry;
         });
         $this->app->singleton(PageDefinitionRegistry::class);
+        $this->app->singleton(SiteSettingsRegistry::class);
         $this->app->singleton(InlayManager::class);
     }
 
@@ -53,7 +55,10 @@ final class InlayServiceProvider extends ServiceProvider
             Livewire::addNamespace('inlay', classNamespace: 'WeArePixel\\Inlay\\Livewire');
         }
 
-        $this->app['events']->listen(RequestHandled::class, fn () => $this->app->make(BlockRegistry::class)->forgetDeclarative());
+        $this->app['events']->listen(RequestHandled::class, function () {
+            $this->app->make(BlockRegistry::class)->forgetDeclarative();
+            $this->app->make(SiteSettingsRegistry::class)->forgetResolved();
+        });
 
         if (config('inlay.mcp.screenshots.driver') === 'browsershot' && ! $this->app->bound(Screenshotter::class)) {
             $this->app->singleton(Screenshotter::class, fn () => new BrowsershotScreenshotter(

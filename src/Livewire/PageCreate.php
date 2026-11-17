@@ -6,18 +6,19 @@ namespace WeArePixel\Inlay\Livewire;
 
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\Layout;
 use Livewire\Component;
 use WeArePixel\Inlay\Actions\CreatePage;
 use WeArePixel\Inlay\InlayManager;
+use WeArePixel\Inlay\Livewire\Concerns\InlayAdminComponent;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Pages\ResolvedPageDefinition;
 use WeArePixel\Inlay\Rules\PagePath;
 
-#[Layout('inlay::layout')]
 final class PageCreate extends Component
 {
+    use InlayAdminComponent;
+
     public string $title = '';
 
     public string $path = '';
@@ -82,13 +83,11 @@ final class PageCreate extends Component
             isHomepage: $this->isHomepage,
         );
 
-        $this->redirectRoute('inlay.admin.pages.edit', ['page' => $page], navigate: false);
+        $this->redirect(app(InlayManager::class)->adminUrl('pages.edit', $page));
     }
 
     public function render(): View
     {
-        return view('inlay::livewire.page-create', [
-            'title' => 'Create page · Inlay',
-        ]);
+        return $this->adminView('inlay::livewire.page-create', 'Create page · Inlay');
     }
 }

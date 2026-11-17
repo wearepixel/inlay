@@ -13,7 +13,7 @@
                 style="width: 220px;"
                 data-test="page-search"
             >
-            <a href="{{ route('inlay.admin.pages.create') }}" class="inlay-button inlay-button--primary">New page</a>
+            <a href="{{ \WeArePixel\Inlay\Facades\Inlay::adminUrl('pages.create') }}" class="inlay-button inlay-button--primary">New page</a>
         </div>
     </div>
 
@@ -46,7 +46,7 @@
                     @foreach ($pages as $page)
                         <tr wire:key="page-{{ $page->id }}">
                             <td>
-                                <a href="{{ route('inlay.admin.pages.edit', $page) }}" class="inlay-table__title">{{ $page->title }}</a>
+                                <a href="{{ \WeArePixel\Inlay\Facades\Inlay::adminUrl('pages.edit', $page) }}" class="inlay-table__title">{{ $page->title }}</a>
                                 <div class="inlay-table__slug">
                                     @if ($page->path !== null)
                                         {{ $this->url($page) }}
@@ -66,7 +66,7 @@
                             <td title="{{ $page->updated_at?->toDayDateTimeString() }}">{{ $page->updated_at?->diffForHumans() }}</td>
                             <td>
                                 <div class="inlay-table__actions">
-                                    <a href="{{ route('inlay.admin.pages.edit', $page) }}" class="inlay-button inlay-button--small">Edit</a>
+                                    <a href="{{ \WeArePixel\Inlay\Facades\Inlay::adminUrl('pages.edit', $page) }}" class="inlay-button inlay-button--small">Edit</a>
                                     <button
                                         type="button"
                                         wire:click="delete({{ $page->id }})"

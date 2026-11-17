@@ -8,7 +8,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -16,6 +15,7 @@ use WeArePixel\Inlay\Actions\PublishPage;
 use WeArePixel\Inlay\Actions\RestorePageRevision;
 use WeArePixel\Inlay\Actions\SetPageAsHomepage;
 use WeArePixel\Inlay\InlayManager;
+use WeArePixel\Inlay\Livewire\Concerns\InlayAdminComponent;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Models\PageSection;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
@@ -31,9 +31,9 @@ use WeArePixel\Inlay\Support\SectionInstanceLabel;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Support\SettingsCoercer;
 
-#[Layout('inlay::layout')]
 final class PageEditor extends Component
 {
+    use InlayAdminComponent;
     use WithFileUploads;
 
     public Page $page;
@@ -68,6 +68,11 @@ final class PageEditor extends Component
     public string $pageMetaDescription = '';
 
     public bool $pageIsHomepage = false;
+
+    protected function authorizedPage(): Page
+    {
+        return $this->page;
+    }
 
     public function mount(Page $page): void
     {
@@ -515,8 +520,7 @@ final class PageEditor extends Component
             default => $blocks->filter(fn ($block) => $pageDefinition->allows($block->slug))->values(),
         };
 
-        return view('inlay::livewire.page-editor', [
-            'title' => "{$this->page->title} · Inlay",
+        return $this->adminView('inlay::livewire.page-editor', "{$this->page->title} · Inlay", [
             'sections' => $sections,
             // Display name + a best-guess instance detail (e.g. "Hero" /
             // "Welcome") for every section in the tree - see

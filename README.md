@@ -69,6 +69,72 @@ The blocks are yours from then on - restyle them to the client's brand.
 6. `npm run build`, then visit `/inlay/pages`.
 7. For AI agents: `composer require laravel/mcp`, mount the server and define the abilities (below).
 
+## Your own admin
+
+Inlay's admin can live inside the host's own admin panel instead of its own shell.
+
+**Your layout, Inlay's screens.** Point `config('inlay.admin.layout')` at a Blade component that renders `$slot` (and optionally `$title`). Inlay's pages, editor and settings render inside it, on Inlay's routes:
+
+```php
+'admin' => [
+    'prefix' => 'admin/content',
+    'middleware' => ['web', 'auth'],
+    'ability' => 'manage-content',
+    'layout' => 'layouts.admin',   // resources/views/components/layouts/admin.blade.php
+],
+```
+
+The editor fills the height of the element around it, so give the layout's content area a height (for example a flex column with `min-height: 100dvh`).
+
+**Your routes, Inlay's components.** Mount the components yourself, wrapped in `<x-inlay::frame>` (which loads Inlay's CSS and JS and scopes its styles):
+
+```blade
+<x-layouts.admin>
+    <x-inlay::frame>
+        <livewire:inlay::page-editor :page="$page" />
+    </x-inlay::frame>
+</x-layouts.admin>
+```
+
+Available: `inlay::page-index`, `inlay::page-create`, `inlay::page-editor` and `inlay::site-settings-editor`. Keep `Inlay::adminRoutes()` registered - the editor's preview and the admin assets are served from it. Point Inlay's own links at your routes:
+
+```php
+Inlay::adminUrlsUsing(fn (string $screen, mixed ...$params) => match ($screen) {
+    'pages.edit' => route('admin.content.edit', $params[0]),
+    default => null, // keep Inlay's route
+});
+```
+
+**Access.** `config('inlay.admin.ability')` is checked by every admin screen on the first load and on every action after it, receiving the Page where there is one. Set it whenever you mount the components on your own routes: Livewire only re-runs the middleware Inlay registers for its own routes.
+
+**Styling.** Override the `--inlay-*` custom properties (see the top of `resources/dist/inlay.css`) to match your brand:
+
+```css
+:root { --inlay-accent: #334735; --inlay-bg: #f8fafc; --inlay-font: "Almarai", sans-serif; }
+```
+
+## Site settings
+
+Content that belongs to the whole site - contact details, header links, footer text - is declared with the same `Settings` schema as a block and edited under **Settings** in the admin:
+
+```php
+use WeArePixel\Inlay\Schema\Settings;
+
+Inlay::siteSettings('contact', Settings::make()
+    ->text('phone')->label('Phone')->default('+61 400 000 000')
+    ->text('email')->label('Email')
+    ->textarea('address'), label: 'Contact details');
+```
+
+Read values anywhere, hydrated like block settings (images to `ImageValue`, links to `LinkValue`):
+
+```blade
+<a href="tel:{{ Inlay::setting('contact.phone') }}">{{ Inlay::setting('contact.phone') }}</a>
+@foreach (Inlay::setting('header.links', []) as $link) ... @endforeach
+```
+
+Site settings are live as soon as they are saved: there is no draft or publish step. Run `php artisan migrate` after upgrading - they are stored in `inlay_site_settings`.
+
 ## MCP server
 
 With `laravel/mcp` installed (Laravel 12+), AI agents can list blocks, compose pages, preview them and, if allowed, publish. Either give Inlay its own endpoint:

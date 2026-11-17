@@ -5,7 +5,7 @@
             <h1>New page</h1>
         </div>
         <div class="inlay-topbar__actions">
-            <a href="{{ route('inlay.admin.pages.index') }}" class="inlay-button inlay-button--ghost">Cancel</a>
+            <a href="{{ \WeArePixel\Inlay\Facades\Inlay::adminUrl('pages.index') }}" class="inlay-button inlay-button--ghost">Cancel</a>
             <button type="button" wire:click="save" class="inlay-button inlay-button--primary" data-test="save-page">Create page</button>
         </div>
     </div>

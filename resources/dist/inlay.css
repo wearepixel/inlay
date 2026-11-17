@@ -159,6 +159,31 @@
   min-height: 0;
 }
 
+/* Inlay rendered inside a host's own admin layout (<x-inlay::frame>). The
+   host gives the frame's parent a height for the editor to fill. */
+.inlay-frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.inlay-frame > * {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.inlay-site-settings {
+  max-width: 560px;
+}
+
+.inlay-site-settings .inlay-tabs {
+  margin-bottom: 20px;
+}
+
 /* Passes .inlay-main's flex height through page-editor's Livewire root element. */
 .inlay-editor-page {
   display: flex;

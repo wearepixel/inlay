@@ -6,16 +6,16 @@ namespace WeArePixel\Inlay\Livewire;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 use WeArePixel\Inlay\Enums\PageStatus;
 use WeArePixel\Inlay\InlayManager;
+use WeArePixel\Inlay\Livewire\Concerns\InlayAdminComponent;
 use WeArePixel\Inlay\Models\Page;
 
-#[Layout('inlay::layout')]
 final class PageIndex extends Component
 {
+    use InlayAdminComponent;
     use WithPagination;
 
     public string $search = '';
@@ -51,8 +51,7 @@ final class PageIndex extends Component
 
     public function render(): View
     {
-        return view('inlay::livewire.page-index', [
-            'title' => 'Pages · Inlay',
+        return $this->adminView('inlay::livewire.page-index', 'Pages · Inlay', [
             'pages' => $this->pages(),
         ]);
     }

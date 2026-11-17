@@ -23,6 +23,12 @@
                     href="{{ route('inlay.admin.pages.index') }}"
                     class="inlay-topnav__link {{ request()->routeIs('inlay.admin.pages.*') ? 'is-active' : '' }}"
                 >Pages</a>
+                @if (app(\WeArePixel\Inlay\SiteSettings\SiteSettingsRegistry::class)->all() !== [])
+                    <a
+                        href="{{ \WeArePixel\Inlay\Facades\Inlay::adminUrl('settings') }}"
+                        class="inlay-topnav__link {{ request()->routeIs('inlay.admin.settings') ? 'is-active' : '' }}"
+                    >Settings</a>
+                @endif
             </nav>
         </header>
 

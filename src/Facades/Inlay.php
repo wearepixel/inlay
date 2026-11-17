@@ -21,6 +21,14 @@ use WeArePixel\Inlay\Pages\PageDefinition;
  * @method static Htmlable renderPage(Page $page, ?array<string, mixed> $context = null)
  * @method static void pageDefinition(class-string<PageDefinition> $definitionClass)
  * @method static void pageDefinitions(array<int, class-string<PageDefinition>> $definitionClasses)
+ * @method static void singleFileBlock(string $path)
+ * @method static void singleFileBlocks(string $directory)
+ * @method static void authorizeAdmin(?Page $page = null)
+ * @method static void adminUrlsUsing(?\Closure $resolver)
+ * @method static string adminUrl(string $screen, mixed ...$parameters)
+ * @method static void siteSettings(string $handle, \WeArePixel\Inlay\Schema\Settings $schema, ?string $label = null)
+ * @method static mixed setting(string $key, mixed $default = null)
+ * @method static array<string, mixed> settings(string $handle)
  *
  * @see InlayManager
  */
