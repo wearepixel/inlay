@@ -94,3 +94,11 @@ it('shows a distinct Homepage badge alongside the status badge, without hiding t
         ->toContain('Homepage')
         ->toContain('home'); // the public path is still shown, not replaced by the badge
 });
+
+it('shows the homepage at its root url rather than as having no public path', function () {
+    Page::create(['title' => 'Home', 'is_homepage' => true]);
+
+    Livewire::test(PageIndex::class)
+        ->assertDontSee('No public path')
+        ->assertSee('/');
+});

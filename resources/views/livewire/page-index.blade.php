@@ -48,7 +48,7 @@
                             <td>
                                 <a href="{{ \WeArePixel\Inlay\Facades\Inlay::adminUrl('pages.edit', $page) }}" class="inlay-table__title">{{ $page->title }}</a>
                                 <div class="inlay-table__slug">
-                                    @if ($page->path !== null)
+                                    @if ($this->url($page) !== null)
                                         {{ $this->url($page) }}
                                     @else
                                         <span style="opacity: 0.6;">No public path</span>
