@@ -60,7 +60,10 @@ BLADE;
     private function defaultExpression(array $field): string
     {
         if ($field['type'] === 'link' && is_array($field['default'])) {
-            return 'new LinkValue('.var_export($field['default']['label'], true).', '.var_export($field['default']['url'], true).')';
+            $link = $field['default'];
+            $newTab = ($link['openInNewTab'] ?? false) ? ', true' : '';
+
+            return 'new LinkValue('.var_export($link['label'], true).', '.var_export($link['url'], true).$newTab.')';
         }
 
         return var_export($field['default'], true);

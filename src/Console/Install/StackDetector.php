@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeArePixel\Inlay\Console\Install;
 
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Route;
 
 /**
  * Reads the host application's package.json, composer.json, routes and views
@@ -23,12 +24,13 @@ final class StackDetector
         return new Stack(
             css: $this->cssFramework($npm),
             hasLivewire: isset($composer['livewire/livewire']),
-            hasAuth: $this->hasAuth($composer),
+            hasAuth: Route::has('login'),
             hasFilament: isset($composer['filament/filament']),
             hasMcp: isset($composer['laravel/mcp']),
             isFreshApp: $this->isFreshApp(),
             layouts: $this->layouts(),
             viteEntries: $this->viteEntries(),
+            registersRoutesAfterWeb: $this->registersRoutesAfterWeb(),
         );
     }
 
@@ -46,22 +48,6 @@ final class StackDetector
         }
 
         return 'plain';
-    }
-
-    /**
-     * @param  array<string, string>  $composer
-     */
-    private function hasAuth(array $composer): bool
-    {
-        foreach (['laravel/fortify', 'laravel/breeze', 'laravel/jetstream', 'laravel/ui', 'filament/filament'] as $package) {
-            if (isset($composer[$package])) {
-                return true;
-            }
-        }
-
-        return $this->files->exists(app_path('Http/Controllers/Auth'))
-            || $this->files->isDirectory(resource_path('views/auth'))
-            || $this->files->isDirectory(resource_path('views/livewire/auth'));
     }
 
     /**
@@ -93,16 +79,44 @@ final class StackDetector
         $layouts = [];
 
         foreach ($this->files->glob(resource_path('views/components/layouts/*.blade.php')) as $path) {
-            $layouts[] = 'component:layouts.'.basename($path, '.blade.php');
+            if ($this->isPublicLayout($path)) {
+                $layouts[] = 'component:layouts.'.basename($path, '.blade.php');
+            }
         }
 
         foreach ($this->files->glob(resource_path('views/layouts/*.blade.php')) as $path) {
-            if (str_contains($this->files->get($path), '@yield(')) {
+            if ($this->isPublicLayout($path) && str_contains($this->files->get($path), '@yield(')) {
                 $layouts[] = 'extends:layouts.'.basename($path, '.blade.php');
             }
         }
 
         return $layouts;
+    }
+
+    /**
+     * A layout that reads the signed-in user (an app dashboard layout) would
+     * fail for visitors, so it is not offered for public pages.
+     */
+    private function isPublicLayout(string $path): bool
+    {
+        $source = $this->files->get($path);
+
+        return ! str_contains($source, 'auth()->user()') && ! str_contains($source, 'Auth::user()');
+    }
+
+    /**
+     * Routes added through withRouting(then: ...) or Folio's pages: are
+     * registered after routes/web.php, so Inlay's catch-all would hide them.
+     */
+    private function registersRoutesAfterWeb(): bool
+    {
+        $bootstrap = base_path('bootstrap/app.php');
+
+        if (! $this->files->exists($bootstrap)) {
+            return false;
+        }
+
+        return preg_match('/\b(then|pages)\s*:/', $this->files->get($bootstrap)) === 1;
     }
 
     /**

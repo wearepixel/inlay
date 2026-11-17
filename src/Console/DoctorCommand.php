@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace WeArePixel\Inlay\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
+use Throwable;
 use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\RouteConflicts;
@@ -41,8 +43,14 @@ final class DoctorCommand extends Command
         $this->check('Config published', file_exists(config_path('inlay.php')) ? self::PASS : self::WARN,
             'Run php artisan vendor:publish --tag=inlay-config to customise it.');
 
-        $this->check('Database tables', $this->tablesExist() ? self::PASS : self::FAIL,
-            'Run php artisan migrate.');
+        $databaseReady = $this->tablesExist();
+
+        $this->check('Database tables', $databaseReady ? self::PASS : self::FAIL,
+            'Check the database connection, then run php artisan migrate.');
+
+        if (! $databaseReady) {
+            return $this->finish();
+        }
 
         $this->check('Livewire installed (for the admin)', LivewireRequirement::isSatisfied() ? self::PASS : self::FAIL,
             'Run composer require livewire/livewire.');
@@ -51,7 +59,7 @@ final class DoctorCommand extends Command
             'Add Inlay::adminRoutes(); to routes/web.php.');
 
         $this->check('Admin access restricted', $this->adminIsGuarded(),
-            "Set config('inlay.admin.ability') and define that Gate ability, or add 'auth' to config('inlay.admin.middleware').");
+            "Set config('inlay.admin.ability') and define that Gate ability so only editors pass it - right now it is missing, unchecked, or lets visitors who are not signed in through.");
 
         $this->check('Sections registered', $sections->slugs() !== [] ? self::PASS : self::FAIL,
             'Add sections to resources/views/inlay/sections and call Inlay::singleFileSections(...) in a service provider.');
@@ -73,6 +81,11 @@ final class DoctorCommand extends Command
         $this->check('Preview links can be shared', config('cache.default') !== 'array' ? self::PASS : self::WARN,
             'Preview links need a cache store shared between requests - set CACHE_STORE to database, file or redis.');
 
+        return $this->finish();
+    }
+
+    private function finish(): int
+    {
         $this->newLine();
 
         if ($this->failures > 0) {
@@ -118,7 +131,7 @@ final class DoctorCommand extends Command
 
         $hiddenPages = [];
 
-        foreach ($this->pagesWithUrls($inlay) as $title => $url) {
+        foreach ($this->pagesWithUrls($inlay) as [$title, $url]) {
             $takenBy = $conflicts->routeTaking($url);
 
             if ($takenBy !== null) {
@@ -136,7 +149,7 @@ final class DoctorCommand extends Command
     }
 
     /**
-     * @return array<string, string> page title => URL
+     * @return array<int, array{0: string, 1: string}> each page's title and URL
      */
     private function pagesWithUrls(InlayManager $inlay): array
     {
@@ -150,7 +163,7 @@ final class DoctorCommand extends Command
             $url = $inlay->url($page);
 
             if ($url !== null) {
-                $urls[$page->title] = $url;
+                $urls[] = [$page->title, $url];
             }
         }
 
@@ -159,6 +172,12 @@ final class DoctorCommand extends Command
 
     private function tablesExist(): bool
     {
+        try {
+            DB::connection()->getPdo();
+        } catch (Throwable) {
+            return false;
+        }
+
         foreach (['pages', 'page_sections', 'page_revisions', 'inlay_site_settings'] as $table) {
             if (! Schema::hasTable($table)) {
                 return false;
@@ -173,12 +192,16 @@ final class DoctorCommand extends Command
         $ability = config('inlay.admin.ability');
 
         if (is_string($ability) && $ability !== '') {
-            return Gate::has($ability) ? self::PASS : self::FAIL;
+            if (! Gate::has($ability)) {
+                return self::FAIL;
+            }
+
+            return Gate::forUser(null)->allows($ability) ? self::WARN : self::PASS;
         }
 
-        $middleware = (array) config('inlay.admin.middleware', []);
+        $middleware = array_diff((array) config('inlay.admin.middleware', []), ['web']);
 
-        return in_array('auth', $middleware, true) ? self::WARN : self::FAIL;
+        return $middleware !== [] ? self::WARN : self::FAIL;
     }
 
     private function previewViewExists(InlayManager $inlay): bool

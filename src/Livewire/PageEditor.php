@@ -96,16 +96,6 @@ final class PageEditor extends Component
      * as PageCreate's own effectiveUrl does - never read from the database
      * directly, since it must update live as an editor types.
      */
-    /**
-     * The route that answers this page's URL before Inlay can, so the page
-     * would never show there.
-     */
-    #[Computed]
-    public function routeConflict(): ?string
-    {
-        return app(RouteConflicts::class)->routeTaking($this->pageEffectiveUrl());
-    }
-
     #[Computed]
     public function pageEffectiveUrl(): ?string
     {
@@ -115,6 +105,16 @@ final class PageEditor extends Component
         ]);
 
         return app(InlayManager::class)->url($page);
+    }
+
+    /**
+     * The route that answers this page's URL before Inlay can, so the page
+     * would never show there.
+     */
+    #[Computed]
+    public function routeConflict(): ?string
+    {
+        return app(RouteConflicts::class)->routeTaking($this->pageEffectiveUrl());
     }
 
     public function savePageSettings(): void

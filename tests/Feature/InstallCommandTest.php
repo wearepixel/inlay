@@ -94,3 +94,46 @@ it('rejects an unknown starter without installing anything', function () {
 
     expect("{$this->base}/app/Providers/InlayServiceProvider.php")->not->toBeFile();
 });
+
+it('does not touch a routes file that already uses Inlay', function () {
+    $routes = "<?php\r\n\r\nuse WeArePixel\\Inlay\\Facades\\Inlay;\r\n\r\nInlay::routes();\r\n";
+    $this->files->put("{$this->base}/routes/web.php", $routes);
+
+    $this->artisan('inlay:install', ['--starter' => 'none', '--no-interaction' => true])->assertSuccessful();
+
+    expect($this->files->get("{$this->base}/routes/web.php"))->toBe($routes);
+});
+
+it('appends fully qualified route calls that work without an import', function () {
+    $this->files->put("{$this->base}/routes/web.php", "<?php\n\nRoute::get('/x', fn () => 'x');\n");
+
+    $this->artisan('inlay:install', ['--starter' => 'none', '--no-interaction' => true])->assertSuccessful();
+
+    expect($this->files->get("{$this->base}/routes/web.php"))->toContain('\\WeArePixel\\Inlay\\Facades\\Inlay::pageRoutes();');
+});
+
+it('tells you to register the provider when the app has no bootstrap/providers.php', function () {
+    $this->files->delete("{$this->base}/bootstrap/providers.php");
+
+    $this->artisan('inlay:install', ['--starter' => 'none', '--no-interaction' => true])
+        ->expectsOutputToContain('NEEDS YOU')
+        ->expectsOutputToContain("to the 'providers' array in config/app.php")
+        ->assertSuccessful();
+});
+
+it('renders into a layout\'s content section, not its title', function () {
+    $this->files->ensureDirectoryExists("{$this->base}/resources/views/layouts");
+    $this->files->put("{$this->base}/resources/views/layouts/site.blade.php", "<title>@yield('title', 'Site')</title><main>@yield('main')</main>");
+
+    $this->artisan('inlay:install', ['--starter' => 'none', '--layout' => 'extends:layouts.site', '--no-interaction' => true])->assertSuccessful();
+
+    expect($this->files->get("{$this->base}/resources/views/inlay/pages/show.blade.php"))->toContain("@section('main')");
+});
+
+it('tells you which page type to add when the provider already exists', function () {
+    $this->artisan('inlay:install', ['--starter' => 'none', '--no-interaction' => true])->assertSuccessful();
+
+    $this->artisan('inlay:install', ['--starter' => 'landing', '--no-interaction' => true])
+        ->expectsOutputToContain('Add Inlay::pageDefinition(\\App\\Inlay\\LandingPage::class);')
+        ->assertSuccessful();
+});

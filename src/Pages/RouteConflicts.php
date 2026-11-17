@@ -35,7 +35,7 @@ final class RouteConflicts
         }
 
         try {
-            $route = $this->router->getRoutes()->match(Request::create($url, 'GET'));
+            $route = $this->router->getRoutes()->match(self::requestFor($url));
         } catch (NotFoundHttpException) {
             return null;
         } catch (MethodNotAllowedHttpException) {
@@ -86,10 +86,19 @@ final class RouteConflicts
     private function answeredByPageRoute(string $url): bool
     {
         try {
-            return $this->router->getRoutes()->match(Request::create($url, 'GET'))->getName() === self::PAGE_ROUTE;
+            return $this->router->getRoutes()->match(self::requestFor($url))->getName() === self::PAGE_ROUTE;
         } catch (NotFoundHttpException|MethodNotAllowedHttpException) {
             return false;
         }
+    }
+
+    /**
+     * A request for $url on the application's own host, so routes scoped to
+     * a domain are matched the way they would be for a real visitor.
+     */
+    private static function requestFor(string $url): Request
+    {
+        return Request::create(url($url), 'GET');
     }
 
     private static function describe(Route $route): string

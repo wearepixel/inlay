@@ -91,10 +91,11 @@ final class ContentLifter
                 return $match[0];
             }
 
-            $name = $this->addField('link', 'link', 'Link', ['label' => $label, 'url' => $url]);
+            $name = $this->addField('link', 'link', 'Link', ['label' => $label, 'url' => $url, 'openInNewTab' => str_contains($match[0], '_blank')]);
+            $attributes = self::withoutNewTabAttributes($match[1].'href="{{ $'.$name.'->url }}"'.$match[3]);
             $newTab = '@if ($'.$name.'->openInNewTab) target="_blank" rel="noopener" @endif';
 
-            return '<a'.$match[1].'href="{{ $'.$name.'->url }}"'.$match[3].' '.$newTab.'>{{ $'.$name.'->label }}</a>';
+            return '<a'.$attributes.' '.$newTab.'>{{ $'.$name.'->label }}</a>';
         }, $this->markup);
     }
 
@@ -140,6 +141,14 @@ final class ContentLifter
         }
 
         return null;
+    }
+
+    /**
+     * The link's "open in new tab" setting now decides target and rel.
+     */
+    private static function withoutNewTabAttributes(string $attributes): string
+    {
+        return (string) preg_replace('/\s(target|rel)="[^"]*"/i', '', $attributes);
     }
 
     private static function isPlainCopy(string $text): bool

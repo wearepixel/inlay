@@ -19,7 +19,7 @@ final class TopLevelElements
      */
     public static function split(string $markup): array
     {
-        preg_match_all('/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*?(\/?)>/', $markup, $tags, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+        preg_match_all('/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*?(\/?)>/', self::maskIgnoredParts($markup), $tags, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
 
         $elements = [];
         $depth = 0;
@@ -63,13 +63,58 @@ final class TopLevelElements
     }
 
     /**
+     * Text that sits between the top-level elements - usually Blade
+     * directives such as @if or @foreach that wrap them. Importing the
+     * elements alone would drop that logic, so the importer warns about it.
+     *
+     * @return array<int, string>
+     */
+    public static function textBetween(string $markup): array
+    {
+        $remaining = $markup;
+
+        foreach (self::split($markup) as $element) {
+            $remaining = str_replace($element, "\n", $remaining);
+        }
+
+        $leftovers = [];
+
+        foreach (explode("\n", self::maskIgnoredParts($remaining)) as $line) {
+            if (trim($line) !== '') {
+                $leftovers[] = trim($line);
+            }
+        }
+
+        return $leftovers;
+    }
+
+    /**
+     * Comments, scripts and styles can contain text that looks like tags.
+     * They are blanked out (keeping every offset the same) so the tag walk
+     * never counts them.
+     */
+    private static function maskIgnoredParts(string $markup): string
+    {
+        $blank = fn (array $match): string => str_repeat(' ', strlen($match[0]));
+
+        $markup = (string) preg_replace_callback('/<!--.*?-->/s', $blank, $markup);
+        $markup = (string) preg_replace_callback('/\{\{--.*?--\}\}/s', $blank, $markup);
+
+        // A script or style element keeps its own tags, so it still counts as
+        // an element; only what is inside it is blanked.
+        $blankContents = fn (array $match): string => $match[1].str_repeat(' ', strlen($match[3])).$match[4];
+
+        return (string) preg_replace_callback('/(<(script|style)\b[^>]*>)(.*?)(<\/\2>)/is', $blankContents, $markup);
+    }
+
+    /**
      * The part of a Blade page that holds its content: its "content" section
      * when it extends a layout, the slot of a page wrapped in a layout
      * component, or the body of a full HTML document.
      */
     public static function contentOf(string $blade): string
     {
-        if (preg_match("/@section\\(\\s*'content'\\s*\\)(.*?)@(endsection|stop|show)/s", $blade, $match) === 1) {
+        if (preg_match('/@section\(\s*[\'"]content[\'"]\s*\)(.*?)@(endsection|stop|show)/s', $blade, $match) === 1) {
             return $match[1];
         }
 

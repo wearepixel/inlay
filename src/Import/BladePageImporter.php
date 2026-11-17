@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace WeArePixel\Inlay\Import;
 
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use WeArePixel\Inlay\Actions\CreatePage;
 use WeArePixel\Inlay\Actions\ReplacePageComposition;
 use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
+use WeArePixel\Inlay\Support\SectionRegistry;
 
 /**
  * Turns an existing Blade page into an editable draft page: one section
@@ -24,22 +26,23 @@ final class BladePageImporter
         private readonly CreatePage $createPage,
         private readonly ReplacePageComposition $compose,
         private readonly PageDefinitionRegistry $definitions,
+        private readonly SectionRegistry $sections,
     ) {}
 
     /**
-     * Works out the sections without writing anything.
-     *
-     * @return array<int, ImportedSection>
+     * Works out the sections without writing anything. Handles are chosen
+     * so none clashes with a section that is already registered or already
+     * has a file in $sectionsDirectory.
      */
-    public function plan(string $bladePath, string $pageName): array
+    public function plan(string $bladePath, string $pageName, string $sectionsDirectory): ImportPlan
     {
         $content = TopLevelElements::contentOf($this->files->get($bladePath));
         $sections = [];
-        $usedHandles = [];
+        $takenHandles = $this->existingHandles($sectionsDirectory);
 
         foreach (TopLevelElements::split($content) as $index => $element) {
-            $handle = $this->uniqueHandle($pageName, $element, $index, $usedHandles);
-            $usedHandles[] = $handle;
+            $handle = $this->uniqueHandle($pageName, $element, $index, $takenHandles);
+            $takenHandles[] = $handle;
             $lifted = ContentLifter::lift(self::dedent($element));
 
             $sections[] = new ImportedSection(
@@ -50,12 +53,12 @@ final class BladePageImporter
             );
         }
 
-        return $sections;
+        return new ImportPlan($sections, TopLevelElements::textBetween($content));
     }
 
     /**
      * Writes each section file into $sectionsDirectory and creates a draft
-     * page using them. Existing section files are never overwritten.
+     * page using them. plan() chose handles no existing file uses.
      *
      * @param  array<int, ImportedSection>  $sections
      */
@@ -65,15 +68,9 @@ final class BladePageImporter
 
         foreach ($sections as $section) {
             $file = "{$sectionsDirectory}/{$section->handle}.blade.php";
-
-            if (! $this->files->exists($file)) {
-                $this->files->put($file, $section->toBlade($sourcePath));
-            }
-
+            $this->files->put($file, $section->toBlade($sourcePath));
             Inlay::singleFileSection($file);
         }
-
-        $page = $this->createPage->execute(definition: $this->definitions->default(), title: $title, path: $path);
 
         $composition = [];
 
@@ -81,9 +78,26 @@ final class BladePageImporter
             $composition[] = ['section' => $section->handle];
         }
 
-        $this->compose->execute($page, $composition);
+        return DB::transaction(function () use ($title, $path, $composition): Page {
+            $page = $this->createPage->execute(definition: $this->definitions->default(), title: $title, path: $path);
+            $this->compose->execute($page, $composition);
 
-        return $page->refresh();
+            return $page->refresh();
+        });
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function existingHandles(string $sectionsDirectory): array
+    {
+        $handles = $this->sections->slugs();
+
+        foreach ($this->files->glob("{$sectionsDirectory}/*.blade.php") as $file) {
+            $handles[] = basename($file, '.blade.php');
+        }
+
+        return $handles;
     }
 
     /**
@@ -120,9 +134,9 @@ final class BladePageImporter
      * Named after the element's id, then its first class, then its first
      * heading, falling back to its position on the page.
      *
-     * @param  array<int, string>  $usedHandles
+     * @param  array<int, string>  $takenHandles
      */
-    private function uniqueHandle(string $pageName, string $element, int $index, array $usedHandles): string
+    private function uniqueHandle(string $pageName, string $element, int $index, array $takenHandles): string
     {
         $name = match (true) {
             preg_match('/^<[a-zA-Z0-9-]+[^>]*\bid="([^"{]+)"/', $element, $match) === 1 => $match[1],
@@ -135,7 +149,7 @@ final class BladePageImporter
         $candidate = $handle;
         $suffix = 2;
 
-        while (in_array($candidate, $usedHandles, true)) {
+        while (in_array($candidate, $takenHandles, true)) {
             $candidate = "{$handle}-{$suffix}";
             $suffix++;
         }

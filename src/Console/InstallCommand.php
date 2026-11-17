@@ -11,6 +11,7 @@ use WeArePixel\Inlay\Actions\PublishPage;
 use WeArePixel\Inlay\Console\Install\HostWiring;
 use WeArePixel\Inlay\Console\Install\Stack;
 use WeArePixel\Inlay\Console\Install\StackDetector;
+use WeArePixel\Inlay\Console\Install\StepResult;
 use WeArePixel\Inlay\Facades\Inlay;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinition;
@@ -40,6 +41,9 @@ final class InstallCommand extends Command
         'showcase' => ['class' => 'App\\Inlay\\ShowcasePage', 'handle' => 'showcase-page'],
     ];
 
+    /** @var array<int, string> steps the installer could not do safely, shown at the end */
+    private array $todos = [];
+
     public function handle(Filesystem $files, StackDetector $detector, HostWiring $wiring): int
     {
         $stack = $detector->detect();
@@ -57,19 +61,19 @@ final class InstallCommand extends Command
             return self::FAILURE;
         }
 
-        if ($starter !== null && $this->starterSource($files, $starter, $css) === null) {
+        $starterSource = $starter !== null ? $this->starterSource($files, $starter, $css) : null;
+
+        if ($starter !== null && $starterSource === null) {
             $this->components->error("The {$starter} kit has no {$css} version. Use --css=tailwind or the landing kit.");
 
             return self::FAILURE;
         }
 
-        $this->callSilently('vendor:publish', ['--tag' => 'inlay-config']);
-        $this->report('config/inlay.php', true);
-        $this->callSilently('migrate', ['--force' => true]);
-        $this->report('Database tables', true);
+        $this->publishConfig();
+        $this->runMigrations();
 
-        if ($starter !== null) {
-            $this->installStarter($files, $starter, $css);
+        if ($starterSource !== null) {
+            $this->installStarter($files, (string) $starter, $starterSource);
         }
 
         $this->wireUp($wiring, $stack, $starter, $css);
@@ -81,6 +85,30 @@ final class InstallCommand extends Command
         $this->printNextSteps($stack);
 
         return self::SUCCESS;
+    }
+
+    private function publishConfig(): void
+    {
+        $published = $this->callSilently('vendor:publish', ['--tag' => 'inlay-config']) === self::SUCCESS;
+
+        $this->report('config/inlay.php', $published ? StepResult::done() : StepResult::needsYou('Run php artisan vendor:publish --tag=inlay-config.'));
+    }
+
+    /**
+     * Runs every pending migration, the host's included, so in production
+     * it asks first rather than assuming.
+     */
+    private function runMigrations(): void
+    {
+        if ($this->laravel->isProduction() && (! $this->input->isInteractive() || ! confirm('Run pending migrations on this production database?', default: false))) {
+            $this->report('Database tables', StepResult::needsYou('Run php artisan migrate.'));
+
+            return;
+        }
+
+        $migrated = $this->callSilently('migrate', ['--force' => true]) === self::SUCCESS;
+
+        $this->report('Database tables', $migrated ? StepResult::done() : StepResult::needsYou('Run php artisan migrate and check its output.'));
     }
 
     private function describe(Stack $stack): void
@@ -178,9 +206,19 @@ final class InstallCommand extends Command
         $this->report('INLAY_CSS_FRAMEWORK in .env', $wiring->setCssFramework($css));
     }
 
-    private function report(string $what, bool $changed): void
+    private function report(string $what, StepResult $result): void
     {
-        $this->components->twoColumnDetail($what, $changed ? '<fg=green;options=bold>DONE</>' : '<fg=gray>already set up</>');
+        $badge = match ($result->status) {
+            'done' => '<fg=green;options=bold>DONE</>',
+            'already set up' => '<fg=gray>already set up</>',
+            default => '<fg=yellow;options=bold>NEEDS YOU</>',
+        };
+
+        $this->components->twoColumnDetail($what, $badge);
+
+        if ($result->todo !== null) {
+            $this->todos[] = $result->todo;
+        }
     }
 
     private function shouldCreateDemo(Stack $stack): bool
@@ -224,7 +262,7 @@ final class InstallCommand extends Command
         $page = app(CreatePage::class)->execute(definition: $definition, title: 'Home', isHomepage: true);
         app(PublishPage::class)->execute($page, label: 'Created by inlay:install');
 
-        $this->report("Homepage built from the {$starter} kit", true);
+        $this->report("Homepage built from the {$starter} kit", StepResult::done());
     }
 
     /**
@@ -244,6 +282,7 @@ final class InstallCommand extends Command
         $this->components->info('Inlay is installed.');
 
         $steps = [
+            ...$this->todos,
             'Edit pages at '.url(config('inlay.admin.prefix', 'inlay')).'/pages - allowed only while APP_ENV=local until you change the gate in app/Providers/InlayServiceProvider.php.',
             'Add your own sections to resources/views/inlay/sections and blocks to resources/views/inlay/blocks.',
             'Run php artisan inlay:doctor at any time to check the setup.',
@@ -251,6 +290,10 @@ final class InstallCommand extends Command
 
         if (! $stack->hasLivewire) {
             array_unshift($steps, 'Install Livewire for the admin: composer require livewire/livewire');
+        }
+
+        if ($stack->registersRoutesAfterWeb) {
+            $steps[] = 'bootstrap/app.php registers routes after routes/web.php (then: or pages:). Inlay::pageRoutes() answers every URL, so call it after those instead.';
         }
 
         if ($stack->viteEntries !== []) {
@@ -277,14 +320,9 @@ final class InstallCommand extends Command
         return null;
     }
 
-    private function installStarter(Filesystem $files, string $starter, string $css): void
+    private function installStarter(Filesystem $files, string $starter, string $source): void
     {
-        $root = dirname(__DIR__, 2)."/stubs/starters/{$starter}";
-        $source = $this->starterSource($files, $starter, $css);
-
-        if ($source === null) {
-            return;
-        }
+        $root = dirname($source);
 
         $copies = [];
 
@@ -318,7 +356,7 @@ final class InstallCommand extends Command
 
         $copied = count($copies) - $skipped;
         $variant = basename($source);
-        $this->report("The {$starter} starter ({$variant}, {$copied} files copied)", $copied > 0);
+        $this->report("The {$starter} starter ({$variant}, {$copied} files copied)", $copied > 0 ? StepResult::done() : StepResult::alreadySetUp());
 
         if ($skipped > 0) {
             $this->components->warn("Kept {$skipped} existing files. Re-run with --force to overwrite them.");

@@ -23,6 +23,7 @@ final readonly class Stack
         public bool $isFreshApp,
         public array $layouts,
         public array $viteEntries,
+        public bool $registersRoutesAfterWeb,
     ) {}
 
     public function describeCss(): string

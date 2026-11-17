@@ -66,3 +66,30 @@ it('writes nothing on a dry run', function () {
     expect($this->sections)->not->toBeDirectory()
         ->and(Page::query()->count())->toBe(0);
 });
+
+it('gives sections new handles when importing again rather than reusing existing files', function () {
+    $this->artisan('inlay:import', ['view' => $this->source])->assertSuccessful();
+    $this->artisan('inlay:import', ['view' => $this->source])->assertSuccessful();
+
+    expect("{$this->sections}/about-hero-2.blade.php")->toBeFile();
+});
+
+it('ignores tags inside comments and scripts, and warns about Blade between elements', function () {
+    $file = sys_get_temp_dir().'/inlay-import-'.bin2hex(random_bytes(3)).'.blade.php';
+    file_put_contents($file, <<<'BLADE'
+{{-- <div class="old"> --}}
+<!-- <section> -->
+<section id="one"><h2>One</h2><script>el.innerHTML = '<div>';</script></section>
+@if ($show)
+<section id="two"><h2>Two</h2></section>
+@endif
+BLADE);
+
+    $this->artisan('inlay:import', ['view' => $file, '--dry-run' => true])
+        ->expectsOutputToContain('-one')
+        ->expectsOutputToContain('-two')
+        ->expectsOutputToContain('@if ($show)')
+        ->assertSuccessful();
+
+    unlink($file);
+});

@@ -38,16 +38,6 @@ final class PageCreate extends Component
      * Inlay::pageRoutes() prefix without it ever being stored on the Page
      * itself (docs/inlay/v1/routing).
      */
-    /**
-     * The route that answers this page's URL before Inlay can, so the page
-     * would never show there.
-     */
-    #[Computed]
-    public function routeConflict(): ?string
-    {
-        return app(RouteConflicts::class)->routeTaking($this->effectiveUrl());
-    }
-
     #[Computed]
     public function effectiveUrl(): ?string
     {
@@ -57,6 +47,16 @@ final class PageCreate extends Component
         ]);
 
         return app(InlayManager::class)->url($page);
+    }
+
+    /**
+     * The route that answers this page's URL before Inlay can, so the page
+     * would never show there.
+     */
+    #[Computed]
+    public function routeConflict(): ?string
+    {
+        return app(RouteConflicts::class)->routeTaking($this->effectiveUrl());
     }
 
     /**

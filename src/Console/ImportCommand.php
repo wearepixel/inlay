@@ -41,7 +41,9 @@ final class ImportCommand extends Command
             return self::FAILURE;
         }
 
-        $sections = $importer->plan($absolute, $pageName);
+        $sectionsDirectory = resource_path('views/inlay/sections');
+        $plan = $importer->plan($absolute, $pageName, $sectionsDirectory);
+        $sections = $plan->sections;
 
         if ($sections === []) {
             $this->components->error('No top-level elements found to turn into sections.');
@@ -55,13 +57,18 @@ final class ImportCommand extends Command
             $this->components->twoColumnDetail($section->handle, $summary);
         }
 
+        if ($plan->textBetweenSections !== []) {
+            $this->components->warn('This text sits outside the sections and will be left out - usually Blade such as @if or @foreach wrapping them. Add that logic to the generated sections by hand:');
+            $this->components->bulletList($plan->textBetweenSections);
+        }
+
         if ($this->option('dry-run')) {
             $this->components->info('Dry run - nothing was written.');
 
             return self::SUCCESS;
         }
 
-        $page = $importer->import($sections, resource_path('views/inlay/sections'), $source, $title, $path);
+        $page = $importer->import($sections, $sectionsDirectory, $source, $title, $path);
 
         $this->newLine();
         $this->components->info("Created a draft page \"{$page->title}\" with ".count($sections).' sections.');
