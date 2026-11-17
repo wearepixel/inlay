@@ -10,15 +10,38 @@ Supported Laravel versions: 11, 12, and 13. Requires PHP 8.2+.
 
 ## Installation
 
-Install the package through [Composer](http://getcomposer.org/):
-
 ```bash
-composer require wearepixel/inlay
-composer require "livewire/livewire:^4.0"
+composer require wearepixel/inlay "livewire/livewire:^4.0"
 php artisan inlay:install
 ```
 
-Livewire is required by the packaged admin only - rendering a composed page never touches it, so a host application that only renders can install Inlay with no Livewire at all. Then register a section, point `Inlay::adminRoutes()` at your own `routes/web.php`, and visit `/inlay/pages`. See [Installation](https://wearepixel.com.au/docs/inlay/v1/installation) for the full walkthrough, including admin middleware and the preview view.
+`inlay:install` looks at your app - Tailwind, Bootstrap or plain CSS, whether it has a login, which layouts it already has - and wires Inlay in for you:
+
+- publishes the config and runs the migrations
+- writes `app/Providers/InlayServiceProvider.php`, where sections, blocks and the "who may edit pages" gate live (local only until you change it)
+- writes the view published pages render through, inside one of your layouts or as a standalone page loading your Vite assets
+- adds the admin and page routes to `routes/web.php` (in a brand new app, replacing the welcome route)
+- guards the admin, requiring a login when your app has one
+- optionally copies a starter kit and builds a homepage from it (`--demo`)
+
+Every step is skipped when it is already done, so it is safe to run again. Then:
+
+```bash
+npm run build
+php artisan inlay:doctor   # checks the setup and tells you how to fix anything missing
+```
+
+and visit `/inlay/pages`. Livewire is needed for the admin only - rendering a page never touches it.
+
+### Adding Inlay to an existing project
+
+Run the same command; it leaves your routes and welcome page alone, and asks which of your layouts published pages should render inside. To turn pages you already have into editable ones:
+
+```bash
+php artisan inlay:import resources/views/pages/about.blade.php --path=about
+```
+
+Each top-level element becomes a section in `resources/views/inlay/sections`, with its headings, paragraphs, links and images lifted into settings (current content as the defaults), and a draft page is built from them. Anything already using Blade (`{{ $user->name }}`, `@if`) is left as written. Review the generated files - rename settings, put back text that should not be editable - then edit and publish the page. `--dry-run` shows what would be created.
 
 ## CSS framework
 
@@ -40,23 +63,18 @@ Inlay reads the classes your site actually defines from its compiled CSS, and ag
 
 Run `npm run build` after changing CSS: until then the new classes are not in the compiled files.
 
-## Landing page starter kit
+## Starter kits
 
 ```bash
-php artisan inlay:install --starter=landing              # Tailwind v4 utilities
-php artisan inlay:install --starter=landing --css=plain  # framework-free CSS, for Bootstrap or hand-written CSS
+php artisan inlay:install --starter=landing    # hero, features, pricing, FAQ and more
+php artisan inlay:install --starter=showcase   # bento grid, layered hero, logo marquee, testimonial wall, pricing comparison, timeline
 ```
 
-`--css` defaults to `tailwind` when `INLAY_CSS_FRAMEWORK=tailwind`, and `plain` otherwise. Either variant copies eleven sections (hero, logo cloud, feature grid, text and image, stats, testimonials, pricing, FAQ, call to action, rich text, and a free-form content section) into `resources/views/inlay/sections`, four blocks (heading, text, button, image) into `resources/views/inlay/blocks`, and a `LandingPage` page type into `app/Inlay`. Existing files are kept unless you pass `--force`. Register them in a service provider's `boot()`, blocks first:
+The **landing** kit comes in Tailwind v4, Bootstrap 5 and framework-free plain CSS (`--css=tailwind|bootstrap|plain`, detected from `package.json` by default), with eleven sections and four blocks (heading, text, button, image). The **showcase** kit is a set of more complex Tailwind layouts to start from. Each kit also adds a page type to `app/Inlay`. Existing files are kept unless you pass `--force`.
 
-```php
-Inlay::singleFileBlocks(resource_path('views/inlay/blocks'));
-Inlay::singleFileSections(resource_path('views/inlay/sections'));
-Inlay::pageDefinition(\App\Inlay\LandingPage::class);
-```
-
-- **Tailwind:** the sections use v4 syntax. Tailwind v4 scans `resources/views` automatically; if your setup does not, add `@source "../views/inlay";` to your CSS.
-- **Plain:** the sections use `inlay-` prefixed classes and the command also copies `resources/css/inlay.css`. Add `@import "./inlay.css";` to your main stylesheet and rebrand it by overriding the `--inlay-*` variables.
+- **Tailwind:** v4 syntax. Tailwind v4 scans `resources/views` automatically; if your setup does not, add `@source "../views/inlay";` to your CSS.
+- **Bootstrap:** Bootstrap 5.3 classes only, no extra CSS.
+- **Plain:** `inlay-` prefixed classes, plus `resources/css/inlay.css` - add `@import "./inlay.css";` to your main stylesheet and rebrand it with the `--inlay-*` variables.
 
 The sections and blocks are yours from then on - restyle them to the client's brand.
 
@@ -96,16 +114,6 @@ A block is declared the same way with `block(Block::make('button')->...)`, in `r
 - Class-based blocks work like class-based sections: implement `InlayBlock`, describe it with `#[BlockMeta]`, and list it in `config('inlay.blocks')`.
 
 In the editor, hover over the preview to outline a section or block and click it to edit it. Picking a section from the list scrolls the preview to it.
-
-## Setting up a new project
-
-1. `composer require wearepixel/inlay "livewire/livewire:^4.0"`, then `php artisan inlay:install --starter=landing`.
-2. Register the starter blocks, sections and page type (above), and set `INLAY_CSS_FRAMEWORK`.
-3. In `routes/web.php`: `Inlay::adminRoutes()`, `Inlay::previewLinkRoutes()` and, to serve pages, `Inlay::pageRoutes()` last.
-4. Guard the admin with `config('inlay.admin.middleware')`, e.g. `['web', 'auth']`.
-5. Call `Inlay::previewView('your.preview.view')` so previews use your layout and assets.
-6. `npm run build`, then visit `/inlay/pages`.
-7. For AI agents: `composer require laravel/mcp`, mount the server and define the abilities (below).
 
 ## Your own admin
 

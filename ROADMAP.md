@@ -7,14 +7,15 @@ Inlay lets developers build sections and blocks in their own Blade and CSS, and 
 - **Sections and blocks.** Pages are built from sections; sections can hold blocks editors arrange freely. Click anything in the preview to edit it.
 - **Your own admin.** Render Inlay inside your admin layout (`inlay.admin.layout`) or mount its components on your own routes, guarded by `inlay.admin.ability`.
 - **Site settings.** Contact details, header and footer content, edited in the admin.
+- **One-command setup.** `inlay:install` detects the stack and writes the wiring; `inlay:doctor` checks it.
+- **Starter kits.** A landing kit in Tailwind v4, Bootstrap 5 and plain CSS, and a showcase kit of complex Tailwind layouts.
+- **Import a Blade page.** `inlay:import` turns an existing page into editable sections and a draft page.
 
 ## Next
 
-- **One-command setup.** `inlay:install` detects the CSS framework, Livewire, auth and an existing admin layout, then writes the service provider registration, routes, admin guard and preview view for you.
-- **Showcase starter kits.** Production-quality layouts to start from - bento grids, split heroes with layered media, pricing tables, testimonial walls, logo marquees - in Tailwind v4 and Bootstrap 5, plus the framework-free plain variant.
-- **Existing-project guide and `inlay:doctor`.** A step-by-step guide for adding Inlay to an established app, and a command that checks the setup and says exactly what is missing.
 - **Rich text editor.** A proper formatting toolbar for rich text fields, in place of the current HTML textarea.
-- **Import a Blade page.** Turn an existing Blade page into editable sections - see `docs/superpowers/specs/2026-11-18-blade-page-import-design.md`.
+- **Smarter import.** Recognise repeated markup (cards, list items) as a repeater or a blocks area, and honour `data-inlay-*` hints in the source.
+- **Bootstrap showcase kit.** The showcase layouts in Bootstrap 5.
 
 ## Later
 
