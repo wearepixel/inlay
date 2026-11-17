@@ -32,6 +32,8 @@ document.addEventListener("alpine:init", () => {
       width: 360,
       collapsed: false,
       resizing: false,
+      skipNextScroll: false,
+      previewScroll: 0,
 
       init() {
         const storedWidth = parseInt(
@@ -45,6 +47,72 @@ document.addEventListener("alpine:init", () => {
 
         this.collapsed =
           localStorage.getItem("inlay-sidebar-collapsed") === "1";
+
+        this.listenToPreview();
+        this.$watch("lastSelectedId", () => this.syncPreview(true));
+        this.$watch("view", () => this.syncPreview(false));
+      },
+
+      previewFrame() {
+        return this.$root.querySelector("[data-test=preview-frame]");
+      },
+
+      /**
+       * The preview (inlay-preview.js) reports clicks on a section and
+       * announces itself after every reload, since each settings change
+       * re-renders it from scratch.
+       */
+      listenToPreview() {
+        window.addEventListener("message", (event) => {
+          const frame = this.previewFrame();
+
+          if (
+            event.origin !== window.location.origin ||
+            !frame ||
+            event.source !== frame.contentWindow
+          ) {
+            return;
+          }
+
+          if (event.data?.type === "inlay:preview-ready") {
+            this.syncPreview(false, this.previewScroll);
+          }
+
+          if (event.data?.type === "inlay:scrolled") {
+            this.previewScroll = Number(event.data.y) || 0;
+          }
+
+          if (event.data?.type === "inlay:select-section") {
+            const id = Number(event.data.id);
+
+            this.skipNextScroll = true;
+            this.showSettings(id);
+            this.$wire.selectSection(id);
+          }
+        });
+      },
+
+      syncPreview(scroll, restoreScroll = null) {
+        const frame = this.previewFrame();
+
+        if (!frame?.contentWindow) {
+          return;
+        }
+
+        const id = this.view === "settings" ? this.lastSelectedId : null;
+
+        frame.contentWindow.postMessage(
+          {
+            type: "inlay:selected",
+            id,
+            scroll: scroll && !this.skipNextScroll,
+            restoreScroll,
+            colour: getComputedStyle(this.$root).getPropertyValue("--inlay-focus").trim(),
+          },
+          window.location.origin,
+        );
+
+        this.skipNextScroll = false;
       },
 
       clampWidth(width) {
@@ -170,7 +238,7 @@ document.addEventListener("alpine:init", () => {
 
       announcement() {
         if (this.view === "settings") {
-          return "Editing block settings";
+          return "Editing section settings";
         }
 
         if (this.view === "page-settings") {
@@ -181,7 +249,7 @@ document.addEventListener("alpine:init", () => {
           return "Showing version history";
         }
 
-        return "Showing blocks";
+        return "Showing sections";
       },
 
       dragStart(id) {

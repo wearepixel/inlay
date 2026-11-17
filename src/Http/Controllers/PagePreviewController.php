@@ -15,6 +15,6 @@ final class PagePreviewController
     {
         $inlay->authorizeAdmin($page);
 
-        return $preview->render($page);
+        return $preview->render($page, selectable: true);
     }
 }

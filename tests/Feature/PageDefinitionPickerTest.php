@@ -58,7 +58,7 @@ it('shows a calm empty state when the current page type allows no further blocks
 
     Livewire::test(PageEditor::class, ['page' => $page])
         ->call('openPicker')
-        ->assertSee('No more blocks are available for this page type')
+        ->assertSee('No more sections are available for this page type')
         ->assertDontSeeHtml('picker-block-test-hero');
 });
 

@@ -115,7 +115,7 @@ it('opens Page Settings from the header with no JavaScript error, and returns to
 
     $editor->click('@back-from-page-settings')
         ->assertMissing('#page-settings-title')
-        ->assertSee('Blocks');
+        ->assertSee('Sections');
 });
 
 it('safely returns to the tree if the selected block is deleted', function () {
@@ -134,7 +134,7 @@ it('safely returns to the tree if the selected block is deleted', function () {
         ->wait(1);
 
     $editor->assertMissing('@setting-heading')
-        ->assertSee('This page has no blocks yet.')
+        ->assertSee('Add a section to start building this page.')
         ->assertNoJavaScriptErrors();
 
     expect($page->sections()->count())->toBe(0);

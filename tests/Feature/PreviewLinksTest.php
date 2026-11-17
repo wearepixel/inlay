@@ -81,3 +81,10 @@ it('sends no referrer so the token cannot leak through a clicked link', function
     $this->get(app(PreviewLinks::class)->forPage($this->page))
         ->assertHeader('Referrer-Policy', 'no-referrer');
 });
+
+it('leaves the editor selection script out of a shared preview link', function () {
+    $this->get(app(PreviewLinks::class)->forPage($this->page))
+        ->assertOk()
+        ->assertDontSee('data-inlay-section', false)
+        ->assertDontSee('inlay:select-section', false);
+});

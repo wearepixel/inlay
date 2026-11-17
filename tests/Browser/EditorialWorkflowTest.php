@@ -36,7 +36,7 @@ it('creates a page from the index and opens its editor', function () {
         ->press('Create page')
         // Livewire's redirectRoute() after save() lands here.
         ->assertSee('Home')
-        ->assertSee('This page has no blocks yet.');
+        ->assertSee('Add a section to start building this page.');
 
     expect(Page::sole())
         ->title->toBe('Home')
