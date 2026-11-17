@@ -8,7 +8,7 @@
     .inlay-preview-outline { position: fixed; z-index: 2147483647; pointer-events: none; box-sizing: border-box; border: 2px solid var(--inlay-preview-colour, #2f5fd6); border-radius: 2px; }
     .inlay-preview-outline[hidden] { display: none; }
     .inlay-preview-outline--hover { border-style: dashed; }
-    .inlay-preview-outline__label { position: absolute; top: 0; left: 0; padding: 3px 8px; background: var(--inlay-preview-colour, #2f5fd6); color: #fff; font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; border-bottom-right-radius: 4px; white-space: nowrap; }
+    .inlay-preview-outline__label { position: absolute; bottom: 100%; left: -2px; padding: 2px 8px; background: var(--inlay-preview-colour, #2f5fd6); color: #fff; font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; border-radius: 4px 4px 0 0; white-space: nowrap; }
     [data-inlay-section] * { cursor: pointer !important; }
   `;
 
@@ -79,6 +79,18 @@
     }
 
     return section;
+  };
+
+  // A smooth scroll started while images are still loading gets cut short,
+  // so a scroll requested right after a reload waits for the page to load.
+  const scrollToSelected = () => {
+    if (document.readyState !== "complete") {
+      window.addEventListener("load", scrollToSelected, { once: true });
+
+      return;
+    }
+
+    selected?.firstElementChild?.scrollIntoView({ block: "start", behavior: "smooth" });
   };
 
   const sectionIdOf = (element) =>
@@ -158,7 +170,7 @@
       }
 
       if (selected && event.data.scroll) {
-        selected.firstElementChild?.scrollIntoView({ section: "start", behavior: "smooth" });
+        scrollToSelected();
       }
 
       update();

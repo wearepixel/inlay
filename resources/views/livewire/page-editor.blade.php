@@ -1,7 +1,7 @@
 <div
     class="inlay-editor-page"
     x-data="inlayEditorSidebar(@js($showingHistory ? 'history' : ($selectedSchema ? 'settings' : 'tree')), @js($selectedSectionId))"
-    x-on:section-selected.window="showSettings($event.detail.id)"
+    x-on:section-selected.window="showNewSection($event.detail.id)"
     x-on:selection-cleared.window="toTree()"
     x-on:history-toggled.window="onHistoryToggled($event.detail.showing)"
     x-on:keydown.escape.window="onEscape()"
@@ -158,7 +158,7 @@
                     </button>
                 </div>
 
-                @if ($selectedInstance)
+                @if ($selectedInstance && ! $selectedBlock)
                     <h2 class="inlay-instance-heading">
                         {{ $selectedInstance['name'] }}
                         @if ($selectedInstance['detail'])

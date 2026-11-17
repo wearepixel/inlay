@@ -35,6 +35,7 @@ document.addEventListener("alpine:init", () => {
       skipNextScroll: false,
       previewScroll: 0,
       selectedBlockId: null,
+      scrollOnReload: false,
 
       init() {
         const storedWidth = parseInt(
@@ -52,8 +53,11 @@ document.addEventListener("alpine:init", () => {
         this.listenToPreview();
         this.selectedBlockId = this.$wire.selectedBlockId ?? null;
         window.addEventListener("block-selected", (event) => {
-          this.selectedBlockId = event.detail.id ?? null;
-          this.syncPreview(Boolean(this.selectedBlockId));
+          const id = event.detail.id ?? null;
+          const alreadyShown = id === this.selectedBlockId;
+
+          this.selectedBlockId = id;
+          this.syncPreview(id !== null && !alreadyShown);
         });
         this.$watch("lastSelectedId", () => this.syncPreview(true));
         this.$watch("view", () => this.syncPreview(false));
@@ -80,12 +84,16 @@ document.addEventListener("alpine:init", () => {
             return;
           }
 
+          // The preview can load more than once per change, so a pending
+          // scroll to a new section stays pending until the preview has
+          // actually scrolled.
           if (event.data?.type === "inlay:preview-ready") {
-            this.syncPreview(false, this.previewScroll);
+            this.syncPreview(this.scrollOnReload, this.scrollOnReload ? null : this.previewScroll);
           }
 
           if (event.data?.type === "inlay:scrolled") {
             this.previewScroll = Number(event.data.y) || 0;
+            this.scrollOnReload = false;
           }
 
           if (event.data?.type === "inlay:select-section") {
@@ -193,6 +201,15 @@ document.addEventListener("alpine:init", () => {
        * and via the section-selected event (addSection/duplicateSection,
        * whose new id doesn't exist until the server creates it).
        */
+      /**
+       * Adding or duplicating a section selects it just before the preview
+       * reloads, so the scroll to it happens once the reload is done.
+       */
+      showNewSection(id) {
+        this.showSettings(id);
+        this.scrollOnReload = true;
+      },
+
       showSettings(id) {
         this.lastSelectedId = id;
         this.selectedBlockId = null;
@@ -445,7 +462,7 @@ document.addEventListener("alpine:init", () => {
           : (currentIndex + direction + cards.length) % cards.length;
 
       this.highlighted = cards[nextIndex];
-      this.highlighted.scrollIntoView({ section: "nearest" });
+      this.highlighted.scrollIntoView({ block: "nearest" });
     },
 
     chooseHighlighted() {
