@@ -34,3 +34,11 @@ it('casts to string as the resolved url, so echoing it directly in Blade is corr
 
     expect((string) $value)->toBe($value->url());
 });
+
+it('serves a root-relative path as-is, so a block can default to a bundled image', function () {
+    expect((new ImageValue('/images/hero.jpg'))->url())->toBe('/images/hero.jpg');
+});
+
+it('does not treat a protocol-relative path as a bundled image', function () {
+    expect((new ImageValue('//evil.example/x.png'))->url())->not->toBe('//evil.example/x.png');
+});

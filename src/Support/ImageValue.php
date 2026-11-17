@@ -42,7 +42,21 @@ final readonly class ImageValue implements Stringable
             return '';
         }
 
+        if ($this->isPublicPath()) {
+            return $this->path;
+        }
+
         return Storage::disk(config('inlay.disk', 'public'))->url($this->path);
+    }
+
+    /**
+     * A root-relative path ("/images/hero.jpg") is a file the application
+     * serves itself - how a block ships a default image without uploading
+     * one. Protocol-relative "//host" is not, so it cannot point offsite.
+     */
+    public function isPublicPath(): bool
+    {
+        return str_starts_with($this->path, '/') && ! str_starts_with($this->path, '//');
     }
 
     public function __toString(): string

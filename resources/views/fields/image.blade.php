@@ -4,7 +4,7 @@
     @if (! empty($editingProps[$field->name]))
         <div class="inlay-image-field__preview">
             <img
-                src="{{ Illuminate\Support\Facades\Storage::disk(config('inlay.disk', 'public'))->url($editingProps[$field->name]) }}"
+                src="{{ (new \WeArePixel\Inlay\Support\ImageValue($editingProps[$field->name]))->url() }}"
                 alt=""
                 class="inlay-image-field__thumb"
             >
