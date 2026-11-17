@@ -61,32 +61,44 @@ final class PreviewRenderer
      */
     private function renderSelectable(array $sections): string
     {
-        $html = '';
+        $this->renderer->tagBlocksForPreview(true);
 
-        foreach ($sections as $section) {
-            $rendered = $this->renderer->render([$section]);
+        try {
+            $html = '';
 
-            if (! isset($section['id']) || $rendered === '') {
-                $html .= $rendered;
-
-                continue;
+            foreach ($sections as $section) {
+                $html .= $this->renderTaggedSection($section);
             }
-
-            $label = $this->sections->hasHandle($section['handle'])
-                ? $this->sections->definition($section['handle'])->name
-                : $section['handle'];
-
-            $html .= sprintf(
-                '<div data-inlay-section="%d" data-inlay-section-label="%s" style="display: contents">%s</div>',
-                $section['id'],
-                e($label),
-                $rendered,
-            );
+        } finally {
+            $this->renderer->tagBlocksForPreview(false);
         }
 
         $script = (string) file_get_contents(__DIR__.'/../../resources/dist/inlay-preview.js');
 
         return $html.'<script>'.$script.'</script>';
+    }
+
+    /**
+     * @param  array{id?: int, handle: string, settings?: array<string, mixed>}  $section
+     */
+    private function renderTaggedSection(array $section): string
+    {
+        $rendered = $this->renderer->render([$section]);
+
+        if (! isset($section['id']) || $rendered === '') {
+            return $rendered;
+        }
+
+        $label = $this->sections->hasHandle($section['handle'])
+            ? $this->sections->definition($section['handle'])->name
+            : $section['handle'];
+
+        return sprintf(
+            '<div data-inlay-section="%d" data-inlay-section-label="%s" style="display: contents">%s</div>',
+            $section['id'],
+            e($label),
+            $rendered,
+        );
     }
 
     /**

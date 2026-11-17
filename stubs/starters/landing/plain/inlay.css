@@ -126,3 +126,19 @@
 @media (prefers-reduced-motion: reduce) {
     .inlay-faq__question::after { transition: none; }
 }
+
+/* Content section and its blocks */
+.inlay-content { display: flex; flex-direction: column; gap: 1.5rem; align-items: flex-start; }
+.inlay-content--narrow { max-width: 48rem; }
+.inlay-content--wide { max-width: 64rem; }
+.inlay-content--center { align-items: center; text-align: center; }
+.inlay-heading { margin: 0; font-family: var(--inlay-heading-font); letter-spacing: -0.02em; text-wrap: balance; }
+.inlay-heading--h2 { font-size: clamp(1.875rem, 3vw, 2.25rem); font-weight: 700; }
+.inlay-heading--h3 { font-size: 1.5rem; font-weight: 600; }
+.inlay-heading--h4 { font-size: 1.25rem; font-weight: 600; }
+.inlay-text { font-size: 1.125rem; line-height: 1.75; }
+.inlay-text > * + * { margin-top: 1rem; }
+.inlay-text a { color: inherit; text-decoration: underline; }
+.inlay-figure { width: 100%; margin: 0; }
+.inlay-figure__image { display: block; width: 100%; border-radius: var(--inlay-radius); object-fit: cover; }
+.inlay-figure__caption { margin-top: 0.75rem; font-size: 0.875rem; color: var(--inlay-muted); }

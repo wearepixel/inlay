@@ -167,62 +167,31 @@
                     </h2>
                 @endif
 
-                @if ($selectedSchema)
-                    <div x-data="{ activeTab: 0 }" wire:key="inspector-{{ $selectedSectionId }}">
-                        @if ($inspectorTabs->count() > 1)
-                            <div class="inlay-tabs" role="tablist">
-                                @foreach ($inspectorTabs as $index => $tab)
-                                    <button
-                                        type="button"
-                                        role="tab"
-                                        class="inlay-tabs__tab"
-                                        :class="activeTab === {{ $index }} ? 'is-active' : ''"
-                                        :aria-selected="(activeTab === {{ $index }}).toString()"
-                                        x-on:click="activeTab = {{ $index }}"
-                                    >{{ $tab['label'] }}</button>
-                                @endforeach
-                            </div>
-                        @endif
-
-                        @foreach ($inspectorTabs as $index => $tab)
-                            <div role="tabpanel" @if ($inspectorTabs->count() > 1) x-show="activeTab === {{ $index }}" @endif>
-                                @foreach ($tab['groups'] as $group)
-                                    @if ($group['label'])
-                                        <div class="inlay-group-section" x-data="inlayCollapsibleGroup(@js($group['label']), false)">
-                                            <button
-                                                type="button"
-                                                class="inlay-group-section__header"
-                                                x-on:click="toggle()"
-                                                :aria-expanded="(!collapsed).toString()"
-                                            >
-                                                {{ $group['label'] }}
-                                                <span class="inlay-group-section__chevron" :class="collapsed ? 'is-collapsed' : ''" aria-hidden="true"><x-inlay::icon name="chevron-down" :size="12" /></span>
-                                            </button>
-                                            <div class="inlay-group-section__body" x-show="!collapsed" x-transition>
-                                                @foreach ($group['fields'] as $field)
-                                                    <div wire:key="field-{{ $selectedSectionId }}-{{ $field->name }}" @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
-                                                        @include('inlay::fields.' . $field->type->value, [
-                                                            'field' => $field,
-                                                            'modelPath' => "editingProps.{$field->name}",
-                                                        ])
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    @else
-                                        @foreach ($group['fields'] as $field)
-                                            <div wire:key="field-{{ $selectedSectionId }}-{{ $field->name }}" @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
-                                                @include('inlay::fields.' . $field->type->value, [
-                                                    'field' => $field,
-                                                    'modelPath' => "editingProps.{$field->name}",
-                                                ])
-                                            </div>
-                                        @endforeach
-                                    @endif
-                                @endforeach
-                            </div>
-                        @endforeach
+                @if ($selectedBlock)
+                    <div class="inlay-block-inspector" data-test="block-inspector">
+                        <button type="button" class="inlay-back-link" wire:click="deselectBlock" data-test="back-to-section">
+                            <x-inlay::icon name="arrow-left" :size="12" /> {{ $selectedInstance['name'] ?? 'Section' }}
+                        </button>
+                        <h3 class="inlay-instance-heading inlay-instance-heading--block">
+                            {{ $selectedBlock['name'] }}
+                            @if ($selectedBlock['detail'])
+                                <span class="inlay-instance-heading__detail">- &ldquo;{{ $selectedBlock['detail'] }}&rdquo;</span>
+                            @endif
+                        </h3>
+                        @include('inlay::livewire.partials.inspector', [
+                            'inspectorTabs' => $selectedBlock['tabs'],
+                            'inspectorKey' => $selectedSectionId.'-'.$selectedBlockId,
+                            'pathPrefix' => "editingProps.{$selectedBlock['field']}.{$selectedBlock['index']}.settings.",
+                            'visibilityScope' => "\$wire.editingProps['{$selectedBlock['field']}'][{$selectedBlock['index']}]['settings']",
+                        ])
                     </div>
+                @elseif ($selectedSchema)
+                    @include('inlay::livewire.partials.inspector', [
+                        'inspectorTabs' => $inspectorTabs,
+                        'inspectorKey' => (string) $selectedSectionId,
+                        'pathPrefix' => 'editingProps.',
+                        'visibilityScope' => '$wire.editingProps',
+                    ])
                 @else
                     <p class="inlay-inspector__empty">Select a section from the list to edit its settings.</p>
                 @endif

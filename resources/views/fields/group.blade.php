@@ -2,10 +2,10 @@
     @include('inlay::fields.partials.label', ['field' => $field])
 
     @foreach ($field->itemSchema->fields() as $subField)
-        @continue(! $subField->isVisible($editingProps[$field->name] ?? []))
+        @continue(! $subField->isVisible(data_get($editingProps, \Illuminate\Support\Str::after($modelPath, 'editingProps.')) ?? []))
         @include('inlay::fields.' . $subField->type->value, [
             'field' => $subField,
-            'modelPath' => "editingProps.{$field->name}.{$subField->name}",
+            'modelPath' => "{$modelPath}.{$subField->name}",
         ])
     @endforeach
 

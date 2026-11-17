@@ -29,9 +29,20 @@ use WeArePixel\Inlay\Schema\Settings;
  */
 final class SectionRenderer
 {
+    /**
+     * Set while the admin preview renders, so each block is wrapped in an
+     * element the preview script can outline and select.
+     */
+    private bool $tagBlocks = false;
+
     public function __construct(
         private readonly SectionRegistry $registry,
     ) {}
+
+    public function tagBlocksForPreview(bool $tag): void
+    {
+        $this->tagBlocks = $tag;
+    }
 
     /**
      * A public entry point a host application can call directly with its
@@ -201,6 +212,7 @@ final class SectionRenderer
         foreach ($schema->fields() as $setting) {
             $effective[$setting->name] = match (true) {
                 array_key_exists($setting->name, $stored) => $this->resolveValue($owner, $setting, $stored[$setting->name], $raw),
+                $setting->type === FieldType::Blocks => $this->resolveValue($owner, $setting, is_array($setting->default) ? $setting->default : [], $raw),
                 ! $raw && $this->hasPlainDefault($setting) => $this->resolveValue($owner, $setting, $setting->default, false),
                 default => $this->normaliseDefault($setting, $raw),
             };
@@ -252,6 +264,10 @@ final class SectionRenderer
             return $raw && $enum instanceof BackedEnum ? $enum->value : $enum;
         }
 
+        if ($setting->type === FieldType::Blocks) {
+            return $this->resolveBlocks($owner, is_array($value) ? $value : [], $raw);
+        }
+
         if ($setting->type === FieldType::Link) {
             $link = $this->hydrateLink($value);
 
@@ -274,6 +290,116 @@ final class SectionRenderer
         }
 
         return $value;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $items
+     * @return array<int, array{id: string, type: string, settings: array<string, mixed>}>|BlockList
+     */
+    private function resolveBlocks(string $owner, array $items, bool $raw): array|BlockList
+    {
+        $items = $this->registeredBlocks($items);
+
+        return $raw ? $this->rawBlocks($items) : $this->renderBlocks($owner, $items);
+    }
+
+    /**
+     * Normalises stored items to {id, type, settings}, dropping any whose
+     * type is no longer registered. An item without an id (a declared
+     * default) gets one from its position, so the editor can select it
+     * before it is first saved.
+     *
+     * @param  array<int|string, mixed>  $items
+     * @return array<int, array{id: string, type: string, settings: array<string, mixed>}>
+     */
+    private function registeredBlocks(array $items): array
+    {
+        $blocks = app(BlockRegistry::class);
+        $registered = [];
+
+        foreach (array_values($items) as $index => $item) {
+            $type = is_array($item) ? ($item['type'] ?? null) : null;
+
+            if (! is_string($type) || ! $blocks->hasHandle($type)) {
+                continue;
+            }
+
+            $id = $item['id'] ?? null;
+
+            $registered[] = [
+                'id' => is_string($id) && $id !== '' ? $id : "b{$index}",
+                'type' => $type,
+                'settings' => is_array($item['settings'] ?? null) ? $item['settings'] : [],
+            ];
+        }
+
+        return $registered;
+    }
+
+    /**
+     * The editor's form state: each block's settings resolved over its
+     * defaults, as plain data.
+     *
+     * @param  array<int, array{id: string, type: string, settings: array<string, mixed>}>  $items
+     * @return array<int, array{id: string, type: string, settings: array<string, mixed>}>
+     */
+    private function rawBlocks(array $items): array
+    {
+        $raw = [];
+
+        foreach ($items as $item) {
+            $schema = app(BlockRegistry::class)->definition($item['type'])->settings;
+            $item['settings'] = $this->resolveEffective($schema, "block:{$item['type']}", $item['settings'], raw: true);
+            $raw[] = $item;
+        }
+
+        return $raw;
+    }
+
+    /**
+     * A block that fails to render is logged and skipped, so one broken
+     * block never takes down the section around it.
+     *
+     * @param  array<int, array{id: string, type: string, settings: array<string, mixed>}>  $items
+     */
+    private function renderBlocks(string $owner, array $items): BlockList
+    {
+        $rendered = [];
+
+        foreach ($items as $item) {
+            $definition = app(BlockRegistry::class)->definition($item['type']);
+
+            try {
+                $settings = $this->resolveEffective($definition->settings, "block:{$item['type']}", $item['settings'], raw: false);
+                $html = $this->renderType($definition, $settings);
+            } catch (Throwable $exception) {
+                Log::warning('inlay: skipped a block that failed to render', [
+                    'section' => $owner,
+                    'block' => $item['type'],
+                    'exception' => $exception->getMessage(),
+                ]);
+
+                continue;
+            }
+
+            if ($this->tagBlocks) {
+                $html = $this->tagForPreview($item['id'], $definition->name, $html);
+            }
+
+            $rendered[] = new RenderedBlock($item['id'], $item['type'], $settings, $html);
+        }
+
+        return new BlockList($rendered);
+    }
+
+    private function tagForPreview(string $id, string $label, string $html): string
+    {
+        return sprintf(
+            '<div data-inlay-block="%s" data-inlay-block-label="%s" style="display: contents">%s</div>',
+            e($id),
+            e($label),
+            $html,
+        );
     }
 
     /**

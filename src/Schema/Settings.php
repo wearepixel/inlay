@@ -75,6 +75,44 @@ final class Settings
         return $this->addField($name, FieldType::Repeater, $itemSchema);
     }
 
+    /**
+     * An area editors fill with blocks (headings, text, buttons) in any order.
+     * The section's view receives a BlockList: {{ $content }} renders them.
+     */
+    public function blocks(string $name): self
+    {
+        return $this->addField($name, FieldType::Blocks);
+    }
+
+    /**
+     * @param  array<int, string>  $handles  the blocks an editor may add to the preceding blocks field
+     */
+    public function allow(array $handles): self
+    {
+        $field = $this->requireLastField('allow');
+
+        if ($field->type !== FieldType::Blocks) {
+            throw new LogicException("allow() only applies to a blocks() field; [{$field->name}] is {$field->type->value}.");
+        }
+
+        $field->allowedBlocks = array_values($handles);
+
+        return $this;
+    }
+
+    public function max(int $count): self
+    {
+        $field = $this->requireLastField('max');
+
+        if ($field->type !== FieldType::Blocks) {
+            throw new LogicException("max() only applies to a blocks() field; [{$field->name}] is {$field->type->value}.");
+        }
+
+        $field->maxBlocks = $count;
+
+        return $this;
+    }
+
     public function group(string $name, Settings $itemSchema): self
     {
         return $this->addField($name, FieldType::Group, $itemSchema);

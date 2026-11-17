@@ -47,9 +47,10 @@ php artisan inlay:install --starter=landing              # Tailwind v4 utilities
 php artisan inlay:install --starter=landing --css=plain  # framework-free CSS, for Bootstrap or hand-written CSS
 ```
 
-`--css` defaults to `tailwind` when `INLAY_CSS_FRAMEWORK=tailwind`, and `plain` otherwise. Either variant copies ten sections (hero, logo cloud, feature grid, text and image, stats, testimonials, pricing, FAQ, call to action, rich text) into `resources/views/inlay/sections` and a `LandingPage` page type into `app/Inlay`. Existing files are kept unless you pass `--force`. Register them in a service provider's `boot()`:
+`--css` defaults to `tailwind` when `INLAY_CSS_FRAMEWORK=tailwind`, and `plain` otherwise. Either variant copies eleven sections (hero, logo cloud, feature grid, text and image, stats, testimonials, pricing, FAQ, call to action, rich text, and a free-form content section) into `resources/views/inlay/sections`, four blocks (heading, text, button, image) into `resources/views/inlay/blocks`, and a `LandingPage` page type into `app/Inlay`. Existing files are kept unless you pass `--force`. Register them in a service provider's `boot()`, blocks first:
 
 ```php
+Inlay::singleFileBlocks(resource_path('views/inlay/blocks'));
 Inlay::singleFileSections(resource_path('views/inlay/sections'));
 Inlay::pageDefinition(\App\Inlay\LandingPage::class);
 ```
@@ -57,12 +58,49 @@ Inlay::pageDefinition(\App\Inlay\LandingPage::class);
 - **Tailwind:** the sections use v4 syntax. Tailwind v4 scans `resources/views` automatically; if your setup does not, add `@source "../views/inlay";` to your CSS.
 - **Plain:** the sections use `inlay-` prefixed classes and the command also copies `resources/css/inlay.css`. Add `@import "./inlay.css";` to your main stylesheet and rebrand it by overriding the `--inlay-*` variables.
 
-The sections are yours from then on - restyle them to the client's brand.
+The sections and blocks are yours from then on - restyle them to the client's brand.
+
+## Sections and blocks
+
+A page is a list of **sections** - full-width bands such as a hero or a pricing table. A section can also have a **blocks** area that editors fill with smaller pieces (a heading, some text, a button) in any order. You build the sections and blocks in Blade with your own CSS; editors arrange them.
+
+A section is a Blade file that declares its settings at the top:
+
+```blade
+<?php
+
+use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\SingleFile\Section;
+
+section(
+    Section::make('feature')
+        ->name('Feature')
+        ->settings(Settings::make()
+            ->text('heading')->label('Heading')->default('Why it matters')
+            ->blocks('content')->label('Content')->allow(['text', 'button'])->max(6)->default([
+                ['type' => 'text', 'settings' => ['body' => '<p>Start here.</p>']],
+            ]))
+);
+?>
+<section class="py-24">
+    <h2>{{ $heading }}</h2>
+    {{ $content }}
+</section>
+```
+
+A block is declared the same way with `block(Block::make('button')->...)`, in `resources/views/inlay/blocks`. Blocks cannot contain blocks.
+
+- `{{ $content }}` renders every block in order. To wrap each one, loop: `@foreach ($content as $block) <div class="card">{{ $block }}</div> @endforeach` - each item also exposes `$block->type` and `$block->settings`.
+- `->allow([...])` limits which blocks the area accepts (all registered blocks when omitted); `->max(n)` caps how many.
+- Blocks are stored inside the section's settings, so drafts, publishing, version history and restore cover them with no extra work. A block whose type is later unregistered is skipped when rendering.
+- Class-based blocks work like class-based sections: implement `InlayBlock`, describe it with `#[BlockMeta]`, and list it in `config('inlay.blocks')`.
+
+In the editor, hover over the preview to outline a section or block and click it to edit it. Picking a section from the list scrolls the preview to it.
 
 ## Setting up a new project
 
 1. `composer require wearepixel/inlay "livewire/livewire:^4.0"`, then `php artisan inlay:install --starter=landing`.
-2. Register the starter sections and page type (above), and set `INLAY_CSS_FRAMEWORK`.
+2. Register the starter blocks, sections and page type (above), and set `INLAY_CSS_FRAMEWORK`.
 3. In `routes/web.php`: `Inlay::adminRoutes()`, `Inlay::previewLinkRoutes()` and, to serve pages, `Inlay::pageRoutes()` last.
 4. Guard the admin with `config('inlay.admin.middleware')`, e.g. `['web', 'auth']`.
 5. Call `Inlay::previewView('your.preview.view')` so previews use your layout and assets.
@@ -158,6 +196,8 @@ Every tool name starts with `inlay-`, and every tool authorises the request itse
 
 - `inlay.manage-pages` for everything. Tools that act on a page pass it to the ability, and tools that don't (listing sections, creating a page) pass nothing, so declare it optional: `Gate::define('inlay.manage-pages', fn (User $user, ?Page $page = null) => ...)`.
 - `inlay.publish-pages` plus `config('inlay.mcp.allow_publish') === true` to publish. Publishing is off by default.
+
+A section's blocks area is filled the same way as any other setting - a list of `{"type": ..., "settings": {...}}` - and `inlay-list-sections` describes which blocks each area allows and their settings.
 
 Spatie permissions with those names work as they are. Agents get feedback after every change: what each section renders (headings, links, images, text), content still on section defaults, publish blockers and a signed preview link. To enable preview links, call `Inlay::previewLinkRoutes()` from `routes/web.php`. Links are built from `APP_URL` (never the request's Host header) and their payload is held in the default cache store, which must be shared between processes - not `array`.
 

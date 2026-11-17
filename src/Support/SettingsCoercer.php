@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeArePixel\Inlay\Support;
 
 use BackedEnum;
+use Illuminate\Support\Str;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
@@ -29,6 +30,7 @@ final class SettingsCoercer
                 ))
                 : [],
             $setting->type === FieldType::Group && $itemSchema instanceof Settings => $this->coerceNested($itemSchema, is_array($value) ? $value : []),
+            $setting->type === FieldType::Blocks => $this->coerceBlocks($setting, $value),
             $setting->type === FieldType::Link => $this->coerceLinkValue($value),
             $setting->type === FieldType::Toggle => is_scalar($value) ? (bool) $value : false,
             $setting->type === FieldType::Number => $this->coerceNumber($value, $setting),
@@ -49,6 +51,79 @@ final class SettingsCoercer
         }
 
         return (bool) preg_match('/^(https?|mailto):/i', $url);
+    }
+
+    /**
+     * Each item becomes {id, type, settings}. An item whose type is not a
+     * registered block the field allows is dropped, an unusable id is
+     * replaced, and its settings are coerced against the block's own schema
+     * (unknown keys dropped). Anything past max() is cut.
+     *
+     * @return array<int, array{id: string, type: string, settings: array<string, mixed>}>
+     */
+    private function coerceBlocks(Setting $setting, mixed $value): array
+    {
+        $registry = app(BlockRegistry::class);
+        $items = [];
+        $usedIds = [];
+
+        foreach (is_array($value) ? $value : [] as $item) {
+            if (! is_array($item) || ! self::isAllowedBlock($setting, $item['type'] ?? null)) {
+                continue;
+            }
+
+            $id = self::usableBlockId($item['id'] ?? null, $usedIds);
+            $usedIds[] = $id;
+            $settings = is_array($item['settings'] ?? null) ? $item['settings'] : [];
+
+            $items[] = [
+                'id' => $id,
+                'type' => $item['type'],
+                'settings' => $this->coerceNested($registry->definition($item['type'])->settings, $settings),
+            ];
+        }
+
+        if ($setting->maxBlocks !== null) {
+            return array_slice($items, 0, $setting->maxBlocks);
+        }
+
+        return $items;
+    }
+
+    /**
+     * Whether $type is a registered block that this blocks field allows.
+     */
+    public static function isAllowedBlock(Setting $setting, mixed $type): bool
+    {
+        if (! is_string($type) || ! app(BlockRegistry::class)->hasHandle($type)) {
+            return false;
+        }
+
+        return $setting->allowedBlocks === [] || in_array($type, $setting->allowedBlocks, true);
+    }
+
+    /**
+     * Keeps a well-formed id that is not already taken, otherwise issues a new one.
+     *
+     * @param  array<int, string>  $usedIds
+     */
+    private static function usableBlockId(mixed $id, array $usedIds): string
+    {
+        if (is_string($id) && self::isValidBlockId($id) && ! in_array($id, $usedIds, true)) {
+            return $id;
+        }
+
+        return self::newBlockId();
+    }
+
+    public static function isValidBlockId(string $id): bool
+    {
+        return preg_match('/^[A-Za-z0-9_-]{1,40}$/', $id) === 1;
+    }
+
+    public static function newBlockId(): string
+    {
+        return strtolower((string) Str::ulid());
     }
 
     /**

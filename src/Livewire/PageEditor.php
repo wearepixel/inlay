@@ -23,8 +23,10 @@ use WeArePixel\Inlay\Pages\PageDefinitionValidator;
 use WeArePixel\Inlay\Pages\PageDefinitionViolationException;
 use WeArePixel\Inlay\Pages\ResolvedPageDefinition;
 use WeArePixel\Inlay\Rules\PagePath;
+use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\Definition;
 use WeArePixel\Inlay\Support\RichTextSanitizer;
 use WeArePixel\Inlay\Support\SectionInstanceLabel;
@@ -40,6 +42,8 @@ final class PageEditor extends Component
     public Page $page;
 
     public ?int $selectedSectionId = null;
+
+    public ?string $selectedBlockId = null;
 
     public bool $showingHistory = false;
 
@@ -387,21 +391,179 @@ final class PageEditor extends Component
         $definition = app(SectionRegistry::class)->definition($section->handle);
 
         $this->selectedSectionId = $sectionId;
+        $this->selectedBlockId = null;
         $this->editingProps = app(SectionRenderer::class)->resolveEffectiveRawSettings($definition, $section->settings ?? []);
     }
 
-    public function addRepeaterItem(string $fieldName): void
+    public function selectBlock(int $sectionId, string $blockId): void
     {
-        $this->editingProps[$fieldName] ??= [];
-        $this->editingProps[$fieldName][] = [];
-        $this->persistSetting($fieldName);
+        if ($this->selectedSectionId !== $sectionId) {
+            $this->selectSection($sectionId);
+        }
+
+        if ($this->selectedSectionId === $sectionId && $this->locateBlock($blockId) !== null) {
+            $this->selectedBlockId = $blockId;
+            $this->dispatch('block-selected', id: $blockId);
+        }
     }
 
-    public function removeRepeaterItem(string $fieldName, int $index): void
+    public function deselectBlock(): void
     {
-        unset($this->editingProps[$fieldName][$index]);
-        $this->editingProps[$fieldName] = array_values($this->editingProps[$fieldName] ?? []);
-        $this->persistSetting($fieldName);
+        $this->selectedBlockId = null;
+        $this->dispatch('block-selected', id: null);
+    }
+
+    public function addBlock(string $field, string $type): void
+    {
+        $setting = $this->blocksField($field);
+
+        if ($setting === null || ! SettingsCoercer::isAllowedBlock($setting, $type) || $this->isFull($setting)) {
+            return;
+        }
+
+        $schema = app(BlockRegistry::class)->definition($type)->settings;
+        $defaults = app(SectionRenderer::class)->resolveSchemaSettings($schema, "block:{$type}", [], raw: true);
+        $block = ['id' => SettingsCoercer::newBlockId(), 'type' => $type, 'settings' => $defaults];
+
+        $items = array_values($this->editingProps[$field] ?? []);
+        $items[] = $block;
+        $this->editingProps[$field] = $items;
+
+        $this->persistSetting($field);
+        $this->selectBlock((int) $this->selectedSectionId, $block['id']);
+    }
+
+    public function moveBlock(string $field, string $blockId, int $direction): void
+    {
+        $items = array_values($this->editingProps[$field] ?? []);
+        $from = $this->blockIndex($items, $blockId);
+        $to = $from === null ? null : $from + ($direction < 0 ? -1 : 1);
+
+        if ($this->blocksField($field) === null || $from === null || $to < 0 || $to >= count($items)) {
+            return;
+        }
+
+        [$items[$from], $items[$to]] = [$items[$to], $items[$from]];
+        $this->editingProps[$field] = $items;
+        $this->persistSetting($field);
+    }
+
+    public function duplicateBlock(string $field, string $blockId): void
+    {
+        $setting = $this->blocksField($field);
+        $items = array_values($this->editingProps[$field] ?? []);
+        $index = $this->blockIndex($items, $blockId);
+
+        if ($setting === null || $index === null || $this->isFull($setting)) {
+            return;
+        }
+
+        $copy = [...$items[$index], 'id' => SettingsCoercer::newBlockId()];
+        array_splice($items, $index + 1, 0, [$copy]);
+
+        $this->editingProps[$field] = $items;
+        $this->persistSetting($field);
+        $this->selectBlock((int) $this->selectedSectionId, $copy['id']);
+    }
+
+    public function removeBlock(string $field, string $blockId): void
+    {
+        $items = array_values($this->editingProps[$field] ?? []);
+        $index = $this->blockIndex($items, $blockId);
+
+        if ($this->blocksField($field) === null || $index === null) {
+            return;
+        }
+
+        array_splice($items, $index, 1);
+        $this->editingProps[$field] = $items;
+        $this->persistSetting($field);
+
+        if ($this->selectedBlockId === $blockId) {
+            $this->deselectBlock();
+        }
+    }
+
+    /**
+     * The selected section's blocks field called $field, or null - every
+     * block action checks this, since $field arrives from the client.
+     */
+    private function blocksField(string $field): ?Setting
+    {
+        if ($this->selectedSectionId === null) {
+            return null;
+        }
+
+        $section = PageSection::whereKey($this->selectedSectionId)->where('page_id', $this->page->id)->first();
+
+        if ($section === null || ! app(SectionRegistry::class)->hasHandle($section->handle)) {
+            return null;
+        }
+
+        $setting = app(SectionRegistry::class)->definition($section->handle)->settings->field($field);
+
+        return $setting?->type === FieldType::Blocks ? $setting : null;
+    }
+
+    private function isFull(Setting $blocksField): bool
+    {
+        $count = count($this->editingProps[$blocksField->name] ?? []);
+
+        return $blocksField->maxBlocks !== null && $count >= $blocksField->maxBlocks;
+    }
+
+    /**
+     * @param  array<int, mixed>  $items
+     */
+    private function blockIndex(array $items, string $blockId): ?int
+    {
+        foreach ($items as $index => $item) {
+            if (is_array($item) && ($item['id'] ?? null) === $blockId) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{field: string, index: int}|null
+     */
+    private function locateBlock(string $blockId): ?array
+    {
+        foreach ($this->editingProps as $field => $value) {
+            if (! is_array($value) || $this->blocksField((string) $field) === null) {
+                continue;
+            }
+
+            $index = $this->blockIndex(array_values($value), $blockId);
+
+            if ($index !== null) {
+                return ['field' => (string) $field, 'index' => $index];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * $path is the repeater's path within editingProps - its name for a
+     * section's own repeater, deeper for one inside a block.
+     */
+    public function addRepeaterItem(string $path): void
+    {
+        $items = data_get($this->editingProps, $path);
+        data_set($this->editingProps, $path, [...(is_array($items) ? array_values($items) : []), []]);
+        $this->persistSetting(explode('.', $path)[0]);
+    }
+
+    public function removeRepeaterItem(string $path, int $index): void
+    {
+        $items = data_get($this->editingProps, $path);
+        $items = is_array($items) ? array_values($items) : [];
+        unset($items[$index]);
+        data_set($this->editingProps, $path, array_values($items));
+        $this->persistSetting(explode('.', $path)[0]);
     }
 
     /**
@@ -503,6 +665,7 @@ final class PageEditor extends Component
             : null;
 
         $schema = $selectedDefinition?->settings;
+        $selectedBlock = $this->selectedBlockForView();
         $sectionTypes = collect(app(SectionRegistry::class)->all());
         $revisions = $this->page->revisions()->get();
 
@@ -558,6 +721,7 @@ final class PageEditor extends Component
             'sectionsExistButNoneAllowed' => $sectionTypes->isNotEmpty() && $allowedSections->isEmpty(),
             'pageDefinitionUnresolved' => $pageDefinition === null,
             'selectedSchema' => $schema,
+            'selectedBlock' => $selectedBlock,
             'inspectorTabs' => $this->inspectorTabs($schema),
             'previewUrl' => $this->previewUrl(),
             'revisions' => $revisions,
@@ -567,6 +731,31 @@ final class PageEditor extends Component
             'lockedSectionHandles' => $lockedSectionHandles,
             'violations' => app(PageDefinitionValidator::class)->validate($this->page),
         ]);
+    }
+
+    /**
+     * @return array{field: string, index: int, name: string, detail: ?string, tabs: Collection<int, mixed>}|null
+     */
+    private function selectedBlockForView(): ?array
+    {
+        $location = $this->selectedBlockId !== null ? $this->locateBlock($this->selectedBlockId) : null;
+        $item = $location !== null ? ($this->editingProps[$location['field']][$location['index']] ?? null) : null;
+        $type = is_array($item) ? ($item['type'] ?? null) : null;
+
+        if ($location === null || ! is_string($type) || ! app(BlockRegistry::class)->hasHandle($type)) {
+            $this->selectedBlockId = null;
+
+            return null;
+        }
+
+        $definition = app(BlockRegistry::class)->definition($type);
+
+        return [
+            ...$location,
+            'name' => $definition->name,
+            'detail' => SectionInstanceLabel::detail($definition, is_array($item['settings'] ?? null) ? $item['settings'] : []),
+            'tabs' => $this->inspectorTabs($definition->settings),
+        ];
     }
 
     /**

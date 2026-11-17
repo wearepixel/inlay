@@ -20,7 +20,7 @@ final class Registration
 {
     private static bool $isCapturing = false;
 
-    private static ?Section $captured = null;
+    private static ?Definable $captured = null;
 
     public static function startCapturing(): void
     {
@@ -28,14 +28,14 @@ final class Registration
         self::$captured = null;
     }
 
-    public static function stopCapturing(): ?Section
+    public static function stopCapturing(): ?Definable
     {
         self::$isCapturing = false;
 
         return self::$captured;
     }
 
-    public static function register(Section $sectionType): void
+    public static function register(Definable $sectionType): void
     {
         if (self::$isCapturing) {
             self::$captured = $sectionType;

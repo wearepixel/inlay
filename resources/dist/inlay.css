@@ -1683,3 +1683,124 @@
     max-width: 100%;
   }
 }
+
+/* Blocks inside a section */
+
+.inlay-icon--flip {
+  transform: rotate(180deg);
+}
+
+.inlay-blocks {
+  margin-bottom: 18px;
+}
+
+.inlay-blocks__list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.inlay-blocks__item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--inlay-surface);
+  border: 1px solid var(--inlay-border);
+  border-radius: var(--inlay-radius);
+  padding: 2px 4px 2px 0;
+}
+
+.inlay-blocks__select {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inlay-blocks__select:hover {
+  color: var(--inlay-accent);
+}
+
+.inlay-blocks__select:focus-visible {
+  outline: 2px solid var(--inlay-focus);
+  outline-offset: -2px;
+  border-radius: var(--inlay-radius);
+}
+
+.inlay-blocks__actions {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.inlay-blocks__add {
+  position: relative;
+}
+
+.inlay-blocks__add > summary {
+  list-style: none;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.inlay-blocks__add > summary::-webkit-details-marker {
+  display: none;
+}
+
+.inlay-blocks__menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  min-width: 220px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  background: var(--inlay-surface);
+  border: 1px solid var(--inlay-border);
+  border-radius: var(--inlay-radius-lg);
+  box-shadow: var(--inlay-shadow-md);
+}
+
+.inlay-blocks__menu button {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--inlay-radius);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.inlay-blocks__menu button:hover,
+.inlay-blocks__menu button:focus-visible {
+  background: var(--inlay-bg);
+}
+
+.inlay-blocks__menu span {
+  color: var(--inlay-text-muted);
+  font-size: 12px;
+}
+
+.inlay-block-inspector .inlay-back-link {
+  margin-bottom: 8px;
+}
+
+.inlay-instance-heading--block {
+  font-size: 15px;
+}

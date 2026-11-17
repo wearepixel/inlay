@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Support\BlockRegistry;
+use WeArePixel\Inlay\Support\Definition;
 use WeArePixel\Inlay\Support\ImageValue;
 use WeArePixel\Inlay\Support\SettingsCoercer;
 
@@ -91,6 +93,7 @@ final class SettingsValidator
             FieldType::Link => $this->validateLink($value, $path),
             FieldType::Repeater => $this->validateRepeater($setting, $value, $path),
             FieldType::Group => $this->validateGroup($setting, $value, $path),
+            FieldType::Blocks => $this->validateBlocks($setting, $value, $path),
         };
     }
 
@@ -220,6 +223,89 @@ final class SettingsValidator
 
         foreach ($value as $index => $item) {
             array_push($errors, ...$this->validateNestedItem($setting, $item, "{$path}.{$index}"));
+        }
+
+        return $errors;
+    }
+
+    /**
+     * @return array<int, CompositionError>
+     */
+    private function validateBlocks(Setting $setting, mixed $value, string $path): array
+    {
+        if (! is_array($value) || ! array_is_list($value)) {
+            return [new CompositionError($path, 'Must be a list of blocks, each {"type": handle, "settings": {...}}.')];
+        }
+
+        $limit = min($setting->maxBlocks ?? self::MAX_REPEATER_ITEMS, self::MAX_REPEATER_ITEMS);
+
+        if (count($value) > $limit) {
+            return [new CompositionError($path, "Must have at most {$limit} blocks.")];
+        }
+
+        $errors = [];
+
+        foreach ($value as $index => $item) {
+            array_push($errors, ...$this->validateBlock($setting, $item, "{$path}.{$index}"));
+        }
+
+        return $errors;
+    }
+
+    /**
+     * @return array<int, CompositionError>
+     */
+    private function validateBlock(Setting $setting, mixed $item, string $path): array
+    {
+        if (! is_array($item) || array_is_list($item)) {
+            return [new CompositionError($path, 'Must be an object with type and settings.')];
+        }
+
+        $errors = [];
+
+        foreach (array_diff(array_keys($item), ['id', 'type', 'settings']) as $unknown) {
+            $errors[] = new CompositionError("{$path}.{$unknown}", 'Unknown key. A block has id, type and settings.');
+        }
+
+        if (isset($item['id']) && (! is_string($item['id']) || ! SettingsCoercer::isValidBlockId($item['id']))) {
+            $errors[] = new CompositionError("{$path}.id", 'Must be up to 40 letters, numbers, dashes or underscores, or omitted.');
+        }
+
+        if (! SettingsCoercer::isAllowedBlock($setting, $item['type'] ?? null)) {
+            $allowed = array_map(fn (Definition $block) => $block->handle, app(BlockRegistry::class)->allowedBy($setting->allowedBlocks));
+            $errors[] = new CompositionError("{$path}.type", 'Must be one of: '.implode(', ', $allowed).'.');
+
+            return $errors;
+        }
+
+        $settings = $item['settings'] ?? [];
+
+        if (! is_array($settings) || ($settings !== [] && array_is_list($settings))) {
+            $errors[] = new CompositionError("{$path}.settings", 'Must be an object.');
+
+            return $errors;
+        }
+
+        return [...$errors, ...$this->validateBlockSettings($item['type'], $settings, "{$path}.settings")];
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return array<int, CompositionError>
+     */
+    private function validateBlockSettings(string $type, array $settings, string $path): array
+    {
+        $definition = app(BlockRegistry::class)->definition($type);
+        $errors = $this->validate($definition->settings, $settings, $path);
+        $reported = array_map(fn (CompositionError $error) => $error->path, $errors);
+
+        $supplied = array_filter($settings, fn (mixed $value) => $value !== null);
+        $effective = [...$definition->defaults(), ...$supplied];
+
+        foreach ($this->validateRequired($definition->settings, $effective, $path) as $missing) {
+            if (! in_array($missing->path, $reported, true)) {
+                $errors[] = $missing;
+            }
         }
 
         return $errors;

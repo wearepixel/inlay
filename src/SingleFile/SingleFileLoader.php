@@ -15,13 +15,16 @@ use WeArePixel\Inlay\Support\SourceType;
  * Definition a class-based section resolves to. The file is
  * developer-owned application code, trusted exactly like any other Blade
  * view - reading its declaration works by requiring the raw file directly
- * (not through Blade's compiler) so only its top PHP section executes; the
+ * (not through Blade's compiler) so only its top PHP block executes; the
  * Blade-templated markup below it is inert, non-executable text as far as
  * plain PHP is concerned; output is discarded, not evaluated.
  */
 final class SingleFileLoader
 {
-    public function load(string $path): Definition
+    /**
+     * @param  class-string<Definable>  $kind
+     */
+    public function load(string $path, string $kind = Section::class): Definition
     {
         if (! is_file($path)) {
             throw new InvalidArgumentException("No single-file section found at [{$path}].");
@@ -44,10 +47,10 @@ final class SingleFileLoader
             $sectionType = Registration::stopCapturing();
         }
 
-        if (! $sectionType instanceof Section) {
-            throw new InvalidArgumentException(
-                "[{$path}] does not declare a single-file section - it must call section(Section::make(...)) in a PHP section at the top of the file."
-            );
+        if (! $sectionType instanceof $kind) {
+            throw new InvalidArgumentException($kind === Block::class
+                ? "[{$path}] does not declare a single-file block - it must call block(Block::make(...)) in a PHP block at the top of the file."
+                : "[{$path}] does not declare a single-file section - it must call section(Section::make(...)) in a PHP block at the top of the file.");
         }
 
         return new Definition(

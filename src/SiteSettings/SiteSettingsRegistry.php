@@ -7,6 +7,7 @@ namespace WeArePixel\Inlay\SiteSettings;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use WeArePixel\Inlay\Models\SiteSetting;
+use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Settings;
 use WeArePixel\Inlay\Support\RichTextSanitizer;
 use WeArePixel\Inlay\Support\SectionRenderer;
@@ -30,6 +31,12 @@ final class SiteSettingsRegistry
     {
         if (! preg_match('/^[a-z0-9][a-z0-9_-]*$/', $handle)) {
             throw new InvalidArgumentException("Site settings handle [{$handle}] must be lowercase letters, numbers, dashes or underscores.");
+        }
+
+        foreach ($schema->fields() as $field) {
+            if ($field->type === FieldType::Blocks) {
+                throw new InvalidArgumentException("Site settings [{$handle}] cannot use a blocks field ([{$field->name}]); blocks belong in a page section.");
+            }
         }
 
         $this->groups[$handle] = new SiteSettingsGroup($handle, $label ?? Str::headline($handle), $schema);

@@ -14,6 +14,7 @@ use WeArePixel\Inlay\Declarative\DeclarativeSections;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Screenshots\BrowsershotScreenshotter;
 use WeArePixel\Inlay\SiteSettings\SiteSettingsRegistry;
+use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\LivewireRequirement;
 use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\View\Components\RenderPage;
@@ -33,6 +34,7 @@ final class InlayServiceProvider extends ServiceProvider
 
             return $registry;
         });
+        $this->app->singleton(BlockRegistry::class, fn () => BlockRegistry::fromConfig());
         $this->app->singleton(PageDefinitionRegistry::class);
         $this->app->singleton(SiteSettingsRegistry::class);
         $this->app->singleton(InlayManager::class);

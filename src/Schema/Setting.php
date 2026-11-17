@@ -43,6 +43,17 @@ final class Setting
     public ?string $badge = null;
 
     /**
+     * For a blocks field: the block handles an editor may add. Empty allows
+     * every registered block.
+     *
+     * @var array<int, string>
+     */
+    public array $allowedBlocks = [];
+
+    /** For a blocks field: the most blocks an editor may add. */
+    public ?int $maxBlocks = null;
+
+    /**
      * @param  array<string, string>  $options  Resolved label map - populated
      *                                          immediately by Settings::options()
      *                                          whether given as a literal array
@@ -93,22 +104,18 @@ final class Setting
 
     /**
      * The client-side equivalent of isVisible(), reading Livewire's live
-     * (not-yet-persisted) editingProps state via Alpine's $wire, so the
-     * inspector can show/hide a conditional field instantly and animate the
-     * change - rather than waiting on a full round trip to re-render the
-     * field in or out of existence. Only meaningful for a top-level field;
-     * a field nested inside a repeater/group item still uses the
-     * server-rendered isVisible() check, since its dependency lives at a
-     * dynamic array path this expression doesn't attempt to address.
+     * editingProps through Alpine's $wire so a conditional field shows or
+     * hides without a round trip. $scope is the JS path to the object the
+     * field lives in - a block's settings, for a block's field.
      */
-    public function visibilityExpression(): ?string
+    public function visibilityExpression(string $scope = '$wire.editingProps'): ?string
     {
         if ($this->visibleWhen === null) {
             return null;
         }
 
         [$field, $value] = $this->visibleWhen;
-        $comparison = "\$wire.editingProps['{$field}'] === ".json_encode($value);
+        $comparison = "{$scope}['{$field}'] === ".json_encode($value);
 
         return $this->negateVisibility ? "!({$comparison})" : $comparison;
     }

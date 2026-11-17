@@ -74,6 +74,10 @@ final class InstallCommand extends Command
             $copies[$sectionType] = $sectionsTarget.'/'.basename($sectionType);
         }
 
+        foreach ($files->glob("{$source}/blocks/*.blade.php") as $blockType) {
+            $copies[$blockType] = resource_path('views/inlay/blocks/'.basename($blockType));
+        }
+
         $copies["{$root}/LandingPage.php.stub"] = app_path('Inlay/LandingPage.php');
 
         if ($files->exists("{$source}/inlay.css")) {
@@ -100,6 +104,7 @@ final class InstallCommand extends Command
         }
 
         $this->components->twoColumnDetail('Add to a service provider boot() method', '');
+        $this->line('    Inlay::singleFileBlocks(resource_path(\'views/inlay/blocks\'));');
         $this->line('    Inlay::singleFileSections(resource_path(\'views/inlay/sections\'));');
         $this->line('    Inlay::pageDefinition(\App\Inlay\LandingPage::class);');
         $this->newLine();

@@ -15,8 +15,10 @@ use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinition;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\SingleFile\Block;
 use WeArePixel\Inlay\SingleFile\SingleFileLoader;
 use WeArePixel\Inlay\SiteSettings\SiteSettingsRegistry;
+use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\LivewireRequirement;
 use WeArePixel\Inlay\Support\SectionRegistry;
 use WeArePixel\Inlay\Support\SectionRenderer;
@@ -395,11 +397,17 @@ final class InlayManager
 
     public function adminUrl(string $screen, mixed ...$parameters): string
     {
-        $custom = $this->adminUrlResolver !== null
-            ? ($this->adminUrlResolver)($screen, ...$parameters)
-            : null;
+        if ($this->adminUrlResolver !== null) {
+            $hostUrl = ($this->adminUrlResolver)($screen, ...$parameters);
 
-        return $custom ?? route("inlay.admin.{$screen}", array_values(array_filter($parameters, fn (mixed $parameter) => $parameter !== null)));
+            if ($hostUrl !== null) {
+                return $hostUrl;
+            }
+        }
+
+        $routeParameters = array_values(array_filter($parameters, fn (mixed $parameter) => $parameter !== null));
+
+        return route("inlay.admin.{$screen}", $routeParameters);
     }
 
     /**
@@ -427,6 +435,25 @@ final class InlayManager
     public function settings(string $handle): array
     {
         return app(SiteSettingsRegistry::class)->values($handle);
+    }
+
+    /**
+     * Registers a single Blade file as a block - a piece editors place
+     * inside a section's blocks area. It declares itself with
+     * block(Block::make($handle)->...) at the top of the file.
+     */
+    public function singleFileBlock(string $path): void
+    {
+        app(BlockRegistry::class)->registerSingleFile(
+            app(SingleFileLoader::class)->load($path, Block::class)
+        );
+    }
+
+    public function singleFileBlocks(string $directory): void
+    {
+        foreach (glob(rtrim($directory, '/').'/*.blade.php') ?: [] as $path) {
+            $this->singleFileBlock($path);
+        }
     }
 
     /** Cache-busting token for a resources/dist asset, keyed to its own mtime. */

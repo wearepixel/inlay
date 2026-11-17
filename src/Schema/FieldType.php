@@ -16,4 +16,5 @@ enum FieldType: string
     case Link = 'link';
     case Repeater = 'repeater';
     case Group = 'group';
+    case Blocks = 'blocks';
 }

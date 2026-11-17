@@ -15,7 +15,7 @@ final class LandingPage extends PageDefinition
     {
         return array_map(SectionHandle::make(...), [
             'hero', 'logo-cloud', 'feature-grid', 'split-media', 'stats',
-            'testimonials', 'pricing', 'faq', 'cta-band', 'rich-text',
+            'testimonials', 'pricing', 'faq', 'cta-band', 'rich-text', 'content',
         ]);
     }
 

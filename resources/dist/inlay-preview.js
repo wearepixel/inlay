@@ -27,7 +27,7 @@
     return box;
   };
 
-  // Sections are display:contents wrappers with no box, so measure their contents.
+  // Sections and blocks are display:contents wrappers with no box, so measure their contents.
   const boundsOf = (section) => {
     const range = document.createRange();
     range.selectNodeContents(section);
@@ -48,7 +48,8 @@
     box.style.left = `${rect.left}px`;
     box.style.width = `${rect.width}px`;
     box.style.height = `${rect.height}px`;
-    box.firstElementChild.textContent = section.dataset.inlaySectionLabel || "";
+    box.firstElementChild.textContent =
+      section.dataset.inlayBlockLabel || section.dataset.inlaySectionLabel || "";
   };
 
   const update = () => {
@@ -56,8 +57,32 @@
     place(hoverBox, hovered === selected ? null : hovered);
   };
 
+  // The innermost selectable thing: a block if the pointer is inside one, else its section.
   const sectionOf = (target) =>
-    target instanceof Element ? target.closest("[data-inlay-section]") : null;
+    target instanceof Element ? target.closest("[data-inlay-block], [data-inlay-section]") : null;
+
+  const findSelected = (sectionId, blockId) => {
+    if (!sectionId) {
+      return null;
+    }
+
+    const section = document.querySelector(`[data-inlay-section="${Number(sectionId)}"]`);
+
+    if (!section || !blockId) {
+      return section;
+    }
+
+    for (const block of section.querySelectorAll("[data-inlay-block]")) {
+      if (block.dataset.inlayBlock === String(blockId)) {
+        return block;
+      }
+    }
+
+    return section;
+  };
+
+  const sectionIdOf = (element) =>
+    Number(element.closest("[data-inlay-section]")?.dataset.inlaySection);
 
   const start = () => {
     document.head.appendChild(styles);
@@ -88,7 +113,9 @@
         selected = section;
         update();
         window.parent.postMessage(
-          { type: "inlay:select-section", id: Number(section.dataset.inlaySection) },
+          section.dataset.inlayBlock
+            ? { type: "inlay:select-block", id: sectionIdOf(section), blockId: section.dataset.inlayBlock }
+            : { type: "inlay:select-section", id: sectionIdOf(section) },
           window.location.origin,
         );
       },
@@ -124,9 +151,7 @@
         document.documentElement.style.setProperty("--inlay-preview-colour", event.data.colour);
       }
 
-      selected = event.data.id
-        ? document.querySelector(`[data-inlay-section="${Number(event.data.id)}"]`)
-        : null;
+      selected = findSelected(event.data.id, event.data.blockId);
 
       if (typeof event.data.restoreScroll === "number") {
         window.scrollTo({ top: event.data.restoreScroll, behavior: "instant" });

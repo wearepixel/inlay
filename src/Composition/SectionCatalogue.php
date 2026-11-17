@@ -9,11 +9,12 @@ use WeArePixel\Inlay\Pages\ResolvedPageDefinition;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\Definition;
-use WeArePixel\Inlay\Support\SectionRegistry;
-use WeArePixel\Inlay\Support\SourceType;
 use WeArePixel\Inlay\Support\ImageValue;
 use WeArePixel\Inlay\Support\LinkValue;
+use WeArePixel\Inlay\Support\SectionRegistry;
+use WeArePixel\Inlay\Support\SourceType;
 
 /**
  * Describes registered sections and their settings in a form an agent can
@@ -33,6 +34,7 @@ final class SectionCatalogue
         'link' => 'object {"label": string, "url": string, "openInNewTab": boolean}; url must be relative, http(s) or mailto',
         'repeater' => 'list of objects, each shaped by item_settings',
         'group' => 'object shaped by item_settings',
+        'blocks' => 'list of {"type": one of allowed_blocks, "settings": object shaped by that block\'s settings}; order is display order',
     ];
 
     public function __construct(private readonly SectionRegistry $sections) {}
@@ -106,7 +108,22 @@ final class SectionCatalogue
                 $setting->negateVisibility ? 'not_equals' : 'equals' => $setting->visibleWhen[1],
             ],
             'item_settings' => $setting->itemSchema !== null ? $this->describeSettings($setting->itemSchema, nested: true) : null,
+            'max_blocks' => $setting->maxBlocks,
+            'allowed_blocks' => $setting->type === FieldType::Blocks ? $this->describeBlocks($setting) : null,
         ], fn (mixed $value) => $value !== null);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function describeBlocks(Setting $setting): array
+    {
+        return array_map(fn (Definition $block) => [
+            'type' => $block->handle,
+            'name' => $block->name,
+            'description' => $block->description,
+            'settings' => $this->describeSettings($block->settings),
+        ], app(BlockRegistry::class)->allowedBy($setting->allowedBlocks));
     }
 
     /**

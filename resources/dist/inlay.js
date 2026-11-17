@@ -34,6 +34,7 @@ document.addEventListener("alpine:init", () => {
       resizing: false,
       skipNextScroll: false,
       previewScroll: 0,
+      selectedBlockId: null,
 
       init() {
         const storedWidth = parseInt(
@@ -49,6 +50,11 @@ document.addEventListener("alpine:init", () => {
           localStorage.getItem("inlay-sidebar-collapsed") === "1";
 
         this.listenToPreview();
+        this.selectedBlockId = this.$wire.selectedBlockId ?? null;
+        window.addEventListener("block-selected", (event) => {
+          this.selectedBlockId = event.detail.id ?? null;
+          this.syncPreview(Boolean(this.selectedBlockId));
+        });
         this.$watch("lastSelectedId", () => this.syncPreview(true));
         this.$watch("view", () => this.syncPreview(false));
       },
@@ -87,7 +93,17 @@ document.addEventListener("alpine:init", () => {
 
             this.skipNextScroll = true;
             this.showSettings(id);
+            this.selectedBlockId = null;
             this.$wire.selectSection(id);
+          }
+
+          if (event.data?.type === "inlay:select-block") {
+            const id = Number(event.data.id);
+
+            this.skipNextScroll = true;
+            this.showSettings(id);
+            this.selectedBlockId = String(event.data.blockId);
+            this.$wire.selectBlock(id, String(event.data.blockId));
           }
         });
       },
@@ -105,6 +121,7 @@ document.addEventListener("alpine:init", () => {
           {
             type: "inlay:selected",
             id,
+            blockId: id ? this.selectedBlockId : null,
             scroll: scroll && !this.skipNextScroll,
             restoreScroll,
             colour: getComputedStyle(this.$root).getPropertyValue("--inlay-focus").trim(),
@@ -178,6 +195,7 @@ document.addEventListener("alpine:init", () => {
        */
       showSettings(id) {
         this.lastSelectedId = id;
+        this.selectedBlockId = null;
         this.view = "settings";
       },
 

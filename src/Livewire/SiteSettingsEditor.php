@@ -56,18 +56,20 @@ final class SiteSettingsEditor extends Component
         $this->persist(explode('.', $key)[0]);
     }
 
-    public function addRepeaterItem(string $fieldName): void
+    public function addRepeaterItem(string $path): void
     {
-        $this->editingProps[$fieldName] ??= [];
-        $this->editingProps[$fieldName][] = [];
-        $this->persist($fieldName);
+        $items = data_get($this->editingProps, $path);
+        data_set($this->editingProps, $path, [...(is_array($items) ? array_values($items) : []), []]);
+        $this->persist(explode('.', $path)[0]);
     }
 
-    public function removeRepeaterItem(string $fieldName, int $index): void
+    public function removeRepeaterItem(string $path, int $index): void
     {
-        unset($this->editingProps[$fieldName][$index]);
-        $this->editingProps[$fieldName] = array_values($this->editingProps[$fieldName] ?? []);
-        $this->persist($fieldName);
+        $items = data_get($this->editingProps, $path);
+        $items = is_array($items) ? array_values($items) : [];
+        unset($items[$index]);
+        data_set($this->editingProps, $path, array_values($items));
+        $this->persist(explode('.', $path)[0]);
     }
 
     public function updatedImageUploads(mixed $value, string $key): void

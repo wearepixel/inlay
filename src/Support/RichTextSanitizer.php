@@ -38,6 +38,10 @@ final class RichTextSanitizer
             return $this->sanitize($value);
         }
 
+        if ($setting->type === FieldType::Blocks && is_array($value)) {
+            return array_map(fn (mixed $item) => $this->sanitizeBlock($item), $value);
+        }
+
         if ($setting->itemSchema === null || ! is_array($value)) {
             return $value;
         }
@@ -47,6 +51,28 @@ final class RichTextSanitizer
         }
 
         return $this->sanitizeItem($setting, $value);
+    }
+
+    private function sanitizeBlock(mixed $item): mixed
+    {
+        $blocks = app(BlockRegistry::class);
+        $type = is_array($item) ? ($item['type'] ?? null) : null;
+
+        if (! is_string($type) || ! $blocks->hasHandle($type) || ! is_array($item['settings'] ?? null)) {
+            return $item;
+        }
+
+        $schema = $blocks->definition($type)->settings;
+
+        foreach ($item['settings'] as $name => $value) {
+            $field = $schema->field((string) $name);
+
+            if ($field !== null) {
+                $item['settings'][$name] = $this->sanitizeSetting($field, $value);
+            }
+        }
+
+        return $item;
     }
 
     /**
