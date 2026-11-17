@@ -428,8 +428,8 @@ final class PageEditor extends Component
 
         $path = $value->store('inlay', config('inlay.disk', 'public'));
 
-        $this->editingProps[$key] = $path;
-        $this->persistSetting($key);
+        data_set($this->editingProps, $key, $path);
+        $this->persistSetting(explode('.', $key)[0]);
     }
 
     public function publish(): void

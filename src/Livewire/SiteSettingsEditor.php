@@ -78,8 +78,8 @@ final class SiteSettingsEditor extends Component
             "imageUploads.{$key}" => ['image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
         ]);
 
-        $this->editingProps[$key] = $value->store('inlay', config('inlay.disk', 'public'));
-        $this->persist($key);
+        data_set($this->editingProps, $key, $value->store('inlay', config('inlay.disk', 'public')));
+        $this->persist(explode('.', $key)[0]);
     }
 
     public function render(): View
