@@ -2,7 +2,7 @@
 <div class="inlay-repeater">
     @include('inlay::fields.partials.label', ['field' => $field])
 
-    @foreach ((data_get($editingProps, $repeaterPath) ?? []) as $index => $item)
+    @foreach (array_values(data_get($editingProps, $repeaterPath) ?? []) as $index => $item)
         <div class="inlay-repeater__item" wire:key="repeater-{{ $repeaterPath }}-{{ $index }}">
             @foreach ($field->itemSchema->fields() as $subField)
                 @continue(! $subField->isVisible($item))
@@ -11,7 +11,7 @@
                     'modelPath' => "{$modelPath}.{$index}.{$subField->name}",
                 ])
             @endforeach
-            <button type="button" wire:click="removeRepeaterItem(@js($repeaterPath), {{ $index }})" class="inlay-button inlay-button--small inlay-button--danger">Remove</button>
+            <button type="button" wire:click="removeRepeaterItem(@js($repeaterPath), @js($index))" class="inlay-button inlay-button--small inlay-button--danger">Remove</button>
         </div>
     @endforeach
 

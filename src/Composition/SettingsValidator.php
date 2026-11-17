@@ -24,8 +24,6 @@ final class SettingsValidator
 {
     private const LINK_KEYS = ['label', 'url', 'openInNewTab'];
 
-    public const MAX_REPEATER_ITEMS = 100;
-
     /**
      * @param  array<array-key, mixed>  $values
      * @return array<int, CompositionError>
@@ -215,8 +213,8 @@ final class SettingsValidator
             return [new CompositionError($path, 'Must be a list of items.')];
         }
 
-        if (count($value) > self::MAX_REPEATER_ITEMS) {
-            return [new CompositionError($path, 'Must have at most '.self::MAX_REPEATER_ITEMS.' items.')];
+        if (count($value) > Settings::MAX_ITEMS) {
+            return [new CompositionError($path, 'Must have at most '.Settings::MAX_ITEMS.' items.')];
         }
 
         $errors = [];
@@ -237,7 +235,7 @@ final class SettingsValidator
             return [new CompositionError($path, 'Must be a list of blocks, each {"type": handle, "settings": {...}}.')];
         }
 
-        $limit = min($setting->maxBlocks ?? self::MAX_REPEATER_ITEMS, self::MAX_REPEATER_ITEMS);
+        $limit = min($setting->maxBlocks ?? Settings::MAX_ITEMS, Settings::MAX_ITEMS);
 
         if (count($value) > $limit) {
             return [new CompositionError($path, "Must have at most {$limit} blocks.")];

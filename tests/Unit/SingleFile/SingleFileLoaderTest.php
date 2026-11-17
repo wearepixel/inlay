@@ -56,7 +56,7 @@ it('carries a conditional field\'s visibleWhen() through untouched', function ()
 
 it('throws for a missing source file', function () {
     $this->loader->load("{$this->fixturesPath}/does-not-exist.blade.php");
-})->throws(InvalidArgumentException::class, 'No single-file section found at');
+})->throws(InvalidArgumentException::class, 'No single-file section or block found at');
 
 it('throws for a file that never declares a section', function () {
     $this->loader->load("{$this->fixturesPath}/malformed.blade.php");

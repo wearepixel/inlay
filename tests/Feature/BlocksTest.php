@@ -192,3 +192,25 @@ it('refuses a block that declares its own blocks area', function () {
 it('refuses a blocks area in site settings', function () {
     Inlay::siteSettings('footer', Settings::make()->blocks('content'));
 })->throws(InvalidArgumentException::class, 'blocks belong in a page section');
+
+it('refuses a blocks area nested inside a repeater', function () {
+    Settings::make()->repeater('items', Settings::make()->blocks('content'));
+})->throws(InvalidArgumentException::class, 'cannot contain a blocks() field');
+
+it('caps a blocks area with no max() at the shared item limit', function () {
+    Inlay::singleFileSections(__DIR__.'/../Fixtures/single-file/unbounded-blocks');
+    $section = $this->page->sections()->create(['handle' => 'open', 'order' => 0, 'settings' => []]);
+
+    Livewire::test(PageEditor::class, ['page' => $this->page])
+        ->call('selectSection', $section->id)
+        ->set('editingProps.content', array_fill(0, Settings::MAX_ITEMS + 50, ['type' => 'heading', 'settings' => []]));
+
+    expect($section->fresh()->settings['content'])->toHaveCount(Settings::MAX_ITEMS);
+});
+
+it('tags a block\'s own root element in the preview rather than wrapping it', function () {
+    stackSection($this->page, [['id' => 'abc', 'type' => 'heading', 'settings' => ['text' => 'One']]]);
+
+    $this->get(route('inlay.admin.pages.preview', $this->page))
+        ->assertSee('<h2 data-inlay-block="abc"', false);
+});

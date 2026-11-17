@@ -61,16 +61,11 @@ final class PreviewRenderer
      */
     private function renderSelectable(array $sections): string
     {
-        $this->renderer->tagBlocksForPreview(true);
+        $renderer = new SectionRenderer($this->sections, tagForPreview: true);
+        $html = '';
 
-        try {
-            $html = '';
-
-            foreach ($sections as $section) {
-                $html .= $this->renderTaggedSection($section);
-            }
-        } finally {
-            $this->renderer->tagBlocksForPreview(false);
+        foreach ($sections as $section) {
+            $html .= $this->renderTaggedSection($renderer, $section);
         }
 
         $script = (string) file_get_contents(__DIR__.'/../../resources/dist/inlay-preview.js');
@@ -81,11 +76,11 @@ final class PreviewRenderer
     /**
      * @param  array{id?: int, handle: string, settings?: array<string, mixed>}  $section
      */
-    private function renderTaggedSection(array $section): string
+    private function renderTaggedSection(SectionRenderer $renderer, array $section): string
     {
-        $rendered = $this->renderer->render([$section]);
+        $rendered = $renderer->render([$section]);
 
-        if (! isset($section['id']) || $rendered === '') {
+        if (! isset($section['id']) || trim($rendered) === '') {
             return $rendered;
         }
 
@@ -93,12 +88,10 @@ final class PreviewRenderer
             ? $this->sections->definition($section['handle'])->name
             : $section['handle'];
 
-        return sprintf(
-            '<div data-inlay-section="%d" data-inlay-section-label="%s" style="display: contents">%s</div>',
-            $section['id'],
-            e($label),
-            $rendered,
-        );
+        return PreviewTag::apply($rendered, [
+            'data-inlay-section' => (string) $section['id'],
+            'data-inlay-section-label' => $label,
+        ]);
     }
 
     /**

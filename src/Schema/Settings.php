@@ -70,8 +70,16 @@ final class Settings
         return $this->addField($name, FieldType::Select);
     }
 
+    /**
+     * The most items a repeater may hold, and the most blocks a blocks area
+     * may hold when it sets no lower max().
+     */
+    public const MAX_ITEMS = 100;
+
     public function repeater(string $name, Settings $itemSchema): self
     {
+        self::assertNoBlocksInside($name, $itemSchema);
+
         return $this->addField($name, FieldType::Repeater, $itemSchema);
     }
 
@@ -115,7 +123,34 @@ final class Settings
 
     public function group(string $name, Settings $itemSchema): self
     {
+        self::assertNoBlocksInside($name, $itemSchema);
+
         return $this->addField($name, FieldType::Group, $itemSchema);
+    }
+
+    /**
+     * Whether this schema declares a blocks area at any depth.
+     */
+    public function hasBlocks(): bool
+    {
+        foreach ($this->fields as $field) {
+            if ($field->type === FieldType::Blocks || $field->itemSchema?->hasBlocks()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * A blocks area belongs at the top level of a section; the editor and
+     * the renderer only look for one there.
+     */
+    private static function assertNoBlocksInside(string $name, Settings $itemSchema): void
+    {
+        if ($itemSchema->hasBlocks()) {
+            throw new InvalidArgumentException("[{$name}] cannot contain a blocks() field; declare blocks() at the top level of a section.");
+        }
     }
 
     /**

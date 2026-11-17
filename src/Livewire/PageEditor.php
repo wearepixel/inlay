@@ -435,11 +435,20 @@ final class PageEditor extends Component
 
     public function moveBlock(string $field, string $blockId, int $direction): void
     {
+        if ($this->blocksField($field) === null) {
+            return;
+        }
+
         $items = array_values($this->editingProps[$field] ?? []);
         $from = $this->blockIndex($items, $blockId);
-        $to = $from === null ? null : $from + ($direction < 0 ? -1 : 1);
 
-        if ($this->blocksField($field) === null || $from === null || $to < 0 || $to >= count($items)) {
+        if ($from === null) {
+            return;
+        }
+
+        $to = $direction < 0 ? $from - 1 : $from + 1;
+
+        if (! array_key_exists($to, $items)) {
             return;
         }
 
@@ -490,19 +499,35 @@ final class PageEditor extends Component
      */
     private function blocksField(string $field): ?Setting
     {
+        return $this->blocksFields()[$field] ?? null;
+    }
+
+    /**
+     * Every blocks field the selected section declares, keyed by name.
+     *
+     * @return array<string, Setting>
+     */
+    private function blocksFields(): array
+    {
         if ($this->selectedSectionId === null) {
-            return null;
+            return [];
         }
 
         $section = PageSection::whereKey($this->selectedSectionId)->where('page_id', $this->page->id)->first();
 
         if ($section === null || ! app(SectionRegistry::class)->hasHandle($section->handle)) {
-            return null;
+            return [];
         }
 
-        $setting = app(SectionRegistry::class)->definition($section->handle)->settings->field($field);
+        $fields = [];
 
-        return $setting?->type === FieldType::Blocks ? $setting : null;
+        foreach (app(SectionRegistry::class)->definition($section->handle)->settings->fields() as $setting) {
+            if ($setting->type === FieldType::Blocks) {
+                $fields[$setting->name] = $setting;
+            }
+        }
+
+        return $fields;
     }
 
     private function isFull(Setting $blocksField): bool
@@ -531,15 +556,11 @@ final class PageEditor extends Component
      */
     private function locateBlock(string $blockId): ?array
     {
-        foreach ($this->editingProps as $field => $value) {
-            if (! is_array($value) || $this->blocksField((string) $field) === null) {
-                continue;
-            }
-
-            $index = $this->blockIndex(array_values($value), $blockId);
+        foreach (array_keys($this->blocksFields()) as $field) {
+            $index = $this->blockIndex(array_values($this->editingProps[$field] ?? []), $blockId);
 
             if ($index !== null) {
-                return ['field' => (string) $field, 'index' => $index];
+                return ['field' => $field, 'index' => $index];
             }
         }
 
@@ -738,22 +759,30 @@ final class PageEditor extends Component
      */
     private function selectedBlockForView(): ?array
     {
-        $location = $this->selectedBlockId !== null ? $this->locateBlock($this->selectedBlockId) : null;
-        $item = $location !== null ? ($this->editingProps[$location['field']][$location['index']] ?? null) : null;
-        $type = is_array($item) ? ($item['type'] ?? null) : null;
+        if ($this->selectedBlockId === null) {
+            return null;
+        }
 
-        if ($location === null || ! is_string($type) || ! app(BlockRegistry::class)->hasHandle($type)) {
-            $this->selectedBlockId = null;
+        $location = $this->locateBlock($this->selectedBlockId);
 
+        if ($location === null) {
+            return null;
+        }
+
+        $item = $this->editingProps[$location['field']][$location['index']];
+        $type = $item['type'] ?? null;
+
+        if (! is_string($type) || ! app(BlockRegistry::class)->hasHandle($type)) {
             return null;
         }
 
         $definition = app(BlockRegistry::class)->definition($type);
+        $settings = is_array($item['settings'] ?? null) ? $item['settings'] : [];
 
         return [
             ...$location,
             'name' => $definition->name,
-            'detail' => SectionInstanceLabel::detail($definition, is_array($item['settings'] ?? null) ? $item['settings'] : []),
+            'detail' => SectionInstanceLabel::detail($definition, $settings),
             'tabs' => $this->inspectorTabs($definition->settings),
         ];
     }
@@ -874,5 +903,9 @@ final class PageEditor extends Component
         $section->update(['settings' => $stored]);
         $this->bumpPreview();
         $this->dispatch('setting-saved');
+
+        if ($this->selectedBlockId !== null && $this->locateBlock($this->selectedBlockId) === null) {
+            $this->deselectBlock();
+        }
     }
 }

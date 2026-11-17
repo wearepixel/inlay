@@ -11,15 +11,16 @@
     <ul class="inlay-blocks__list">
         @foreach ($items as $index => $item)
             @php
+                $blockId = (string) ($item['id'] ?? '');
                 $definition = $registry->hasHandle($item['type'] ?? '') ? $registry->definition($item['type']) : null;
                 $detail = $definition ? \WeArePixel\Inlay\Support\SectionInstanceLabel::detail($definition, $item['settings'] ?? []) : null;
             @endphp
-            <li class="inlay-blocks__item" wire:key="block-{{ $item['id'] ?? $index }}" data-test="block-item-{{ $item['id'] ?? $index }}">
+            <li class="inlay-blocks__item" wire:key="block-{{ $blockId }}" data-test="block-item-{{ $blockId }}">
                 <button
                     type="button"
                     class="inlay-blocks__select"
-                    wire:click="selectBlock({{ $selectedSectionId }}, @js($item['id'] ?? ''))"
-                    data-test="select-block-{{ $item['id'] ?? $index }}"
+                    wire:click="selectBlock({{ $selectedSectionId }}, @js($blockId))"
+                    data-test="select-block-{{ $blockId }}"
                 >
                     <span class="inlay-tree__label-name">{{ $definition?->name ?? $item['type'] ?? 'Unknown block' }}</span>
                     @if ($detail)
@@ -27,10 +28,10 @@
                     @endif
                 </button>
                 <span class="inlay-blocks__actions">
-                    <button type="button" class="inlay-tree__icon-button" wire:click="moveBlock(@js($blocksPath), @js($item['id'] ?? ''), -1)" @disabled($index === 0) aria-label="Move {{ $definition?->name }} up" data-test="move-block-up-{{ $item['id'] ?? $index }}"><x-inlay::icon name="chevron-down" :size="12" class="inlay-icon--flip" /></button>
-                    <button type="button" class="inlay-tree__icon-button" wire:click="moveBlock(@js($blocksPath), @js($item['id'] ?? ''), 1)" @disabled($index === count($items) - 1) aria-label="Move {{ $definition?->name }} down" data-test="move-block-down-{{ $item['id'] ?? $index }}"><x-inlay::icon name="chevron-down" :size="12" /></button>
-                    <button type="button" class="inlay-tree__icon-button" wire:click="duplicateBlock(@js($blocksPath), @js($item['id'] ?? ''))" @disabled($atLimit) aria-label="Duplicate {{ $definition?->name }}"><x-inlay::icon name="duplicate" :size="13" /></button>
-                    <button type="button" class="inlay-tree__icon-button inlay-tree__icon-button--danger" wire:click="removeBlock(@js($blocksPath), @js($item['id'] ?? ''))" wire:confirm="Remove this block?" aria-label="Remove {{ $definition?->name }}" data-test="remove-block-{{ $item['id'] ?? $index }}"><x-inlay::icon name="trash" :size="13" /></button>
+                    <button type="button" class="inlay-tree__icon-button" wire:click="moveBlock(@js($blocksPath), @js($blockId), -1)" @disabled($index === 0) aria-label="Move {{ $definition?->name }} up" data-test="move-block-up-{{ $blockId }}"><x-inlay::icon name="chevron-down" :size="12" class="inlay-icon--flip" /></button>
+                    <button type="button" class="inlay-tree__icon-button" wire:click="moveBlock(@js($blocksPath), @js($blockId), 1)" @disabled($index === count($items) - 1) aria-label="Move {{ $definition?->name }} down" data-test="move-block-down-{{ $blockId }}"><x-inlay::icon name="chevron-down" :size="12" /></button>
+                    <button type="button" class="inlay-tree__icon-button" wire:click="duplicateBlock(@js($blocksPath), @js($blockId))" @disabled($atLimit) aria-label="Duplicate {{ $definition?->name }}"><x-inlay::icon name="duplicate" :size="13" /></button>
+                    <button type="button" class="inlay-tree__icon-button inlay-tree__icon-button--danger" wire:click="removeBlock(@js($blocksPath), @js($blockId))" wire:confirm="Remove this block?" aria-label="Remove {{ $definition?->name }}" data-test="remove-block-{{ $blockId }}"><x-inlay::icon name="trash" :size="13" /></button>
                 </span>
             </li>
         @endforeach

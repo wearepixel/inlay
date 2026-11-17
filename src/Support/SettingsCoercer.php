@@ -23,12 +23,7 @@ final class SettingsCoercer
         $itemSchema = $setting->itemSchema;
 
         return match (true) {
-            $setting->type === FieldType::Repeater && $itemSchema instanceof Settings => is_array($value)
-                ? array_values(array_map(
-                    fn (mixed $item): array => $this->coerceNested($itemSchema, is_array($item) ? $item : []),
-                    $value,
-                ))
-                : [],
+            $setting->type === FieldType::Repeater && $itemSchema instanceof Settings => $this->coerceRepeater($itemSchema, $value),
             $setting->type === FieldType::Group && $itemSchema instanceof Settings => $this->coerceNested($itemSchema, is_array($value) ? $value : []),
             $setting->type === FieldType::Blocks => $this->coerceBlocks($setting, $value),
             $setting->type === FieldType::Link => $this->coerceLinkValue($value),
@@ -83,11 +78,23 @@ final class SettingsCoercer
             ];
         }
 
-        if ($setting->maxBlocks !== null) {
-            return array_slice($items, 0, $setting->maxBlocks);
+        $limit = min($setting->maxBlocks ?? Settings::MAX_ITEMS, Settings::MAX_ITEMS);
+
+        return array_slice($items, 0, $limit);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function coerceRepeater(Settings $itemSchema, mixed $value): array
+    {
+        $items = [];
+
+        foreach (is_array($value) ? $value : [] as $item) {
+            $items[] = $this->coerceNested($itemSchema, is_array($item) ? $item : []);
         }
 
-        return $items;
+        return array_slice($items, 0, Settings::MAX_ITEMS);
     }
 
     /**

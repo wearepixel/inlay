@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\View;
 use RuntimeException;
 use Throwable;
 use WeArePixel\Inlay\Declarative\DeclarativeRenderer;
+use WeArePixel\Inlay\Preview\PreviewTag;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
 use WeArePixel\Inlay\Schema\Settings;
@@ -30,19 +31,12 @@ use WeArePixel\Inlay\Schema\Settings;
 final class SectionRenderer
 {
     /**
-     * Set while the admin preview renders, so each block is wrapped in an
-     * element the preview script can outline and select.
+     * @param  bool  $tagForPreview  mark each block so the editor preview can outline and select it
      */
-    private bool $tagBlocks = false;
-
     public function __construct(
         private readonly SectionRegistry $registry,
+        private readonly bool $tagForPreview = false,
     ) {}
-
-    public function tagBlocksForPreview(bool $tag): void
-    {
-        $this->tagBlocks = $tag;
-    }
 
     /**
      * A public entry point a host application can call directly with its
@@ -382,24 +376,14 @@ final class SectionRenderer
                 continue;
             }
 
-            if ($this->tagBlocks) {
-                $html = $this->tagForPreview($item['id'], $definition->name, $html);
+            if ($this->tagForPreview) {
+                $html = PreviewTag::apply($html, ['data-inlay-block' => $item['id'], 'data-inlay-block-label' => $definition->name]);
             }
 
             $rendered[] = new RenderedBlock($item['id'], $item['type'], $settings, $html);
         }
 
         return new BlockList($rendered);
-    }
-
-    private function tagForPreview(string $id, string $label, string $html): string
-    {
-        return sprintf(
-            '<div data-inlay-block="%s" data-inlay-block-label="%s" style="display: contents">%s</div>',
-            e($id),
-            e($label),
-            $html,
-        );
     }
 
     /**

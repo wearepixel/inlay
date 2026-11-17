@@ -27,7 +27,7 @@ final class SingleFileLoader
     public function load(string $path, string $kind = Section::class): Definition
     {
         if (! is_file($path)) {
-            throw new InvalidArgumentException("No single-file section found at [{$path}].");
+            throw new InvalidArgumentException("No single-file section or block found at [{$path}].");
         }
 
         Registration::startCapturing();
@@ -44,26 +44,26 @@ final class SingleFileLoader
             // Always stop capturing, even if the required file throws - an
             // exception here must never leave global state stuck mid-capture
             // for every single-file section loaded afterward.
-            $sectionType = Registration::stopCapturing();
+            $declared = Registration::stopCapturing();
         }
 
-        if (! $sectionType instanceof $kind) {
+        if (! $declared instanceof $kind) {
             throw new InvalidArgumentException($kind === Block::class
                 ? "[{$path}] does not declare a single-file block - it must call block(Block::make(...)) in a PHP block at the top of the file."
                 : "[{$path}] does not declare a single-file section - it must call section(Section::make(...)) in a PHP block at the top of the file.");
         }
 
         return new Definition(
-            handle: $sectionType->handle(),
-            name: $sectionType->resolvedName(),
-            description: $sectionType->resolvedDescription(),
-            category: $sectionType->resolvedCategory(),
-            icon: $sectionType->resolvedIcon(),
-            thumbnail: $sectionType->resolvedThumbnail(),
+            handle: $declared->handle(),
+            name: $declared->resolvedName(),
+            description: $declared->resolvedDescription(),
+            category: $declared->resolvedCategory(),
+            icon: $declared->resolvedIcon(),
+            thumbnail: $declared->resolvedThumbnail(),
             sourceType: SourceType::SingleFile,
             sourceIdentifier: $path,
-            settings: $this->applyDeclaredDefaults($sectionType->handle(), $sectionType->resolvedSettings()),
-            keywords: $sectionType->resolvedKeywords(),
+            settings: $this->applyDeclaredDefaults($declared->handle(), $declared->resolvedSettings()),
+            keywords: $declared->resolvedKeywords(),
         );
     }
 

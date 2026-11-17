@@ -8,7 +8,6 @@ use InvalidArgumentException;
 use ReflectionClass;
 use WeArePixel\Inlay\Attributes\BlockMeta;
 use WeArePixel\Inlay\Contracts\InlayBlock;
-use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Settings;
 
 /**
@@ -112,10 +111,8 @@ final class BlockRegistry
 
     private static function assertNoNestedBlocks(string $handle, Settings $settings): void
     {
-        foreach ($settings->fields() as $field) {
-            if ($field->type === FieldType::Blocks) {
-                throw new InvalidArgumentException("Block [{$handle}] declares a blocks field [{$field->name}]; blocks cannot contain blocks.");
-            }
+        if ($settings->hasBlocks()) {
+            throw new InvalidArgumentException("Block [{$handle}] declares a blocks field; blocks cannot contain blocks.");
         }
     }
 }

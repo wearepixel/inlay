@@ -32,7 +32,6 @@ document.addEventListener("alpine:init", () => {
       width: 360,
       collapsed: false,
       resizing: false,
-      skipNextScroll: false,
       previewScroll: 0,
       selectedBlockId: null,
       scrollOnReload: false,
@@ -50,17 +49,26 @@ document.addEventListener("alpine:init", () => {
         this.collapsed =
           localStorage.getItem("inlay-sidebar-collapsed") === "1";
 
-        this.listenToPreview();
         this.selectedBlockId = this.$wire.selectedBlockId ?? null;
-        window.addEventListener("block-selected", (event) => {
-          const id = event.detail.id ?? null;
-          const alreadyShown = id === this.selectedBlockId;
-
-          this.selectedBlockId = id;
-          this.syncPreview(id !== null && !alreadyShown);
-        });
-        this.$watch("lastSelectedId", () => this.syncPreview(true));
+        this.listenToPreview();
+        window.addEventListener("block-selected", (event) => this.onBlockSelected(event.detail.id ?? null));
         this.$watch("view", () => this.syncPreview(false));
+      },
+
+      /**
+       * The server selected a block: one picked from the sidebar list, or
+       * one just added or duplicated. A new block only appears once the
+       * preview reloads, so the scroll to it is repeated after the reload.
+       * A block clicked in the preview is already shown and is left alone.
+       */
+      onBlockSelected(id) {
+        if (id === this.selectedBlockId) {
+          return;
+        }
+
+        this.selectedBlockId = id;
+        this.scrollOnReload = id !== null;
+        this.syncPreview(id !== null);
       },
 
       previewFrame() {
@@ -97,23 +105,30 @@ document.addEventListener("alpine:init", () => {
           }
 
           if (event.data?.type === "inlay:select-section") {
-            const id = Number(event.data.id);
-
-            this.skipNextScroll = true;
-            this.showSettings(id);
-            this.selectedBlockId = null;
-            this.$wire.selectSection(id);
+            this.selectFromPreview(Number(event.data.id), null);
           }
 
           if (event.data?.type === "inlay:select-block") {
-            const id = Number(event.data.id);
-
-            this.skipNextScroll = true;
-            this.showSettings(id);
-            this.selectedBlockId = String(event.data.blockId);
-            this.$wire.selectBlock(id, String(event.data.blockId));
+            this.selectFromPreview(Number(event.data.id), String(event.data.blockId));
           }
         });
+      },
+
+      /**
+       * A click in the preview: the clicked thing is already on screen, so
+       * the preview is not scrolled.
+       */
+      selectFromPreview(sectionId, blockId) {
+        this.lastSelectedId = sectionId;
+        this.selectedBlockId = blockId;
+        this.view = "settings";
+        this.syncPreview(false);
+
+        if (blockId === null) {
+          this.$wire.selectSection(sectionId);
+        } else {
+          this.$wire.selectBlock(sectionId, blockId);
+        }
       },
 
       syncPreview(scroll, restoreScroll = null) {
@@ -130,14 +145,12 @@ document.addEventListener("alpine:init", () => {
             type: "inlay:selected",
             id,
             blockId: id ? this.selectedBlockId : null,
-            scroll: scroll && !this.skipNextScroll,
+            scroll,
             restoreScroll,
             colour: getComputedStyle(this.$root).getPropertyValue("--inlay-focus").trim(),
           },
           window.location.origin,
         );
-
-        this.skipNextScroll = false;
       },
 
       clampWidth(width) {
@@ -195,13 +208,6 @@ document.addEventListener("alpine:init", () => {
       },
 
       /**
-       * Called both optimistically (a tree row's own click handler, the
-       * instant a section with an already-known id is clicked - no need to
-       * wait on the network round trip just to flip which pane is visible)
-       * and via the section-selected event (addSection/duplicateSection,
-       * whose new id doesn't exist until the server creates it).
-       */
-      /**
        * Adding or duplicating a section selects it just before the preview
        * reloads, so the scroll to it happens once the reload is done.
        */
@@ -210,10 +216,16 @@ document.addEventListener("alpine:init", () => {
         this.scrollOnReload = true;
       },
 
+      /**
+       * Called optimistically by a tree row's own click handler (no need to
+       * wait on the round trip just to flip which pane is visible) and by
+       * showNewSection(). Scrolls the preview to the section.
+       */
       showSettings(id) {
         this.lastSelectedId = id;
         this.selectedBlockId = null;
         this.view = "settings";
+        this.$nextTick(() => this.syncPreview(true));
       },
 
       backToTree() {
