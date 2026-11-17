@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use WeArePixel\Inlay\Models\SiteSetting;
 use WeArePixel\Inlay\Schema\Settings;
+use WeArePixel\Inlay\Support\RichTextSanitizer;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Support\SettingsCoercer;
 
@@ -111,7 +112,7 @@ final class SiteSettingsRegistry
             return null;
         }
 
-        $coerced = app(SettingsCoercer::class)->coerce($setting, $value);
+        $coerced = app(RichTextSanitizer::class)->sanitizeSetting($setting, app(SettingsCoercer::class)->coerce($setting, $value));
 
         $row = SiteSetting::firstOrNew(['handle' => $handle]);
         $row->values = [...($row->values ?? []), $field => $coerced];

@@ -28,6 +28,7 @@ use WeArePixel\Inlay\Schema\Settings;
 use WeArePixel\Inlay\Support\BlockDefinition;
 use WeArePixel\Inlay\Support\BlockRegistry;
 use WeArePixel\Inlay\Support\SectionInstanceLabel;
+use WeArePixel\Inlay\Support\RichTextSanitizer;
 use WeArePixel\Inlay\Support\SectionRenderer;
 use WeArePixel\Inlay\Support\SettingsCoercer;
 
@@ -672,7 +673,10 @@ final class PageEditor extends Component
             return;
         }
 
-        $coerced = app(SettingsCoercer::class)->coerce($setting, $this->editingProps[$fieldName] ?? null);
+        $coerced = app(RichTextSanitizer::class)->sanitizeSetting(
+            $setting,
+            app(SettingsCoercer::class)->coerce($setting, $this->editingProps[$fieldName] ?? null),
+        );
         $this->editingProps[$fieldName] = $coerced;
 
         $stored = $section->settings ?? [];
