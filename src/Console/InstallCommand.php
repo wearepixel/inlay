@@ -22,7 +22,7 @@ use function Laravel\Prompts\select;
 final class InstallCommand extends Command
 {
     protected $signature = 'inlay:install
-        {--starter= : Copy a starter kit (landing, or none)}
+        {--starter= : Copy a starter kit (landing, showcase, or none)}
         {--css= : Starter styling: tailwind, bootstrap or plain (detected from package.json)}
         {--layout= : Render pages inside an existing layout, e.g. component:layouts.site or extends:layouts.app}
         {--demo : Create and publish a homepage from the starter kit}
@@ -30,13 +30,14 @@ final class InstallCommand extends Command
 
     protected $description = 'Install Inlay: detect the stack, wire up routes, views and the admin, and optionally add a starter kit';
 
-    private const STARTERS = ['landing'];
+    private const STARTERS = ['landing', 'showcase'];
 
     private const CSS_VARIANTS = ['tailwind', 'bootstrap', 'plain'];
 
     /** @var array<string, array{class: string, handle: string}> */
     private const STARTER_PAGE_TYPES = [
         'landing' => ['class' => 'App\\Inlay\\LandingPage', 'handle' => 'landing-page'],
+        'showcase' => ['class' => 'App\\Inlay\\ShowcasePage', 'handle' => 'showcase-page'],
     ];
 
     public function handle(Filesystem $files, StackDetector $detector, HostWiring $wiring): int
@@ -53,6 +54,12 @@ final class InstallCommand extends Command
         $css = $this->chooseCss($stack);
 
         if ($css === null) {
+            return self::FAILURE;
+        }
+
+        if ($starter !== null && $this->starterSource($files, $starter, $css) === null) {
+            $this->components->error("The {$starter} kit has no {$css} version. Use --css=tailwind or the landing kit.");
+
             return self::FAILURE;
         }
 
@@ -114,7 +121,11 @@ final class InstallCommand extends Command
 
         $choice = select(
             label: 'Start with a starter kit of sections and blocks?',
-            options: ['landing' => 'Landing kit - hero, features, pricing, FAQ and more', 'none' => 'No, I will build my own'],
+            options: [
+                'landing' => 'Landing kit - hero, features, pricing, FAQ and more (Tailwind, Bootstrap or plain CSS)',
+                'showcase' => 'Showcase kit - bento grid, layered hero, logo marquee, testimonial wall (Tailwind)',
+                'none' => 'No, I will build my own',
+            ],
             default: $stack->isFreshApp ? 'landing' : 'none',
         );
 
@@ -201,9 +212,7 @@ final class InstallCommand extends Command
 
         ['class' => $class, 'handle' => $handle] = self::STARTER_PAGE_TYPES[$starter];
 
-        if (! class_exists($class)) {
-            require_once app_path('Inlay/'.class_basename($class).'.php');
-        }
+        $this->loadCopiedPageType($class);
 
         if (! is_a($class, PageDefinition::class, true)) {
             return;
@@ -216,6 +225,17 @@ final class InstallCommand extends Command
         app(PublishPage::class)->execute($page, label: 'Created by inlay:install');
 
         $this->report("Homepage built from the {$starter} kit", true);
+    }
+
+    /**
+     * The page type was just copied into app/Inlay, after Composer's
+     * class map was built, so it may need loading by hand.
+     */
+    private function loadCopiedPageType(string $class): void
+    {
+        if (! class_exists($class)) {
+            require_once app_path('Inlay/'.class_basename($class).'.php');
+        }
     }
 
     private function printNextSteps(Stack $stack): void
@@ -240,10 +260,31 @@ final class InstallCommand extends Command
         $this->components->bulletList($steps);
     }
 
+    /**
+     * The kit's folder for the chosen CSS, falling back to its plain CSS
+     * variant, or null when the kit has neither.
+     */
+    private function starterSource(Filesystem $files, string $starter, string $css): ?string
+    {
+        $root = dirname(__DIR__, 2)."/stubs/starters/{$starter}";
+
+        foreach ([$css, 'plain'] as $variant) {
+            if ($files->isDirectory("{$root}/{$variant}")) {
+                return "{$root}/{$variant}";
+            }
+        }
+
+        return null;
+    }
+
     private function installStarter(Filesystem $files, string $starter, string $css): void
     {
         $root = dirname(__DIR__, 2)."/stubs/starters/{$starter}";
-        $source = $files->isDirectory("{$root}/{$css}") ? "{$root}/{$css}" : "{$root}/plain";
+        $source = $this->starterSource($files, $starter, $css);
+
+        if ($source === null) {
+            return;
+        }
 
         $copies = [];
 
@@ -255,7 +296,8 @@ final class InstallCommand extends Command
             $copies[$blockType] = resource_path('views/inlay/blocks/'.basename($blockType));
         }
 
-        $copies["{$root}/LandingPage.php.stub"] = app_path('Inlay/LandingPage.php');
+        $pageType = class_basename(self::STARTER_PAGE_TYPES[$starter]['class']);
+        $copies["{$root}/{$pageType}.php.stub"] = app_path("Inlay/{$pageType}.php");
 
         if ($files->exists("{$source}/inlay.css")) {
             $copies["{$source}/inlay.css"] = resource_path('css/inlay.css');

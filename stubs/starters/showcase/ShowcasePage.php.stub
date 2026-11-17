@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Inlay;
+
+use WeArePixel\Inlay\Attributes\PageDefinitionMeta;
+use WeArePixel\Inlay\Pages\PageDefinition;
+use WeArePixel\Inlay\Support\SectionHandle;
+
+#[PageDefinitionMeta(handle: 'showcase-page', label: 'Showcase page', description: 'A marketing page built from the showcase sections.')]
+final class ShowcasePage extends PageDefinition
+{
+    public function allowedSections(): array
+    {
+        return array_map(SectionHandle::make(...), [
+            'layered-hero', 'bento-features', 'logo-marquee', 'testimonial-wall', 'pricing-compare', 'timeline',
+        ]);
+    }
+
+    public function defaultSections(): array
+    {
+        return array_map(SectionHandle::make(...), ['layered-hero', 'logo-marquee', 'bento-features', 'testimonial-wall']);
+    }
+}

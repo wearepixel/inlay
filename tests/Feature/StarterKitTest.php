@@ -91,3 +91,25 @@ it('uses only classes its own stylesheet defines in the plain variant', function
 
     expect(array_values($undefined))->toBe([]);
 });
+
+it('registers every showcase section and renders each one from its defaults without problems', function () {
+    Inlay::singleFileSections(dirname(__DIR__, 2).'/stubs/starters/showcase/tailwind/sections');
+
+    $handles = app(SectionRegistry::class)->slugs();
+    $report = app(CompositionReport::class)->build(array_map(fn (string $handle) => ['handle' => $handle], $handles));
+
+    $failures = collect($report['sections'])
+        ->flatMap(fn (array $section) => collect($section['problems'])->filter(fn (string $problem) => str_starts_with($problem, 'Failed to render')))
+        ->all();
+
+    expect($handles)->toHaveCount(6)->and($failures)->toBe([]);
+});
+
+it('installs the showcase kit with its page type, and refuses a CSS it has no version for', function () {
+    $this->artisan('inlay:install', ['--starter' => 'showcase', '--css' => 'tailwind', '--no-interaction' => true])->assertSuccessful();
+
+    expect(glob($this->base.'/resources/views/inlay/sections/*.blade.php'))->toHaveCount(6)
+        ->and($this->base.'/app/Inlay/ShowcasePage.php')->toBeFile();
+
+    $this->artisan('inlay:install', ['--starter' => 'showcase', '--css' => 'bootstrap', '--no-interaction' => true])->assertFailed();
+});
