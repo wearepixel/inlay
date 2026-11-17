@@ -22,6 +22,7 @@ use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
 use WeArePixel\Inlay\Pages\PageDefinitionValidator;
 use WeArePixel\Inlay\Pages\PageDefinitionViolationException;
 use WeArePixel\Inlay\Pages\ResolvedPageDefinition;
+use WeArePixel\Inlay\Pages\RouteConflicts;
 use WeArePixel\Inlay\Rules\PagePath;
 use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Setting;
@@ -95,6 +96,16 @@ final class PageEditor extends Component
      * as PageCreate's own effectiveUrl does - never read from the database
      * directly, since it must update live as an editor types.
      */
+    /**
+     * The route that answers this page's URL before Inlay can, so the page
+     * would never show there.
+     */
+    #[Computed]
+    public function routeConflict(): ?string
+    {
+        return app(RouteConflicts::class)->routeTaking($this->pageEffectiveUrl());
+    }
+
     #[Computed]
     public function pageEffectiveUrl(): ?string
     {

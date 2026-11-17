@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Pages\RouteConflicts;
 use WeArePixel\Inlay\Support\LivewireRequirement;
 use WeArePixel\Inlay\Support\SectionRegistry;
 
@@ -33,7 +34,7 @@ final class DoctorCommand extends Command
 
     private int $failures = 0;
 
-    public function handle(InlayManager $inlay, SectionRegistry $sections): int
+    public function handle(InlayManager $inlay, SectionRegistry $sections, RouteConflicts $conflicts): int
     {
         $this->components->info('Checking Inlay');
 
@@ -60,6 +61,8 @@ final class DoctorCommand extends Command
 
         $this->check('Public page routes registered', Route::has('inlay.pages.show') ? self::PASS : self::WARN,
             'Add Inlay::pageRoutes(); as the last line of routes/web.php, or render pages from your own routes with <x-inlay::render>.');
+
+        $this->checkRouteOrder($inlay, $conflicts);
 
         $this->check('Published homepage', $this->hasPublishedHomepage() ? self::PASS : self::WARN,
             'Create a page in the admin, mark it as the homepage and publish it.');
@@ -100,6 +103,58 @@ final class DoctorCommand extends Command
         if ($status === self::FAIL) {
             $this->failures++;
         }
+    }
+
+    /**
+     * Inlay's page route answers any URL, so it has to be registered after
+     * every other route - otherwise an app route hides a page, or the page
+     * route hides an app route.
+     */
+    private function checkRouteOrder(InlayManager $inlay, RouteConflicts $conflicts): void
+    {
+        if (! Route::has(RouteConflicts::PAGE_ROUTE)) {
+            return;
+        }
+
+        $hiddenPages = [];
+
+        foreach ($this->pagesWithUrls($inlay) as $title => $url) {
+            $takenBy = $conflicts->routeTaking($url);
+
+            if ($takenBy !== null) {
+                $hiddenPages[] = "{$title} ({$url}) is answered by {$takenBy}";
+            }
+        }
+
+        $this->check('Pages are reachable at their URLs', $hiddenPages === [] ? self::PASS : self::FAIL,
+            implode("\n     ", [...$hiddenPages, 'Remove or rename those routes, or give the pages other paths.']));
+
+        $hiddenRoutes = $conflicts->routesHiddenByPages();
+
+        $this->check('Inlay::pageRoutes() registered last', $hiddenRoutes === [] ? self::PASS : self::FAIL,
+            'It is registered before '.implode(', ', $hiddenRoutes).', so those never run. Move Inlay::pageRoutes() to the end of routes/web.php.');
+    }
+
+    /**
+     * @return array<string, string> page title => URL
+     */
+    private function pagesWithUrls(InlayManager $inlay): array
+    {
+        if (! Schema::hasTable('pages')) {
+            return [];
+        }
+
+        $urls = [];
+
+        foreach (Page::query()->orderBy('title')->get() as $page) {
+            $url = $inlay->url($page);
+
+            if ($url !== null) {
+                $urls[$page->title] = $url;
+            }
+        }
+
+        return $urls;
     }
 
     private function tablesExist(): bool

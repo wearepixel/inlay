@@ -1804,3 +1804,24 @@
 .inlay-instance-heading--block {
   font-size: 15px;
 }
+
+/* A page whose URL another route answers first */
+
+.inlay-route-conflict__body {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.inlay-route-conflict code {
+  font-family: var(--inlay-font-mono);
+  font-size: 12px;
+}
+
+.inlay-page .inlay-route-conflict {
+  margin: 12px 0 0;
+}
+
+.inlay-badge--hidden {
+  background: color-mix(in srgb, var(--inlay-danger) 12%, transparent);
+  color: var(--inlay-danger);
+}

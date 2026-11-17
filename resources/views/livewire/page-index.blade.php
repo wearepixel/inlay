@@ -61,6 +61,9 @@
                                     @if ($page->is_homepage)
                                         <span class="inlay-badge inlay-badge--homepage">Homepage</span>
                                     @endif
+                                    @if ($takenBy = $this->routeConflict($page))
+                                        <span class="inlay-badge inlay-badge--hidden" title="{{ ucfirst($takenBy) }} answers this page's URL first." data-test="route-conflict-{{ $page->id }}">Hidden by another route</span>
+                                    @endif
                                 </div>
                             </td>
                             <td title="{{ $page->updated_at?->toDayDateTimeString() }}">{{ $page->updated_at?->diffForHumans() }}</td>

@@ -12,6 +12,7 @@ use WeArePixel\Inlay\Enums\PageStatus;
 use WeArePixel\Inlay\InlayManager;
 use WeArePixel\Inlay\Livewire\Concerns\InlayAdminComponent;
 use WeArePixel\Inlay\Models\Page;
+use WeArePixel\Inlay\Pages\RouteConflicts;
 
 final class PageIndex extends Component
 {
@@ -42,6 +43,11 @@ final class PageIndex extends Component
     public function url(Page $page): ?string
     {
         return app(InlayManager::class)->url($page);
+    }
+
+    public function routeConflict(Page $page): ?string
+    {
+        return app(RouteConflicts::class)->routeTaking($this->url($page));
     }
 
     public function delete(int $pageId): void

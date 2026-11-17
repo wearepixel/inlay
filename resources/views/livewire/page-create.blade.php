@@ -40,6 +40,9 @@
                 @endif
             </p>
             @error('path') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
+            @if ($this->routeConflict)
+                @include('inlay::livewire.partials.route-conflict', ['url' => $this->effectiveUrl, 'takenBy' => $this->routeConflict])
+            @endif
         </div>
 
         <div class="inlay-field">

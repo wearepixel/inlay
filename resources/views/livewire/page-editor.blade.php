@@ -43,6 +43,10 @@
         </div>
     </div>
 
+    @if ($this->routeConflict)
+        @include('inlay::livewire.partials.route-conflict', ['url' => $this->pageEffectiveUrl, 'takenBy' => $this->routeConflict])
+    @endif
+
     @if ($violations !== [])
         <div class="inlay-violation-banner" data-test="violation-banner">
             <span class="inlay-violation-banner__title">This page can't be published yet</span>
