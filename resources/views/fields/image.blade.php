@@ -12,17 +12,18 @@
                 alt=""
                 class="inlay-image-field__thumb"
             >
+            <input id="{{ $imageFieldId }}" type="file" wire:model="imageUploads.{{ $imagePath }}" accept="image/*" data-test="setting-{{ $field->name }}" class="inlay-sr-only inlay-image-field__input">
+            <label for="{{ $imageFieldId }}" class="inlay-button inlay-button--small inlay-image-field__replace">
+                <span wire:loading.remove wire:target="imageUploads.{{ $imagePath }}">Replace image</span>
+                <span wire:loading wire:target="imageUploads.{{ $imagePath }}">Uploading...</span>
+            </label>
         </div>
-        {{-- Kept as a plain, always-visible input here (unlike the empty
-             state below) so replacing an existing image stays a real,
-             directly-focusable control with its own native focus ring,
-             rather than one hidden behind a styled label. --}}
-        <input id="{{ $imageFieldId }}" type="file" wire:model="imageUploads.{{ $imagePath }}" accept="image/*" data-test="setting-{{ $field->name }}">
     @else
         <input id="{{ $imageFieldId }}" type="file" wire:model="imageUploads.{{ $imagePath }}" accept="image/*" data-test="setting-{{ $field->name }}" class="inlay-sr-only inlay-image-field__input">
         <label for="{{ $imageFieldId }}" class="inlay-image-field__dropzone">
             <x-inlay::icon name="image" :size="20" />
-            <span>Click to upload an image</span>
+            <span wire:loading.remove wire:target="imageUploads.{{ $imagePath }}">Click to upload an image</span>
+            <span wire:loading wire:target="imageUploads.{{ $imagePath }}">Uploading...</span>
         </label>
     @endif
     @error('imageUploads.' . $imagePath)

@@ -474,6 +474,11 @@
   background: var(--inlay-bg);
 }
 
+.inlay-image-field__input:focus-visible + .inlay-image-field__replace {
+  outline: 2px solid var(--inlay-focus);
+  outline-offset: 2px;
+}
+
 .inlay-image-field__input:focus-visible + .inlay-image-field__dropzone {
   outline: 2px solid var(--inlay-focus);
   outline-offset: 2px;
