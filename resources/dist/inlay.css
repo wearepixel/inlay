@@ -735,6 +735,16 @@
   background: color-mix(in srgb, var(--inlay-accent) 5%, white);
 }
 
+/* The slot a dragged section will drop into. */
+.inlay-tree__item.is-dragging {
+  border: 1px dashed var(--inlay-accent);
+  background: color-mix(in srgb, var(--inlay-accent) 8%, transparent);
+}
+
+.inlay-tree__item.is-dragging > * {
+  visibility: hidden;
+}
+
 .inlay-tree__handle {
   cursor: grab;
   color: var(--inlay-text-faint);

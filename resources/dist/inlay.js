@@ -29,6 +29,8 @@ document.addEventListener("alpine:init", () => {
       mobilePanel: "edit",
       lastSelectedId: initialSelectedId,
       dragging: null,
+      orderBeforeDrag: [],
+      dropped: false,
       width: 360,
       collapsed: false,
       resizing: false,
@@ -299,36 +301,120 @@ document.addEventListener("alpine:init", () => {
         return "Showing sections";
       },
 
-      dragStart(id) {
+      /*
+       * Dragging a section moves its row through the list as the pointer
+       * goes, so the gap it leaves shows exactly where it will land. The
+       * new order is only saved on drop; letting go anywhere else puts the
+       * rows back.
+       */
+      dragStart(event, id) {
         this.dragging = id;
+        this.orderBeforeDrag = this.rowIds();
+        this.dropped = false;
+        event.dataTransfer.effectAllowed = "move";
+        // Firefox will not start a drag that carries no data.
+        event.dataTransfer.setData("text/plain", String(id));
+
+        // Wait a frame so the browser's drag image is taken of the row as
+        // it looks now, not of the faded placeholder.
+        const row = event.currentTarget;
+        requestAnimationFrame(() => row.classList.add("is-dragging"));
       },
 
       dragOver(event) {
-        event.preventDefault();
-      },
-
-      drop(overId) {
-        if (this.dragging === null || this.dragging === overId) {
-          this.dragging = null;
-
+        if (this.dragging === null) {
           return;
         }
 
-        this.reorder(this.dragging, overId);
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+
+        const overRow = event.target.closest("[data-section-id]");
+        const draggedRow = this.rowElement(this.dragging);
+
+        if (!overRow || overRow === draggedRow || overRow.getAttribute("draggable") !== "true") {
+          return;
+        }
+
+        // A row that is still sliding reports its in-between position, which
+        // would make the dragged row jump back and forth.
+        if (overRow.getAnimations().length > 0) {
+          return;
+        }
+
+        const bounds = overRow.getBoundingClientRect();
+        const pointerInLowerHalf = event.clientY > bounds.top + bounds.height / 2;
+        const rowToInsertBefore = pointerInLowerHalf ? overRow.nextElementSibling : overRow;
+
+        if (rowToInsertBefore === draggedRow || rowToInsertBefore === draggedRow.nextElementSibling) {
+          return;
+        }
+
+        this.moveRowWithAnimation(draggedRow, rowToInsertBefore);
+      },
+
+      drop() {
+        if (this.dragging === null) {
+          return;
+        }
+
+        this.dropped = true;
+        const ids = this.rowIds();
+
+        if (ids.join(",") !== this.orderBeforeDrag.join(",")) {
+          this.$wire.updateOrder(ids);
+        }
+      },
+
+      dragEnd() {
+        const draggedRow = this.rowElement(this.dragging);
+        draggedRow?.classList.remove("is-dragging");
+
+        if (!this.dropped) {
+          this.restoreOrder(this.orderBeforeDrag);
+        }
+
         this.dragging = null;
       },
 
-      reorder(fromId, toId) {
-        const ids = this.rowIds();
-        const fromIndex = ids.indexOf(fromId);
-        const toIndex = ids.indexOf(toId);
+      /*
+       * FLIP: note where every row is, move the dragged row, then animate
+       * each row from its old position to its new one.
+       */
+      moveRowWithAnimation(draggedRow, rowToInsertBefore) {
+        const rows = Array.from(this.$refs.list.children);
+        const topsBefore = new Map(rows.map((row) => [row, row.getBoundingClientRect().top]));
 
-        if (fromIndex === -1 || toIndex === -1) {
+        this.$refs.list.insertBefore(draggedRow, rowToInsertBefore);
+
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
           return;
         }
 
-        ids.splice(toIndex, 0, ids.splice(fromIndex, 1)[0]);
-        this.$wire.updateOrder(ids);
+        for (const row of rows) {
+          const distance = topsBefore.get(row) - row.getBoundingClientRect().top;
+
+          if (distance !== 0) {
+            row.animate(
+              [{ transform: `translateY(${distance}px)` }, { transform: "translateY(0)" }],
+              { duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+            );
+          }
+        }
+      },
+
+      restoreOrder(ids) {
+        for (const id of ids) {
+          const row = this.rowElement(id);
+
+          if (row) {
+            this.$refs.list.appendChild(row);
+          }
+        }
+      },
+
+      rowElement(id) {
+        return this.$refs.list.querySelector(`[data-section-id="${id}"]`);
       },
 
       rowIds() {
@@ -338,7 +424,7 @@ document.addEventListener("alpine:init", () => {
       },
 
       focusRow(id) {
-        this.$refs.list.querySelector(`[data-section-id="${id}"]`)?.focus();
+        this.rowElement(id)?.focus();
       },
 
       focusAdjacentRow(currentId, direction) {

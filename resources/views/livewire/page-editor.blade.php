@@ -75,7 +75,7 @@
                     <button type="button" wire:click="openPicker" data-test="open-picker" class="inlay-button inlay-button--small inlay-button--primary">+ Add</button>
                 </div>
 
-                <ul class="inlay-tree" x-ref="list" role="listbox" aria-label="Page sections">
+                <ul class="inlay-tree" x-ref="list" role="listbox" aria-label="Page sections" x-on:dragover="dragOver($event)" x-on:drop.prevent="drop()">
                     @php $sectionHandleCounts = $sections->countBy('handle'); @endphp
                     @forelse ($sections as $section)
                         @php
@@ -95,9 +95,8 @@
                             role="option"
                             aria-selected="{{ $selectedSectionId === $section->id ? 'true' : 'false' }}"
                             @unless ($isLocked)
-                                x-on:dragstart="dragStart({{ $section->id }})"
-                                x-on:dragover="dragOver($event)"
-                                x-on:drop="drop({{ $section->id }})"
+                                x-on:dragstart="dragStart($event, {{ $section->id }})"
+                                x-on:dragend="dragEnd()"
                                 x-on:keydown.alt.down.prevent.stop="moveRow({{ $section->id }}, 1)"
                                 x-on:keydown.alt.up.prevent.stop="moveRow({{ $section->id }}, -1)"
                             @endunless

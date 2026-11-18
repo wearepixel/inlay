@@ -12,10 +12,8 @@ use WeArePixel\Inlay\Tests\Fixtures\TestFaqSection;
  * split into smaller, independently-debuggable tests rather than one long
  * chain. Two things are deliberately NOT covered here:
  *
- * - Native HTML5 drag-and-drop reordering: WebDriver/CDP drag simulation is
- *   unreliable, so the reorder *behaviour* is proven at the Livewire level
- *   in tests/Feature/PageEditorTest.php ("it persists drag-reordering").
- *   The test below only proves the drag UI itself is wired up.
+ * - Drag-and-drop reordering: covered by tests/Browser/SectionDragTest.php
+ *   with dispatched DragEvents, since CDP drag simulation is unreliable.
  * - Locked/required Section enforcement (Page Definitions): that
  *   subsystem does not exist in this release - see the completion report.
  */
