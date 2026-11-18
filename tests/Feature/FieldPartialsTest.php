@@ -102,3 +102,19 @@ it("shows an enum case's optional description under a Select field once it's the
         ->call('selectSection', $section->id)
         ->assertSee('Full-width, best for a strong first impression.');
 });
+
+it('removes an optional image so the section renders without one', function () {
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
+    $section = $page->sections()->create([
+        'handle' => 'test-hero',
+        'order' => 0,
+        'settings' => ['heading' => 'Hello', 'photo' => 'inlay/photo.jpg'],
+    ]);
+
+    Livewire::test(PageEditor::class, ['page' => $page])
+        ->call('selectSection', $section->id)
+        ->assertSeeHtml('data-test="remove-photo"')
+        ->call('clearField', 'photo');
+
+    expect($section->fresh()->settings)->toHaveKey('photo', null);
+});

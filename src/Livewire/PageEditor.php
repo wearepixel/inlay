@@ -627,6 +627,16 @@ final class PageEditor extends Component
         $this->persistSetting(explode('.', $key)[0]);
     }
 
+    /**
+     * Empties an optional image or link field, which has no text to delete.
+     * $path is relative to editingProps, e.g. "photo" or "items.0.photo".
+     */
+    public function clearField(string $path): void
+    {
+        data_set($this->editingProps, $path, null);
+        $this->persistSetting(explode('.', $path)[0]);
+    }
+
     public function publish(): void
     {
         try {

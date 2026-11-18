@@ -89,3 +89,12 @@ it('404s an unknown group in the URL', function () {
 it('does not let a client switch group without selectGroup()', function () {
     Livewire::test(SiteSettingsEditor::class)->set('group', 'header');
 })->throws(CannotUpdateLockedPropertyException::class);
+
+it('removes an optional link', function () {
+    Livewire::test(SiteSettingsEditor::class, ['group' => 'header'])
+        ->set('editingProps.cta', ['label' => 'Enquire', 'url' => '/enquire', 'openInNewTab' => false])
+        ->assertSeeHtml('data-test="remove-cta"')
+        ->call('clearField', 'cta');
+
+    expect(Inlay::setting('header.cta')->url)->toBe('');
+});

@@ -6,6 +6,12 @@
         <input type="checkbox" wire:model.live="{{ $modelPath }}.openInNewTab">
         Open in new tab
     </label>
+    @unless ($field->required)
+        @php $linkValue = data_get(['editingProps' => $editingProps], $modelPath); @endphp
+        @if (filled($linkValue['url'] ?? null) || filled($linkValue['label'] ?? null))
+            <button type="button" wire:click="clearField('{{ \Illuminate\Support\Str::after($modelPath, 'editingProps.') }}')" class="inlay-button inlay-button--small inlay-button--ghost inlay-button--danger" data-test="remove-{{ $field->name }}">Remove link</button>
+        @endif
+    @endunless
     @if ($field->help)
         <p class="inlay-field__help">{{ $field->help }}</p>
     @endif
