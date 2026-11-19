@@ -204,6 +204,10 @@ final class InstallCommand extends Command
         $this->report('resources/views/inlay/pages/show.blade.php', $wiring->writePageView($layout, $stack->viteEntries));
         $this->report('Routes in routes/web.php', $wiring->writeRoutes(replaceWelcomeRoute: $stack->isFreshApp));
         $this->report('INLAY_CSS_FRAMEWORK in .env', $wiring->setCssFramework($css));
+
+        if ($css === 'tailwind') {
+            $this->report('Admin theme in resources/css/app.css', $wiring->writeAdminTheme());
+        }
     }
 
     private function report(string $what, StepResult $result): void
@@ -211,6 +215,7 @@ final class InstallCommand extends Command
         $badge = match ($result->status) {
             'done' => '<fg=green;options=bold>DONE</>',
             'already set up' => '<fg=gray>already set up</>',
+            'not needed' => '<fg=gray>not needed</>',
             default => '<fg=yellow;options=bold>NEEDS YOU</>',
         };
 

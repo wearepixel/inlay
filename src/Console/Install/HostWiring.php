@@ -155,6 +155,51 @@ final class HostWiring
     }
 
     /**
+     * Gives the admin the app's own font and brand colour by copying them
+     * from the Tailwind @theme block into Inlay's --inlay-* variables. The
+     * values are copied rather than referenced because Tailwind only emits
+     * the theme variables a page actually uses.
+     */
+    public function writeAdminTheme(): StepResult
+    {
+        $path = resource_path('css/app.css');
+
+        if (! $this->files->exists($path)) {
+            return StepResult::notNeeded();
+        }
+
+        $css = $this->files->get($path);
+
+        if (str_contains($css, '--inlay-')) {
+            return StepResult::alreadySetUp();
+        }
+
+        $variables = $this->adminThemeVariables($this->themeTokens($css));
+
+        if ($variables === []) {
+            return StepResult::notNeeded();
+        }
+
+        $lines = '';
+
+        foreach ($variables as $name => $value) {
+            $lines .= "    {$name}: {$value};\n";
+        }
+
+        $this->files->append($path, <<<CSS
+
+/* Inlay's admin, in your brand. Applies where the admin renders inside your
+   own layout (inlay.admin.layout). Every --inlay-* variable is listed at
+   https://wearepixel.com.au/docs/inlay */
+.inlay {
+{$lines}}
+
+CSS);
+
+        return StepResult::done();
+    }
+
+    /**
      * An existing provider is left alone, but a starter's page type it does
      * not register yet is reported, since the starter's pages need it.
      *
@@ -254,5 +299,52 @@ final class HostWiring
     private static function stub(string $name): string
     {
         return dirname(__DIR__, 3).'/stubs/install/'.$name;
+    }
+
+    /**
+     * The variables declared in the stylesheet's @theme blocks, by name
+     * without the leading dashes, e.g. ['color-brand' => '#334735'].
+     *
+     * @return array<string, string>
+     */
+    private function themeTokens(string $css): array
+    {
+        $tokens = [];
+
+        preg_match_all('/@theme[^{]*\{(.*?)\n\}/s', $css, $themeBlocks);
+
+        foreach ($themeBlocks[1] as $block) {
+            preg_match_all('/--([\w-]+)\s*:\s*([^;]+);/', $block, $declarations, PREG_SET_ORDER);
+
+            foreach ($declarations as [, $name, $value]) {
+                $tokens[$name] = trim($value);
+            }
+        }
+
+        return $tokens;
+    }
+
+    /**
+     * @param  array<string, string>  $tokens
+     * @return array<string, string>
+     */
+    private function adminThemeVariables(array $tokens): array
+    {
+        $variables = [];
+
+        if (isset($tokens['font-sans'])) {
+            $variables['--inlay-font'] = $tokens['font-sans'];
+        }
+
+        foreach (['color-brand', 'color-primary', 'color-accent'] as $brandToken) {
+            if (isset($tokens[$brandToken])) {
+                $variables['--inlay-accent'] = $tokens[$brandToken];
+                $variables['--inlay-focus'] = $tokens[$brandToken];
+
+                break;
+            }
+        }
+
+        return $variables;
     }
 }

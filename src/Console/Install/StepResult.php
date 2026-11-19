@@ -25,6 +25,11 @@ final readonly class StepResult
         return new self('already set up');
     }
 
+    public static function notNeeded(): self
+    {
+        return new self('not needed');
+    }
+
     public static function needsYou(string $todo): self
     {
         return new self('needs you', $todo);

@@ -137,3 +137,17 @@ it('tells you which page type to add when the provider already exists', function
         ->expectsOutputToContain('Add Inlay::pageDefinition(\\App\\Inlay\\LandingPage::class);')
         ->assertSuccessful();
 });
+
+it('copies the app font and brand colour into the admin theme', function () {
+    $this->files->put("{$this->base}/resources/css/app.css", "@import \"tailwindcss\";\n\n@theme {\n    --font-sans: 'Almarai', sans-serif;\n    --color-brand: #334735;\n}\n");
+
+    $this->artisan('inlay:install', ['--starter' => 'none', '--no-interaction' => true])->assertSuccessful();
+    $this->artisan('inlay:install', ['--starter' => 'none', '--no-interaction' => true])->assertSuccessful();
+
+    $css = $this->files->get("{$this->base}/resources/css/app.css");
+
+    expect($css)
+        ->toContain("--inlay-font: 'Almarai', sans-serif;")
+        ->toContain('--inlay-accent: #334735;')
+        ->and(substr_count($css, '.inlay {'))->toBe(1);
+});
