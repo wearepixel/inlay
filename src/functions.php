@@ -10,7 +10,7 @@ if (! function_exists('section')) {
     /**
      * Declares a single-file Inlay section. Called from the PHP block at
      * the top of a Blade file registered via Inlay::singleFileSection()
-     * or Inlay::singleFileSections() - see docs/inlay/v1/single-file-sections.
+     * or Inlay::singleFileSections() - see https://wearepixel.com.au/docs/inlay/v1/sections.
      */
     function section(Section $sectionType): void
     {
