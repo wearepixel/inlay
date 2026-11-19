@@ -4,7 +4,7 @@
     $footerIsEmpty = $footerValue === null || $footerValue === '' || $footerValue === [];
 @endphp
 @if ($field->required && $footerIsEmpty)
-    <p class="inlay-field__hint">This field is required.</p>
+    <p class="inlay-field__hint">{{ __('inlay::admin.fields.required') }}</p>
 @endif
 @if ($field->help)
     <p class="inlay-field__help">{{ $field->help }}</p>

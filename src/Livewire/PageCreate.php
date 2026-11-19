@@ -99,6 +99,6 @@ final class PageCreate extends Component
 
     public function render(): View
     {
-        return $this->adminView('inlay::livewire.page-create', 'Create page · Inlay');
+        return $this->adminView('inlay::livewire.page-create', __('inlay::admin.titles.create_page'));
     }
 }

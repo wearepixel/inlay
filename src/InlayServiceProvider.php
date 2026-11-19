@@ -46,6 +46,7 @@ final class InlayServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'inlay');
+        $this->loadTranslationsFrom(__DIR__.'/../lang', 'inlay');
 
         $this->publishes([
             __DIR__.'/../config/inlay.php' => config_path('inlay.php'),
@@ -54,6 +55,10 @@ final class InlayServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../resources/views' => resource_path('views/vendor/inlay'),
         ], 'inlay-views');
+
+        $this->publishes([
+            __DIR__.'/../lang' => $this->app->langPath('vendor/inlay'),
+        ], 'inlay-lang');
 
         Blade::component('inlay::render', RenderPage::class);
 

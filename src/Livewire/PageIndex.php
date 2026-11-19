@@ -57,7 +57,7 @@ final class PageIndex extends Component
 
     public function render(): View
     {
-        return $this->adminView('inlay::livewire.page-index', 'Pages · Inlay', [
+        return $this->adminView('inlay::livewire.page-index', __('inlay::admin.titles.pages'), [
             'pages' => $this->pages(),
         ]);
     }

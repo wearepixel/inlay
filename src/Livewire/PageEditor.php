@@ -726,7 +726,7 @@ final class PageEditor extends Component
             default => $sectionTypes->filter(fn ($sectionType) => $pageDefinition->allows($sectionType->slug))->values(),
         };
 
-        return $this->adminView('inlay::livewire.page-editor', "{$this->page->title} · Inlay", [
+        return $this->adminView('inlay::livewire.page-editor', __('inlay::admin.titles.edit_page', ['page' => $this->page->title]), [
             'sections' => $sections,
             // Display name + a best-guess instance detail (e.g. "Hero" /
             // "Welcome") for every section in the tree - see
@@ -744,7 +744,7 @@ final class PageEditor extends Component
                         app(SectionRegistry::class)->definition($section->handle),
                         $section->settings ?? [],
                     )
-                    : ['name' => $section->handle, 'detail' => 'No longer registered'],
+                    : ['name' => $section->handle, 'detail' => __('inlay::admin.editor.section_unregistered')],
             ]),
             'selectedInstance' => $selectedDefinition
                 ? $this->instanceLabel($selectedDefinition, $selectedSection->settings ?? [])

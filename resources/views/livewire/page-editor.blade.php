@@ -1,6 +1,6 @@
 <div
     class="inlay-editor-page"
-    x-data="inlayEditorSidebar(@js($showingHistory ? 'history' : ($selectedSchema ? 'settings' : 'tree')), @js($selectedSectionId))"
+    x-data="inlayEditorSidebar(@js($showingHistory ? 'history' : ($selectedSchema ? 'settings' : 'tree')), @js($selectedSectionId), @js(__('inlay::admin.editor.sidebar_announcements')))"
     x-on:section-selected.window="showNewSection($event.detail.id)"
     x-on:selection-cleared.window="toTree()"
     x-on:history-toggled.window="onHistoryToggled($event.detail.showing)"
@@ -8,7 +8,7 @@
 >
     <div class="inlay-topbar">
         <div>
-            <a href="{{ \WeArePixel\Inlay\Facades\Inlay::adminUrl('pages.index') }}" class="inlay-eyebrow" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"><x-inlay::icon name="arrow-left" :size="11" /> All pages</a>
+            <a href="{{ \WeArePixel\Inlay\Facades\Inlay::adminUrl('pages.index') }}" class="inlay-eyebrow" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"><x-inlay::icon name="arrow-left" :size="11" /> {{ __('inlay::admin.editor.all_pages') }}</a>
             <h1>{{ $page->title }}</h1>
         </div>
         <div
@@ -20,29 +20,29 @@
                     setTimeout(() => { if (this.message === message) { this.message = null; } }, ms);
                 },
             }"
-            x-on:setting-saved.window="announce('Saved', 1200)"
-            x-on:page-published.window="announce('Published successfully', 2500)"
-            x-on:revision-restored.window="announce('Revision restored', 2500)"
-            x-on:revision-restored-with-violations.window="announce('Restored to draft - not published', 3500)"
-            x-on:publish-blocked.window="announce('Publish blocked - see the notice below', 3500)"
+            x-on:setting-saved.window="announce(@js(__('inlay::admin.editor.announce_saved')), 1200)"
+            x-on:page-published.window="announce(@js(__('inlay::admin.editor.announce_published')), 2500)"
+            x-on:revision-restored.window="announce(@js(__('inlay::admin.editor.announce_restored')), 2500)"
+            x-on:revision-restored-with-violations.window="announce(@js(__('inlay::admin.editor.announce_restored_with_violations')), 3500)"
+            x-on:publish-blocked.window="announce(@js(__('inlay::admin.editor.announce_publish_blocked')), 3500)"
         >
-            <span class="inlay-badge inlay-badge--{{ $page->status->value }}">{{ $page->status->value }}</span>
+            <span class="inlay-badge inlay-badge--{{ $page->status->value }}">{{ __('inlay::admin.status.'.$page->status->value) }}</span>
 
-            <span wire:loading.delay wire:target="editingProps" class="inlay-status inlay-status--saving">Saving&hellip;</span>
+            <span wire:loading.delay wire:target="editingProps" class="inlay-status inlay-status--saving">{{ __('inlay::admin.common.saving') }}</span>
             <span x-show="message" x-cloak x-text="message" x-transition.opacity class="inlay-status inlay-status--success" role="status" aria-live="polite"></span>
 
             @if (config('inlay.admin.editor_actions'))
                 @include(config('inlay.admin.editor_actions'), ['page' => $page])
             @endif
 
-            <button type="button" x-on:click="showPageSettings()" data-test="open-page-settings" class="inlay-button inlay-button--ghost">Page Settings</button>
-            <button type="button" wire:click="toggleHistory" data-test="toggle-history" class="inlay-button inlay-button--ghost" aria-expanded="{{ $showingHistory ? 'true' : 'false' }}">History</button>
-            <button type="button" x-on:click="$dispatch('open-shortcuts')" data-test="open-shortcuts" class="inlay-button inlay-button--ghost" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
+            <button type="button" x-on:click="showPageSettings()" data-test="open-page-settings" class="inlay-button inlay-button--ghost">{{ __('inlay::admin.editor.page_settings') }}</button>
+            <button type="button" wire:click="toggleHistory" data-test="toggle-history" class="inlay-button inlay-button--ghost" aria-expanded="{{ $showingHistory ? 'true' : 'false' }}">{{ __('inlay::admin.editor.history') }}</button>
+            <button type="button" x-on:click="$dispatch('open-shortcuts')" data-test="open-shortcuts" class="inlay-button inlay-button--ghost" title="{{ __('inlay::admin.editor.keyboard_shortcuts') }}" aria-label="{{ __('inlay::admin.editor.keyboard_shortcuts') }}">
                 <x-inlay::icon name="keyboard" :size="14" />
             </button>
             <button type="button" wire:click="publish" wire:loading.attr="disabled" wire:target="publish" data-test="publish" class="inlay-button inlay-button--primary">
-                <span wire:loading.remove wire:target="publish">Publish</span>
-                <span wire:loading wire:target="publish">Publishing&hellip;</span>
+                <span wire:loading.remove wire:target="publish">{{ __('inlay::admin.editor.publish') }}</span>
+                <span wire:loading wire:target="publish">{{ __('inlay::admin.editor.publishing') }}</span>
             </button>
         </div>
     </div>
@@ -53,7 +53,7 @@
 
     @if ($violations !== [])
         <div class="inlay-violation-banner" data-test="violation-banner">
-            <span class="inlay-violation-banner__title">This page can't be published yet</span>
+            <span class="inlay-violation-banner__title">{{ __('inlay::admin.editor.violations_title') }}</span>
             <ul class="inlay-violation-banner__list">
                 @foreach ($violations as $violation)
                     <li data-test="violation-{{ $violation->type }}">{{ $violation->message }}</li>
@@ -63,9 +63,9 @@
     @endif
 
     <div class="inlay-editor" :class="resizing ? 'is-resizing' : ''" :style="'--inlay-sidebar-width: ' + (collapsed ? '0px' : width + 'px')">
-        <div class="inlay-mobile-tabs" role="tablist" aria-label="Editor panel">
-            <button type="button" role="tab" data-test="mobile-panel-edit" class="inlay-mobile-tabs__tab" :class="mobilePanel === 'edit' ? 'is-active' : ''" :aria-selected="(mobilePanel === 'edit').toString()" x-on:click="mobilePanel = 'edit'">Edit</button>
-            <button type="button" role="tab" data-test="mobile-panel-preview" class="inlay-mobile-tabs__tab" :class="mobilePanel === 'preview' ? 'is-active' : ''" :aria-selected="(mobilePanel === 'preview').toString()" x-on:click="mobilePanel = 'preview'">Preview</button>
+        <div class="inlay-mobile-tabs" role="tablist" aria-label="{{ __('inlay::admin.editor.panel_label') }}">
+            <button type="button" role="tab" data-test="mobile-panel-edit" class="inlay-mobile-tabs__tab" :class="mobilePanel === 'edit' ? 'is-active' : ''" :aria-selected="(mobilePanel === 'edit').toString()" x-on:click="mobilePanel = 'edit'">{{ __('inlay::admin.editor.panel_edit') }}</button>
+            <button type="button" role="tab" data-test="mobile-panel-preview" class="inlay-mobile-tabs__tab" :class="mobilePanel === 'preview' ? 'is-active' : ''" :aria-selected="(mobilePanel === 'preview').toString()" x-on:click="mobilePanel = 'preview'">{{ __('inlay::admin.editor.panel_preview') }}</button>
         </div>
 
         <p class="inlay-sr-only" role="status" aria-live="polite" x-text="announcement()"></p>
@@ -75,11 +75,11 @@
             {{-- Section tree (default sidebar state) --}}
             <div x-show="view === 'tree'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
-                    <span class="inlay-eyebrow">Sections</span>
-                    <button type="button" wire:click="openPicker" data-test="open-picker" class="inlay-button inlay-button--small inlay-button--primary">+ Add</button>
+                    <span class="inlay-eyebrow">{{ __('inlay::admin.sections.heading') }}</span>
+                    <button type="button" wire:click="openPicker" data-test="open-picker" class="inlay-button inlay-button--small inlay-button--primary">{{ __('inlay::admin.sections.add') }}</button>
                 </div>
 
-                <ul class="inlay-tree" x-ref="list" role="listbox" aria-label="Page sections" x-on:dragover="dragOver($event)" x-on:drop.prevent="drop()">
+                <ul class="inlay-tree" x-ref="list" role="listbox" aria-label="{{ __('inlay::admin.sections.list_label') }}" x-on:dragover="dragOver($event)" x-on:drop.prevent="drop()">
                     @php $sectionHandleCounts = $sections->countBy('handle'); @endphp
                     @forelse ($sections as $section)
                         @php
@@ -119,22 +119,22 @@
                                     <span class="inlay-tree__label-detail">- &ldquo;{{ $sectionLabels[$section->id]['detail'] }}&rdquo;</span>
                                 @endif
                                 @if ($isLocked)
-                                    <span class="inlay-tree__indicator" data-test="locked-{{ $section->id }}" title="Locked by {{ $pageDefinition?->label }} - can't be moved or removed"><x-inlay::icon name="lock" :size="9" /> Locked</span>
+                                    <span class="inlay-tree__indicator" data-test="locked-{{ $section->id }}" title="{{ __('inlay::admin.sections.locked_title', ['definition' => $pageDefinition?->label]) }}"><x-inlay::icon name="lock" :size="9" /> {{ __('inlay::admin.sections.locked') }}</span>
                                 @elseif ($isRequired)
-                                    <span class="inlay-tree__indicator" data-test="required-{{ $section->id }}" title="Required by {{ $pageDefinition?->label }}">Required</span>
+                                    <span class="inlay-tree__indicator" data-test="required-{{ $section->id }}" title="{{ __('inlay::admin.sections.required_title', ['definition' => $pageDefinition?->label]) }}">{{ __('inlay::admin.sections.required') }}</span>
                                 @endif
                             </span>
                             <span class="inlay-tree__actions">
-                                <button type="button" wire:click.stop="duplicateSection({{ $section->id }})" data-test="duplicate-{{ $section->id }}" class="inlay-tree__icon-button" title="Duplicate" aria-label="Duplicate {{ $sectionLabels[$section->id]['name'] }}"><x-inlay::icon name="duplicate" :size="14" /></button>
+                                <button type="button" wire:click.stop="duplicateSection({{ $section->id }})" data-test="duplicate-{{ $section->id }}" class="inlay-tree__icon-button" title="{{ __('inlay::admin.sections.duplicate') }}" aria-label="{{ __('inlay::admin.sections.duplicate_label', ['section' => $sectionLabels[$section->id]['name']]) }}"><x-inlay::icon name="duplicate" :size="14" /></button>
                                 @if ($canDelete)
                                     <button
                                         type="button"
                                         wire:click.stop="deleteSection({{ $section->id }})"
-                                        wire:confirm="Remove this section from the page?"
+                                        wire:confirm="{{ __('inlay::admin.sections.delete_confirm') }}"
                                         data-test="delete-{{ $section->id }}"
                                         class="inlay-tree__icon-button inlay-tree__icon-button--danger"
-                                        title="Delete"
-                                        aria-label="Delete {{ $sectionLabels[$section->id]['name'] }}"
+                                        title="{{ __('inlay::admin.sections.delete') }}"
+                                        aria-label="{{ __('inlay::admin.sections.delete_label', ['section' => $sectionLabels[$section->id]['name']]) }}"
                                     ><x-inlay::icon name="trash" :size="14" /></button>
                                 @else
                                     <button
@@ -142,16 +142,16 @@
                                         disabled
                                         data-test="delete-disabled-{{ $section->id }}"
                                         class="inlay-tree__icon-button inlay-tree__icon-button--danger"
-                                        title="{{ $isLocked ? "Locked by {$pageDefinition?->label} - can't be removed" : "Required by {$pageDefinition?->label} - remove another instance first" }}"
-                                        aria-label="{{ $sectionLabels[$section->id]['name'] }} cannot be removed"
+                                        title="{{ $isLocked ? __('inlay::admin.sections.locked_cannot_remove', ['definition' => $pageDefinition?->label]) : __('inlay::admin.sections.required_cannot_remove', ['definition' => $pageDefinition?->label]) }}"
+                                        aria-label="{{ __('inlay::admin.sections.cannot_remove_label', ['section' => $sectionLabels[$section->id]['name']]) }}"
                                     ><x-inlay::icon name="trash" :size="14" /></button>
                                 @endif
                             </span>
                         </li>
                     @empty
                         <li class="inlay-empty-state inlay-empty-state--tree">
-                            <p class="inlay-empty-state__title">No sections yet</p>
-                            <p>Add a section to start building this page.</p>
+                            <p class="inlay-empty-state__title">{{ __('inlay::admin.sections.empty_title') }}</p>
+                            <p>{{ __('inlay::admin.sections.empty') }}</p>
                         </li>
                     @endforelse
                 </ul>
@@ -161,7 +161,7 @@
             <div x-show="view === 'settings'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
                     <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-to-sections">
-                        <x-inlay::icon name="arrow-left" :size="12" /> Sections
+                        <x-inlay::icon name="arrow-left" :size="12" /> {{ __('inlay::admin.sections.back') }}
                     </button>
                 </div>
 
@@ -177,7 +177,7 @@
                 @if ($selectedBlock)
                     <div class="inlay-block-inspector" data-test="block-inspector">
                         <button type="button" class="inlay-back-link" wire:click="deselectBlock" data-test="back-to-section">
-                            <x-inlay::icon name="arrow-left" :size="12" /> {{ $selectedInstance['name'] ?? 'Section' }}
+                            <x-inlay::icon name="arrow-left" :size="12" /> {{ $selectedInstance['name'] ?? __('inlay::admin.sections.fallback_name') }}
                         </button>
                         <h3 class="inlay-instance-heading inlay-instance-heading--block">
                             {{ $selectedBlock['name'] }}
@@ -200,7 +200,7 @@
                         'visibilityScope' => '$wire.editingProps',
                     ])
                 @else
-                    <p class="inlay-inspector__empty">Select a section from the list to edit its settings.</p>
+                    <p class="inlay-inspector__empty">{{ __('inlay::admin.sections.select_prompt') }}</p>
                 @endif
             </div>
 
@@ -208,35 +208,35 @@
             <div x-show="view === 'page-settings'" x-cloak x-transition.opacity.duration.120ms>
                 <div class="inlay-editor__heading">
                     <button type="button" class="inlay-back-link" x-on:click="backToTree()" data-test="back-from-page-settings">
-                        <x-inlay::icon name="arrow-left" :size="12" /> Sections
+                        <x-inlay::icon name="arrow-left" :size="12" /> {{ __('inlay::admin.sections.back') }}
                     </button>
                 </div>
 
-                <p class="inlay-eyebrow">General</p>
+                <p class="inlay-eyebrow">{{ __('inlay::admin.page_settings.general') }}</p>
                 <div class="inlay-field">
-                    <label class="inlay-field__label" for="page-settings-title">Title</label>
+                    <label class="inlay-field__label" for="page-settings-title">{{ __('inlay::admin.page_fields.title') }}</label>
                     <input id="page-settings-title" type="text" wire:model="pageTitle" class="inlay-input" data-test="page-settings-title">
                     @error('pageTitle') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
                 </div>
                 <div class="inlay-field">
-                    <label class="inlay-field__label">Page type</label>
+                    <label class="inlay-field__label">{{ __('inlay::admin.page_fields.page_type') }}</label>
                     @if ($pageDefinition)
                         <p data-test="page-settings-definition">{{ $pageDefinition->label }}</p>
                         @if ($pageDefinition->description)
                             <p class="inlay-field__help">{{ $pageDefinition->description }}</p>
                         @endif
                     @else
-                        <p class="inlay-field__help" style="color: var(--inlay-danger);" data-test="page-settings-definition-unresolved">This page's type is no longer registered. A developer needs to resolve this before publishing.</p>
+                        <p class="inlay-field__help" style="color: var(--inlay-danger);" data-test="page-settings-definition-unresolved">{{ __('inlay::admin.page_settings.type_unresolved') }}</p>
                     @endif
-                    <p class="inlay-field__help">Controls which sections this page may contain. Cannot be changed after creation.</p>
+                    <p class="inlay-field__help">{{ __('inlay::admin.page_settings.page_type_help') }}</p>
                 </div>
                 <div class="inlay-field">
-                    <label class="inlay-field__label" for="page-settings-path">Public path</label>
-                    <input id="page-settings-path" type="text" wire:model.live.debounce.300ms="pagePath" class="inlay-input" placeholder="about/team" data-test="page-settings-path">
+                    <label class="inlay-field__label" for="page-settings-path">{{ __('inlay::admin.page_fields.public_path') }}</label>
+                    <input id="page-settings-path" type="text" wire:model.live.debounce.300ms="pagePath" class="inlay-input" placeholder="{{ __('inlay::admin.page_fields.path_placeholder') }}" data-test="page-settings-path">
                     <p class="inlay-field__help">
-                        Optional. Leave blank for a page with no public URL of its own.
+                        {{ __('inlay::admin.page_settings.path_help') }}
                         @if ($this->pageEffectiveUrl)
-                            Publishes at <code data-test="page-settings-effective-url">{{ $this->pageEffectiveUrl }}</code>.
+                            {!! __('inlay::admin.page_settings.publishes_at', ['url' => '<code data-test="page-settings-effective-url">'.e($this->pageEffectiveUrl).'</code>']) !!}
                         @endif
                     </p>
                     @error('pagePath') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
@@ -244,35 +244,37 @@
                 <div class="inlay-field">
                     <label class="inlay-field__label" style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" wire:model="pageIsHomepage" data-test="page-settings-is-homepage">
-                        Set as homepage
+                        {{ __('inlay::admin.page_fields.set_as_homepage') }}
                     </label>
-                    <p class="inlay-field__help">Serves this page at your site's root URL. Replaces the current homepage, if one is already set.</p>
+                    <p class="inlay-field__help">{{ __('inlay::admin.page_settings.homepage_help') }}</p>
                 </div>
 
-                <p class="inlay-eyebrow">Search metadata</p>
+                <p class="inlay-eyebrow">{{ __('inlay::admin.page_settings.search_metadata') }}</p>
                 <div class="inlay-field">
-                    <label class="inlay-field__label" for="page-settings-meta-title">Meta title</label>
+                    <label class="inlay-field__label" for="page-settings-meta-title">{{ __('inlay::admin.page_fields.meta_title') }}</label>
                     <input id="page-settings-meta-title" type="text" wire:model="pageMetaTitle" class="inlay-input" data-test="page-settings-meta-title">
-                    <p class="inlay-field__help">Falls back to the title above when left blank.</p>
+                    <p class="inlay-field__help">{{ __('inlay::admin.page_settings.meta_title_help') }}</p>
                     @error('pageMetaTitle') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
                 </div>
                 <div class="inlay-field">
-                    <label class="inlay-field__label" for="page-settings-meta-description">Meta description</label>
+                    <label class="inlay-field__label" for="page-settings-meta-description">{{ __('inlay::admin.page_fields.meta_description') }}</label>
                     <textarea id="page-settings-meta-description" wire:model="pageMetaDescription" class="inlay-input" rows="3" data-test="page-settings-meta-description"></textarea>
                     @error('pageMetaDescription') <p class="inlay-field__help" style="color: var(--inlay-danger);">{{ $message }}</p> @enderror
                 </div>
 
-                <p class="inlay-eyebrow">Publishing</p>
-                <p class="inlay-field__help">Status: <span class="inlay-badge inlay-badge--{{ $page->status->value }}">{{ $page->status->value }}</span></p>
+                <p class="inlay-eyebrow">{{ __('inlay::admin.page_settings.publishing') }}</p>
+                <p class="inlay-field__help">{{ __('inlay::admin.page_settings.status') }} <span class="inlay-badge inlay-badge--{{ $page->status->value }}">{{ __('inlay::admin.status.'.$page->status->value) }}</span></p>
                 @if ($latestRevision)
-                    <p class="inlay-field__help" data-test="page-settings-last-published">Last published {{ $latestRevision->created_at->diffForHumans() }}{{ $latestRevision->label ? " ({$latestRevision->label})" : '' }}.</p>
+                    <p class="inlay-field__help" data-test="page-settings-last-published">{{ $latestRevision->label
+                        ? __('inlay::admin.page_settings.last_published_labelled', ['time' => $latestRevision->created_at->diffForHumans(), 'label' => $latestRevision->label])
+                        : __('inlay::admin.page_settings.last_published', ['time' => $latestRevision->created_at->diffForHumans()]) }}</p>
                 @else
-                    <p class="inlay-field__help" data-test="page-settings-last-published">Never published.</p>
+                    <p class="inlay-field__help" data-test="page-settings-last-published">{{ __('inlay::admin.page_settings.never_published') }}</p>
                 @endif
 
-                <p class="inlay-field__help" data-test="page-settings-live-notice">Public path and homepage status take effect as soon as you save - they aren't part of this page's unpublished section content, so they don't wait for Publish.</p>
+                <p class="inlay-field__help" data-test="page-settings-live-notice">{{ __('inlay::admin.page_settings.live_notice') }}</p>
 
-                <button type="button" wire:click="savePageSettings" class="inlay-button inlay-button--primary" data-test="save-page-settings">Save page settings</button>
+                <button type="button" wire:click="savePageSettings" class="inlay-button inlay-button--primary" data-test="save-page-settings">{{ __('inlay::admin.page_settings.save') }}</button>
             </div>
 
             {{-- Version history --}}
@@ -280,18 +282,18 @@
                 <div x-show="view === 'history'" x-cloak x-transition.opacity.duration.120ms>
                     <div class="inlay-editor__heading">
                         <button type="button" class="inlay-back-link" wire:click="toggleHistory" data-test="close-history">
-                            <x-inlay::icon name="arrow-left" :size="12" /> Sections
+                            <x-inlay::icon name="arrow-left" :size="12" /> {{ __('inlay::admin.sections.back') }}
                         </button>
                     </div>
-                    <p class="inlay-eyebrow">Version history</p>
+                    <p class="inlay-eyebrow">{{ __('inlay::admin.history.heading') }}</p>
                     <ul class="inlay-history">
                         @forelse ($revisions as $revision)
                             <li class="inlay-history__item">
                                 <span>{{ $revision->label ?? $revision->created_at->diffForHumans() }}</span>
-                                <button type="button" wire:click="restore({{ $revision->id }})" data-test="restore-{{ $revision->id }}" class="inlay-button inlay-button--small">Restore</button>
+                                <button type="button" wire:click="restore({{ $revision->id }})" data-test="restore-{{ $revision->id }}" class="inlay-button inlay-button--small">{{ __('inlay::admin.history.restore') }}</button>
                             </li>
                         @empty
-                            <li class="inlay-empty-state">No revisions yet - publish this page to create the first one.</li>
+                            <li class="inlay-empty-state">{{ __('inlay::admin.history.empty') }}</li>
                         @endforelse
                     </ul>
                 </div>
@@ -303,7 +305,7 @@
             :class="collapsed ? 'is-collapsed' : ''"
             role="separator"
             aria-orientation="vertical"
-            aria-label="Resize the sections panel"
+            aria-label="{{ __('inlay::admin.editor.resize_panel') }}"
             tabindex="0"
             data-test="panel-resize-handle"
             x-on:mousedown="startResize($event)"
@@ -317,8 +319,8 @@
                 data-test="collapse-panel"
                 x-on:click.stop="toggleCollapsed()"
                 :aria-expanded="(!collapsed).toString()"
-                :aria-label="collapsed ? 'Expand panel' : 'Collapse panel'"
-                :title="collapsed ? 'Expand panel' : 'Collapse panel'"
+                :aria-label="collapsed ? @js(__('inlay::admin.editor.expand_panel')) : @js(__('inlay::admin.editor.collapse_panel'))"
+                :title="collapsed ? @js(__('inlay::admin.editor.expand_panel')) : @js(__('inlay::admin.editor.collapse_panel'))"
             >
                 <x-inlay::icon name="chevron-left" :size="12" />
             </button>
@@ -327,27 +329,27 @@
         <div class="inlay-editor__preview-column" :class="mobilePanel === 'edit' ? 'inlay-mobile-hide' : ''">
             <div class="inlay-preview" x-data="inlayViewportSelector">
                 <div class="inlay-preview__toolbar">
-                    <div class="inlay-preview__url-bar" title="{{ $this->pageEffectiveUrl ?? "This page has no public path - it isn't reachable at a URL of its own" }}">
+                    <div class="inlay-preview__url-bar" title="{{ $this->pageEffectiveUrl ?? __('inlay::admin.preview.no_public_path') }}">
                         <x-inlay::icon name="globe" :size="12" />
-                        <span class="inlay-preview__url-text">{{ $this->pageEffectiveUrl ?? 'Not published' }}</span>
+                        <span class="inlay-preview__url-text">{{ $this->pageEffectiveUrl ?? __('inlay::admin.preview.not_published') }}</span>
                     </div>
                     <div class="inlay-preview__toolbar-actions">
-                        <div class="inlay-viewport-selector" role="group" aria-label="Preview viewport">
-                            <button type="button" class="inlay-viewport-selector__button" :class="viewport === 'desktop' ? 'is-active' : ''" x-on:click="select('desktop')" aria-label="Desktop viewport">Desktop</button>
-                            <button type="button" class="inlay-viewport-selector__button" :class="viewport === 'tablet' ? 'is-active' : ''" x-on:click="select('tablet')" aria-label="Tablet viewport">Tablet</button>
-                            <button type="button" class="inlay-viewport-selector__button" :class="viewport === 'mobile' ? 'is-active' : ''" x-on:click="select('mobile')" aria-label="Mobile viewport">Mobile</button>
+                        <div class="inlay-viewport-selector" role="group" aria-label="{{ __('inlay::admin.preview.viewport_label') }}">
+                            <button type="button" class="inlay-viewport-selector__button" :class="viewport === 'desktop' ? 'is-active' : ''" x-on:click="select('desktop')" aria-label="{{ __('inlay::admin.preview.desktop_label') }}">{{ __('inlay::admin.preview.desktop') }}</button>
+                            <button type="button" class="inlay-viewport-selector__button" :class="viewport === 'tablet' ? 'is-active' : ''" x-on:click="select('tablet')" aria-label="{{ __('inlay::admin.preview.tablet_label') }}">{{ __('inlay::admin.preview.tablet') }}</button>
+                            <button type="button" class="inlay-viewport-selector__button" :class="viewport === 'mobile' ? 'is-active' : ''" x-on:click="select('mobile')" aria-label="{{ __('inlay::admin.preview.mobile_label') }}">{{ __('inlay::admin.preview.mobile') }}</button>
                         </div>
-                        <button type="button" class="inlay-preview__refresh" wire:click="$refresh" title="Refresh preview" aria-label="Refresh preview">
+                        <button type="button" class="inlay-preview__refresh" wire:click="$refresh" title="{{ __('inlay::admin.preview.refresh') }}" aria-label="{{ __('inlay::admin.preview.refresh') }}">
                             <x-inlay::icon name="refresh" :size="14" />
                         </button>
                     </div>
                 </div>
                 <div class="inlay-preview__viewport" :class="'inlay-preview__viewport--' + viewport" wire:loading.class.delay="is-loading">
-                    <iframe wire:key="preview-{{ $previewVersion }}" src="{{ $previewUrl }}" class="inlay-preview__frame" data-test="preview-frame" title="Page preview"></iframe>
+                    <iframe wire:key="preview-{{ $previewVersion }}" src="{{ $previewUrl }}" class="inlay-preview__frame" data-test="preview-frame" title="{{ __('inlay::admin.preview.frame_title') }}"></iframe>
                     @if ($sections->isEmpty())
                         <div class="inlay-preview__empty" data-test="preview-empty-state">
-                            <strong>Nothing here yet</strong>
-                            Add a section to see it appear here.
+                            <strong>{{ __('inlay::admin.preview.empty_title') }}</strong>
+                            {{ __('inlay::admin.preview.empty') }}
                         </div>
                     @endif
                 </div>
@@ -369,7 +371,7 @@
                 class="inlay-picker__panel"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Add a section"
+                aria-label="{{ __('inlay::admin.picker.label') }}"
                 x-transition:enter="inlay-picker__panel-enter"
                 x-transition:enter-start="inlay-picker__panel-enter-start"
                 x-transition:enter-end="inlay-picker__panel-enter-end"
@@ -382,21 +384,21 @@
                         type="text"
                         x-model="query"
                         x-init="$nextTick(() => $el.focus())"
-                        placeholder="Search sections…"
+                        placeholder="{{ __('inlay::admin.picker.search_placeholder') }}"
                         class="inlay-picker__search"
                         data-test="picker-search"
-                        aria-label="Search sections"
+                        aria-label="{{ __('inlay::admin.picker.search_label') }}"
                     >
                 </div>
                 <div class="inlay-picker__hint">
-                    <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate</span>
-                    <span><kbd>&crarr;</kbd> add</span>
-                    <span><kbd>Esc</kbd> close</span>
+                    <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> {{ __('inlay::admin.picker.hint_navigate') }}</span>
+                    <span><kbd>&crarr;</kbd> {{ __('inlay::admin.picker.hint_add') }}</span>
+                    <span><kbd>{{ __('inlay::admin.keys.esc') }}</kbd> {{ __('inlay::admin.picker.hint_close') }}</span>
                 </div>
                 <div class="inlay-picker__body">
                     <template x-if="recentSections().length > 0 && query === ''">
                         <div>
-                            <p class="inlay-eyebrow inlay-picker__recent-title">Recent</p>
+                            <p class="inlay-eyebrow inlay-picker__recent-title">{{ __('inlay::admin.picker.recent') }}</p>
                             <div class="inlay-picker__grid">
                                 <template x-for="section in recentSections()" :key="section.slug">
                                     <button
@@ -449,17 +451,17 @@
                     @empty
                         <p class="inlay-empty-state" style="padding: 24px 20px; text-align: center;" data-test="picker-empty-state">
                             @if ($pageDefinitionUnresolved)
-                                This page's type is no longer registered, so Inlay cannot tell which sections it allows. A developer needs to resolve this before sections can be added.
+                                {{ __('inlay::admin.picker.definition_unresolved') }}
                             @elseif ($sectionsExistButNoneAllowed)
-                                No more sections are available for this page type.
+                                {{ __('inlay::admin.picker.none_allowed') }}
                             @else
-                                No sections have been registered yet. Add one to <code>config('inlay.sections')</code> or via <code>Inlay::singleFileSection()</code>.
+                                {!! __('inlay::admin.picker.none_registered', ['config' => "<code>config('inlay.sections')</code>", 'method' => '<code>Inlay::singleFileSection()</code>']) !!}
                             @endif
                         </p>
                     @endforelse
 
                     @if ($availableSections->isNotEmpty())
-                        <p class="inlay-picker__no-results" x-show="!hasAnyMatches()">No sections match &ldquo;<span x-text="query"></span>&rdquo;.</p>
+                        <p class="inlay-picker__no-results" x-show="!hasAnyMatches()">{!! __('inlay::admin.picker.no_results', ['query' => '<span x-text="query"></span>']) !!}</p>
                     @endif
                 </div>
             </div>
@@ -475,42 +477,42 @@
             x-on:click="close()"
             role="dialog"
             aria-modal="true"
-            aria-label="Keyboard shortcuts"
+            aria-label="{{ __('inlay::admin.shortcuts.title') }}"
             data-test="shortcuts-overlay"
         >
             <div class="inlay-shortcuts__panel" x-on:click.stop>
-                <p class="inlay-shortcuts__title">Keyboard shortcuts</p>
+                <p class="inlay-shortcuts__title">{{ __('inlay::admin.shortcuts.title') }}</p>
                 <ul class="inlay-shortcuts__list">
                     <li class="inlay-shortcuts__row">
-                        <span>Move focus between sections</span>
+                        <span>{{ __('inlay::admin.shortcuts.focus_sections') }}</span>
                         <span class="inlay-shortcuts__keys"><kbd>&uarr;</kbd><kbd>&darr;</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Open the focused section's settings</span>
+                        <span>{{ __('inlay::admin.shortcuts.open_settings') }}</span>
                         <span class="inlay-shortcuts__keys"><kbd>&crarr;</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Reorder the focused section</span>
-                        <span class="inlay-shortcuts__keys"><kbd>Alt</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd></span>
+                        <span>{{ __('inlay::admin.shortcuts.reorder') }}</span>
+                        <span class="inlay-shortcuts__keys"><kbd>{{ __('inlay::admin.keys.alt') }}</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Delete the focused section</span>
-                        <span class="inlay-shortcuts__keys"><kbd>Delete</kbd></span>
+                        <span>{{ __('inlay::admin.shortcuts.delete') }}</span>
+                        <span class="inlay-shortcuts__keys"><kbd>{{ __('inlay::admin.keys.delete') }}</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Back to the section list</span>
-                        <span class="inlay-shortcuts__keys"><kbd>Esc</kbd></span>
+                        <span>{{ __('inlay::admin.shortcuts.back') }}</span>
+                        <span class="inlay-shortcuts__keys"><kbd>{{ __('inlay::admin.keys.esc') }}</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Resize the sections panel</span>
+                        <span>{{ __('inlay::admin.shortcuts.resize') }}</span>
                         <span class="inlay-shortcuts__keys"><kbd>&larr;</kbd><kbd>&rarr;</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>In the section picker: navigate / add</span>
+                        <span>{{ __('inlay::admin.shortcuts.picker') }}</span>
                         <span class="inlay-shortcuts__keys"><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&crarr;</kbd></span>
                     </li>
                     <li class="inlay-shortcuts__row">
-                        <span>Show this panel</span>
+                        <span>{{ __('inlay::admin.shortcuts.show_panel') }}</span>
                         <span class="inlay-shortcuts__keys"><kbd>?</kbd></span>
                     </li>
                 </ul>

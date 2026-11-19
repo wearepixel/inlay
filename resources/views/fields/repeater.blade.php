@@ -11,11 +11,11 @@
                     'modelPath' => "{$modelPath}.{$index}.{$subField->name}",
                 ])
             @endforeach
-            <button type="button" wire:click="removeRepeaterItem(@js($repeaterPath), @js($index))" class="inlay-button inlay-button--small inlay-button--danger">Remove</button>
+            <button type="button" wire:click="removeRepeaterItem(@js($repeaterPath), @js($index))" class="inlay-button inlay-button--small inlay-button--danger">{{ __('inlay::admin.common.remove') }}</button>
         </div>
     @endforeach
 
-    <button type="button" wire:click="addRepeaterItem(@js($repeaterPath))" class="inlay-button inlay-button--small">+ Add item</button>
+    <button type="button" wire:click="addRepeaterItem(@js($repeaterPath))" class="inlay-button inlay-button--small">{{ __('inlay::admin.fields.add_item') }}</button>
 
     @if ($field->help)
         <p class="inlay-field__help">{{ $field->help }}</p>

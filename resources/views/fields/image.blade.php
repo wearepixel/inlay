@@ -14,19 +14,19 @@
             >
             <input id="{{ $imageFieldId }}" type="file" wire:model="imageUploads.{{ $imagePath }}" accept="image/*" data-test="setting-{{ $field->name }}" class="inlay-sr-only inlay-image-field__input">
             <label for="{{ $imageFieldId }}" class="inlay-button inlay-button--small inlay-image-field__replace">
-                <span wire:loading.remove wire:target="imageUploads.{{ $imagePath }}">Replace image</span>
-                <span wire:loading wire:target="imageUploads.{{ $imagePath }}">Uploading...</span>
+                <span wire:loading.remove wire:target="imageUploads.{{ $imagePath }}">{{ __('inlay::admin.fields.replace_image') }}</span>
+                <span wire:loading wire:target="imageUploads.{{ $imagePath }}">{{ __('inlay::admin.fields.uploading') }}</span>
             </label>
             @unless ($field->required)
-                <button type="button" wire:click="clearField('{{ $imagePath }}')" class="inlay-button inlay-button--small inlay-button--ghost inlay-button--danger" data-test="remove-{{ $field->name }}">Remove</button>
+                <button type="button" wire:click="clearField('{{ $imagePath }}')" class="inlay-button inlay-button--small inlay-button--ghost inlay-button--danger" data-test="remove-{{ $field->name }}">{{ __('inlay::admin.common.remove') }}</button>
             @endunless
         </div>
     @else
         <input id="{{ $imageFieldId }}" type="file" wire:model="imageUploads.{{ $imagePath }}" accept="image/*" data-test="setting-{{ $field->name }}" class="inlay-sr-only inlay-image-field__input">
         <label for="{{ $imageFieldId }}" class="inlay-image-field__dropzone">
             <x-inlay::icon name="image" :size="20" />
-            <span wire:loading.remove wire:target="imageUploads.{{ $imagePath }}">Click to upload an image</span>
-            <span wire:loading wire:target="imageUploads.{{ $imagePath }}">Uploading...</span>
+            <span wire:loading.remove wire:target="imageUploads.{{ $imagePath }}">{{ __('inlay::admin.fields.upload_image') }}</span>
+            <span wire:loading wire:target="imageUploads.{{ $imagePath }}">{{ __('inlay::admin.fields.uploading') }}</span>
         </label>
     @endif
     @error('imageUploads.' . $imagePath)

@@ -3,9 +3,9 @@
         <ul class="inlay-pagination__list">
             <li>
                 @if ($paginator->onFirstPage())
-                    <span class="inlay-pagination__link inlay-pagination__link--disabled" aria-disabled="true" aria-label="{{ __('pagination.previous') }}">&laquo; Previous</span>
+                    <span class="inlay-pagination__link inlay-pagination__link--disabled" aria-disabled="true" aria-label="{{ __('pagination.previous') }}">&laquo; {{ __('inlay::admin.pagination.previous') }}</span>
                 @else
-                    <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="inlay-pagination__link" aria-label="{{ __('pagination.previous') }}">&laquo; Previous</a>
+                    <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="inlay-pagination__link" aria-label="{{ __('pagination.previous') }}">&laquo; {{ __('inlay::admin.pagination.previous') }}</a>
                 @endif
             </li>
 
@@ -29,9 +29,9 @@
 
             <li>
                 @if ($paginator->hasMorePages())
-                    <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="inlay-pagination__link" aria-label="{{ __('pagination.next') }}">Next &raquo;</a>
+                    <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="inlay-pagination__link" aria-label="{{ __('pagination.next') }}">{{ __('inlay::admin.pagination.next') }} &raquo;</a>
                 @else
-                    <span class="inlay-pagination__link inlay-pagination__link--disabled" aria-disabled="true" aria-label="{{ __('pagination.next') }}">Next &raquo;</span>
+                    <span class="inlay-pagination__link inlay-pagination__link--disabled" aria-disabled="true" aria-label="{{ __('pagination.next') }}">{{ __('inlay::admin.pagination.next') }} &raquo;</span>
                 @endif
             </li>
         </ul>

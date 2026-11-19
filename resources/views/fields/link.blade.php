@@ -1,15 +1,15 @@
 @include('inlay::fields.partials.label', ['field' => $field])
 <div class="inlay-field">
-    <input type="text" placeholder="Label" wire:model.live.debounce.400ms="{{ $modelPath }}.label" class="inlay-input" style="margin-bottom: 6px;" data-test="setting-{{ $field->name }}-label">
-    <input type="url" placeholder="URL" wire:model.live.debounce.400ms="{{ $modelPath }}.url" class="inlay-input" style="margin-bottom: 6px;" data-test="setting-{{ $field->name }}-url">
+    <input type="text" placeholder="{{ __('inlay::admin.fields.link_label_placeholder') }}" wire:model.live.debounce.400ms="{{ $modelPath }}.label" class="inlay-input" style="margin-bottom: 6px;" data-test="setting-{{ $field->name }}-label">
+    <input type="url" placeholder="{{ __('inlay::admin.fields.link_url_placeholder') }}" wire:model.live.debounce.400ms="{{ $modelPath }}.url" class="inlay-input" style="margin-bottom: 6px;" data-test="setting-{{ $field->name }}-url">
     <label class="inlay-checkbox-row">
         <input type="checkbox" wire:model.live="{{ $modelPath }}.openInNewTab">
-        Open in new tab
+        {{ __('inlay::admin.fields.open_in_new_tab') }}
     </label>
     @unless ($field->required)
         @php $linkValue = data_get(['editingProps' => $editingProps], $modelPath); @endphp
         @if (filled($linkValue['url'] ?? null) || filled($linkValue['label'] ?? null))
-            <button type="button" wire:click="clearField('{{ \Illuminate\Support\Str::after($modelPath, 'editingProps.') }}')" class="inlay-button inlay-button--small inlay-button--ghost inlay-button--danger" data-test="remove-{{ $field->name }}">Remove link</button>
+            <button type="button" wire:click="clearField('{{ \Illuminate\Support\Str::after($modelPath, 'editingProps.') }}')" class="inlay-button inlay-button--small inlay-button--ghost inlay-button--danger" data-test="remove-{{ $field->name }}">{{ __('inlay::admin.fields.remove_link') }}</button>
         @endif
     @endunless
     @if ($field->help)

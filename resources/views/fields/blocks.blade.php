@@ -22,26 +22,26 @@
                     wire:click="selectBlock({{ $selectedSectionId }}, @js($blockId))"
                     data-test="select-block-{{ $blockId }}"
                 >
-                    <span class="inlay-tree__label-name">{{ $definition?->name ?? $item['type'] ?? 'Unknown block' }}</span>
+                    <span class="inlay-tree__label-name">{{ $definition?->name ?? $item['type'] ?? __('inlay::admin.blocks.unknown') }}</span>
                     @if ($detail)
                         <span class="inlay-tree__label-detail">- &ldquo;{{ $detail }}&rdquo;</span>
                     @endif
                 </button>
                 <span class="inlay-blocks__actions">
-                    <button type="button" class="inlay-tree__icon-button" wire:click="moveBlock(@js($blocksPath), @js($blockId), -1)" @disabled($index === 0) aria-label="Move {{ $definition?->name }} up" data-test="move-block-up-{{ $blockId }}"><x-inlay::icon name="chevron-down" :size="12" class="inlay-icon--flip" /></button>
-                    <button type="button" class="inlay-tree__icon-button" wire:click="moveBlock(@js($blocksPath), @js($blockId), 1)" @disabled($index === count($items) - 1) aria-label="Move {{ $definition?->name }} down" data-test="move-block-down-{{ $blockId }}"><x-inlay::icon name="chevron-down" :size="12" /></button>
-                    <button type="button" class="inlay-tree__icon-button" wire:click="duplicateBlock(@js($blocksPath), @js($blockId))" @disabled($atLimit) aria-label="Duplicate {{ $definition?->name }}"><x-inlay::icon name="duplicate" :size="13" /></button>
-                    <button type="button" class="inlay-tree__icon-button inlay-tree__icon-button--danger" wire:click="removeBlock(@js($blocksPath), @js($blockId))" wire:confirm="Remove this block?" aria-label="Remove {{ $definition?->name }}" data-test="remove-block-{{ $blockId }}"><x-inlay::icon name="trash" :size="13" /></button>
+                    <button type="button" class="inlay-tree__icon-button" wire:click="moveBlock(@js($blocksPath), @js($blockId), -1)" @disabled($index === 0) aria-label="{{ __('inlay::admin.blocks.move_up', ['block' => $definition?->name]) }}" data-test="move-block-up-{{ $blockId }}"><x-inlay::icon name="chevron-down" :size="12" class="inlay-icon--flip" /></button>
+                    <button type="button" class="inlay-tree__icon-button" wire:click="moveBlock(@js($blocksPath), @js($blockId), 1)" @disabled($index === count($items) - 1) aria-label="{{ __('inlay::admin.blocks.move_down', ['block' => $definition?->name]) }}" data-test="move-block-down-{{ $blockId }}"><x-inlay::icon name="chevron-down" :size="12" /></button>
+                    <button type="button" class="inlay-tree__icon-button" wire:click="duplicateBlock(@js($blocksPath), @js($blockId))" @disabled($atLimit) aria-label="{{ __('inlay::admin.blocks.duplicate', ['block' => $definition?->name]) }}"><x-inlay::icon name="duplicate" :size="13" /></button>
+                    <button type="button" class="inlay-tree__icon-button inlay-tree__icon-button--danger" wire:click="removeBlock(@js($blocksPath), @js($blockId))" wire:confirm="{{ __('inlay::admin.blocks.remove_confirm') }}" aria-label="{{ __('inlay::admin.blocks.remove', ['block' => $definition?->name]) }}" data-test="remove-block-{{ $blockId }}"><x-inlay::icon name="trash" :size="13" /></button>
                 </span>
             </li>
         @endforeach
     </ul>
 
     @if ($available === [])
-        <p class="inlay-field__help">No blocks are registered for this area.</p>
+        <p class="inlay-field__help">{{ __('inlay::admin.blocks.none_registered') }}</p>
     @elseif (! $atLimit)
         <details class="inlay-blocks__add">
-            <summary class="inlay-button inlay-button--small" data-test="add-block-{{ $field->name }}">+ Add block</summary>
+            <summary class="inlay-button inlay-button--small" data-test="add-block-{{ $field->name }}">{{ __('inlay::admin.blocks.add') }}</summary>
             <div class="inlay-blocks__menu">
                 @foreach ($available as $blockType)
                     <button type="button" wire:click="addBlock(@js($blocksPath), @js($blockType->handle))" x-on:click="$el.closest('details').open = false" data-test="add-block-type-{{ $blockType->handle }}">

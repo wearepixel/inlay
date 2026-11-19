@@ -101,7 +101,7 @@ final class SiteSettingsEditor extends Component
         $registry = app(SiteSettingsRegistry::class);
         $current = $this->group !== null ? $registry->group($this->group) : null;
 
-        return $this->adminView('inlay::livewire.site-settings', 'Settings · Inlay', [
+        return $this->adminView('inlay::livewire.site-settings', __('inlay::admin.titles.settings'), [
             'groups' => $registry->all(),
             'current' => $current,
             'fields' => $current?->schema->fields() ?? [],

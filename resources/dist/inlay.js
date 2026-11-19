@@ -24,8 +24,9 @@ document.addEventListener("alpine:init", () => {
    */
   Alpine.data(
     "inlayEditorSidebar",
-    (initialView = "tree", initialSelectedId = null) => ({
+    (initialView = "tree", initialSelectedId = null, announcements = {}) => ({
       view: initialView,
+      announcements,
       mobilePanel: "edit",
       lastSelectedId: initialSelectedId,
       dragging: null,
@@ -287,18 +288,18 @@ document.addEventListener("alpine:init", () => {
 
       announcement() {
         if (this.view === "settings") {
-          return "Editing section settings";
+          return this.announcements.settings;
         }
 
         if (this.view === "page-settings") {
-          return "Editing page settings";
+          return this.announcements.page_settings;
         }
 
         if (this.view === "history") {
-          return "Showing version history";
+          return this.announcements.history;
         }
 
-        return "Showing sections";
+        return this.announcements.tree;
       },
 
       /*

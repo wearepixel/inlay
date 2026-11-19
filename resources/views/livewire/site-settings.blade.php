@@ -1,21 +1,21 @@
 <div
     x-data="{ message: '', timer: null }"
-    x-on:setting-saved.window="message = 'Saved'; clearTimeout(timer); timer = setTimeout(() => message = '', 1200)"
+    x-on:setting-saved.window="message = @js(__('inlay::admin.common.saved')); clearTimeout(timer); timer = setTimeout(() => message = '', 1200)"
 >
     <div class="inlay-topbar">
         <div>
-            <span class="inlay-eyebrow">Site</span>
-            <h1>Settings</h1>
+            <span class="inlay-eyebrow">{{ __('inlay::admin.settings.eyebrow') }}</span>
+            <h1>{{ __('inlay::admin.settings.heading') }}</h1>
         </div>
         <div class="inlay-topbar__actions">
-            <span wire:loading.delay wire:target="editingProps, imageUploads" class="inlay-status inlay-status--saving">Saving&hellip;</span>
+            <span wire:loading.delay wire:target="editingProps, imageUploads" class="inlay-status inlay-status--saving">{{ __('inlay::admin.common.saving') }}</span>
             <span x-show="message" x-cloak x-text="message" x-transition.opacity class="inlay-status inlay-status--success" role="status" aria-live="polite"></span>
         </div>
     </div>
 
     <div class="inlay-page inlay-site-settings">
         @if ($current === null)
-            <p class="inlay-inspector__empty">No site settings are registered.</p>
+            <p class="inlay-inspector__empty">{{ __('inlay::admin.settings.empty') }}</p>
         @else
             @if (count($groups) > 1)
                 <div class="inlay-tabs" role="tablist">
