@@ -3,7 +3,7 @@
 
     @foreach ($field->itemSchema->fields() as $subField)
         @continue(! $subField->isVisible(data_get($editingProps, \Illuminate\Support\Str::after($modelPath, 'editingProps.')) ?? []))
-        @include('inlay::fields.' . $subField->type->value, [
+        @include(\WeArePixel\Inlay\Facades\Inlay::fieldView($subField->type), [
             'field' => $subField,
             'modelPath' => "{$modelPath}.{$subField->name}",
         ])

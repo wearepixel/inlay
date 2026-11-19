@@ -14,6 +14,7 @@ use RuntimeException;
 use WeArePixel\Inlay\Models\Page;
 use WeArePixel\Inlay\Pages\PageDefinition;
 use WeArePixel\Inlay\Pages\PageDefinitionRegistry;
+use WeArePixel\Inlay\Schema\FieldType;
 use WeArePixel\Inlay\Schema\Settings;
 use WeArePixel\Inlay\SingleFile\Block;
 use WeArePixel\Inlay\SingleFile\SingleFileLoader;
@@ -408,6 +409,21 @@ final class InlayManager
         $routeParameters = array_values(array_filter($parameters, fn (mixed $parameter) => $parameter !== null));
 
         return route("inlay.admin.{$screen}", $routeParameters);
+    }
+
+    /**
+     * The view that edits a field of this type: the host's own from
+     * config('inlay.admin.fields'), or Inlay's.
+     */
+    public function fieldView(FieldType $type): string
+    {
+        $override = config("inlay.admin.fields.{$type->value}");
+
+        if (is_string($override) && $override !== '') {
+            return $override;
+        }
+
+        return "inlay::fields.{$type->value}";
     }
 
     /**

@@ -32,7 +32,7 @@
                         <div class="inlay-group-section__body" x-show="!collapsed" x-transition>
                             @foreach ($group['fields'] as $field)
                                 <div wire:key="field-{{ $inspectorKey }}-{{ $field->name }}" @if ($field->visibilityExpression($visibilityScope)) x-data x-show="{{ $field->visibilityExpression($visibilityScope) }}" x-cloak x-transition @endif>
-                                    @include('inlay::fields.' . $field->type->value, [
+                                    @include(\WeArePixel\Inlay\Facades\Inlay::fieldView($field->type), [
                                         'field' => $field,
                                         'modelPath' => "{$pathPrefix}{$field->name}",
                                     ])
@@ -43,7 +43,7 @@
                 @else
                     @foreach ($group['fields'] as $field)
                         <div wire:key="field-{{ $inspectorKey }}-{{ $field->name }}" @if ($field->visibilityExpression($visibilityScope)) x-data x-show="{{ $field->visibilityExpression($visibilityScope) }}" x-cloak x-transition @endif>
-                            @include('inlay::fields.' . $field->type->value, [
+                            @include(\WeArePixel\Inlay\Facades\Inlay::fieldView($field->type), [
                                 'field' => $field,
                                 'modelPath' => "{$pathPrefix}{$field->name}",
                             ])

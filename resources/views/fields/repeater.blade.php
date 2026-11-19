@@ -6,7 +6,7 @@
         <div class="inlay-repeater__item" wire:key="repeater-{{ $repeaterPath }}-{{ $index }}">
             @foreach ($field->itemSchema->fields() as $subField)
                 @continue(! $subField->isVisible($item))
-                @include('inlay::fields.' . $subField->type->value, [
+                @include(\WeArePixel\Inlay\Facades\Inlay::fieldView($subField->type), [
                     'field' => $subField,
                     'modelPath' => "{$modelPath}.{$index}.{$subField->name}",
                 ])

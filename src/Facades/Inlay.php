@@ -28,6 +28,7 @@ use WeArePixel\Inlay\Pages\PageDefinition;
  * @method static void authorizeAdmin(?Page $page = null)
  * @method static void adminUrlsUsing(?\Closure $resolver)
  * @method static string adminUrl(string $screen, mixed ...$parameters)
+ * @method static string fieldView(\WeArePixel\Inlay\Schema\FieldType $type)
  * @method static void siteSettings(string $handle, \WeArePixel\Inlay\Schema\Settings $schema, ?string $label = null)
  * @method static mixed setting(string $key, mixed $default = null)
  * @method static array<string, mixed> settings(string $handle)

@@ -51,6 +51,10 @@ final class InlayServiceProvider extends ServiceProvider
             __DIR__.'/../config/inlay.php' => config_path('inlay.php'),
         ], 'inlay-config');
 
+        $this->publishes([
+            __DIR__.'/../resources/views' => resource_path('views/vendor/inlay'),
+        ], 'inlay-views');
+
         Blade::component('inlay::render', RenderPage::class);
 
         // Livewire is optional - only the admin needs it, and adminRoutes()

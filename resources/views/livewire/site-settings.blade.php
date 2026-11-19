@@ -35,7 +35,7 @@
             <div class="inlay-site-settings__fields" wire:key="settings-{{ $current->handle }}">
                 @foreach ($fields as $field)
                     <div wire:key="field-{{ $current->handle }}-{{ $field->name }}" @if ($field->visibilityExpression()) x-data x-show="{{ $field->visibilityExpression() }}" x-cloak x-transition @endif>
-                        @include('inlay::fields.' . $field->type->value, [
+                        @include(\WeArePixel\Inlay\Facades\Inlay::fieldView($field->type), [
                             'field' => $field,
                             'modelPath' => "editingProps.{$field->name}",
                         ])

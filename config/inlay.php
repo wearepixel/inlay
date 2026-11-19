@@ -38,9 +38,22 @@ return [
         | 'layout' - a Blade component name (e.g. 'layouts.admin') to render
         | the admin inside instead of Inlay's own shell. It receives $slot and
         | $title. null uses Inlay's own layout.
+        |
+        | 'fields' - Blade views that replace the editor's UI for a field type,
+        | keyed by type (text, textarea, richtext, number, toggle, select,
+        | image, link, repeater, group, blocks), e.g.
+        | ['image' => 'admin.fields.media-picker']. Each view receives $field,
+        | $modelPath and $editingProps, like Inlay's own in
+        | resources/views/fields.
+        |
+        | 'editor_actions' - a Blade view rendered in the page editor's
+        | header, before Page Settings, given $page. For buttons or links of
+        | your own, such as "View live page".
         */
         'ability' => null,
         'layout' => null,
+        'fields' => [],
+        'editor_actions' => null,
     ],
 
     /*
