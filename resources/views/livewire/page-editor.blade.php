@@ -1,6 +1,11 @@
 <div
     class="inlay-editor-page"
-    x-data="inlayEditorSidebar(@js($showingHistory ? 'history' : ($selectedSchema ? 'settings' : 'tree')), @js($selectedSectionId), @js(__('inlay::admin.editor.sidebar_announcements')))"
+    x-data="inlayEditorSidebar(@js($showingHistory ? 'history' : ($selectedSchema ? 'settings' : 'tree')), @js($selectedSectionId), @js([
+        'settings' => __('inlay::admin.editor.announce_section_settings'),
+        'page_settings' => __('inlay::admin.editor.announce_page_settings'),
+        'history' => __('inlay::admin.editor.announce_history'),
+        'tree' => __('inlay::admin.editor.announce_sections'),
+    ]))"
     x-on:section-selected.window="showNewSection($event.detail.id)"
     x-on:selection-cleared.window="toTree()"
     x-on:history-toggled.window="onHistoryToggled($event.detail.showing)"

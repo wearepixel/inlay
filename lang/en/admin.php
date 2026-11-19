@@ -98,12 +98,10 @@ return [
         'resize_panel' => 'Resize the sections panel',
         'expand_panel' => 'Expand panel',
         'collapse_panel' => 'Collapse panel',
-        'sidebar_announcements' => [
-            'settings' => 'Editing section settings',
-            'page_settings' => 'Editing page settings',
-            'history' => 'Showing version history',
-            'tree' => 'Showing sections',
-        ],
+        'announce_section_settings' => 'Editing section settings',
+        'announce_page_settings' => 'Editing page settings',
+        'announce_history' => 'Showing version history',
+        'announce_sections' => 'Showing sections',
     ],
 
     'sections' => [
