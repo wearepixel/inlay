@@ -9,6 +9,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | User key type
+    |--------------------------------------------------------------------------
+    |
+    | The type of your users' primary key: 'int', 'uuid', 'ulid' or 'string'.
+    | Inlay records who published a revision or authored an agent section in
+    | created_by and updated_by columns, and a migration changes those
+    | columns to this type. Set it before you run php artisan migrate. If
+    | that migration has already run, changing this value needs a migration
+    | of your own to alter the columns.
+    |
+    */
+    'user_key_type' => env('INLAY_USER_KEY_TYPE', 'int'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Admin routes
     |--------------------------------------------------------------------------
     |
