@@ -67,7 +67,7 @@ final class DeclarativeSections
      *
      * @throws InvalidCompositionException
      */
-    public function save(array $definition, ?int $userId): Definition
+    public function save(array $definition, int|string|null $userId): Definition
     {
         $compiled = $this->compiler->compile($definition);
 

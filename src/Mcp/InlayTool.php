@@ -67,6 +67,17 @@ abstract class InlayTool extends Tool
         return Gate::forUser($user)->allows($ability, $page === null ? [] : [$page]);
     }
 
+    /**
+     * The MCP user's id, recorded as created_by / updated_by: an int, or a
+     * string for UUID and ULID users.
+     */
+    protected function userId(Request $request): int|string|null
+    {
+        $id = $request->user()?->getAuthIdentifier();
+
+        return is_int($id) || is_string($id) ? $id : null;
+    }
+
     protected function throttle(Request $request): ?Response
     {
         $key = 'inlay-mcp-writes:'.$request->user()?->getAuthIdentifier();
