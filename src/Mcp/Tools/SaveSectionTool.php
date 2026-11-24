@@ -137,11 +137,4 @@ final class SaveSectionTool extends InlayTool
         return (bool) config('inlay.mcp.allow_publish', false)
             && $this->allows($request, (string) config('inlay.mcp.abilities.publish', 'inlay.publish-pages'));
     }
-
-    private function userId(Request $request): ?int
-    {
-        $id = $request->user()?->getAuthIdentifier();
-
-        return is_numeric($id) ? (int) $id : null;
-    }
 }

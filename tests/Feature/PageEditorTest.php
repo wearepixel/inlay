@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\GenericUser;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
+use WeArePixel\Inlay\Actions\PublishPage;
 use WeArePixel\Inlay\Enums\PageStatus;
 use WeArePixel\Inlay\Livewire\PageEditor;
 use WeArePixel\Inlay\Models\Page;
@@ -73,6 +77,24 @@ it('publishes the page', function () {
 
     expect($page->fresh()->status)->toBe(PageStatus::Published)
         ->and($page->revisions()->count())->toBe(1);
+});
+
+it('records a UUID user as the publisher once an existing install switches user_key_type to uuid', function () {
+    $page = Page::create(['title' => 'Home', 'path' => 'home']);
+    app(PublishPage::class)->execute($page);
+
+    config(['inlay.user_key_type' => 'uuid']);
+    (require __DIR__.'/../../database/migrations/2026_11_24_000001_change_user_columns_to_configured_key_type.php')->up();
+
+    $userId = (string) Str::uuid();
+
+    Livewire::actingAs(new GenericUser(['id' => $userId]))
+        ->test(PageEditor::class, ['page' => $page])
+        ->call('publish')
+        ->assertDispatched('page-published');
+
+    expect(Schema::getColumnType('page_revisions', 'created_by'))->toBe('varchar')
+        ->and($page->revisions()->orderBy('id')->pluck('created_by')->all())->toBe([null, $userId]);
 });
 
 it('duplicates a section, copying its stored settings and selecting the copy', function () {

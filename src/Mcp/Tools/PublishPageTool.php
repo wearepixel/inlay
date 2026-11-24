@@ -73,11 +73,4 @@ final class PublishPageTool extends InlayTool
             'page_id' => $schema->integer()->required(),
         ];
     }
-
-    private function userId(Request $request): ?int
-    {
-        $id = $request->user()?->getAuthIdentifier();
-
-        return is_numeric($id) ? (int) $id : null;
-    }
 }

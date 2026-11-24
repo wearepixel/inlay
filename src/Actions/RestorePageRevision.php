@@ -38,7 +38,7 @@ final class RestorePageRevision
      * whatever the revision recorded - a restore brings back content, not
      * the rules that applied to it at the time.
      */
-    public function execute(PageRevision $revision, ?int $createdBy = null): ?PageRevision
+    public function execute(PageRevision $revision, int|string|null $createdBy = null): ?PageRevision
     {
         return DB::transaction(function () use ($revision, $createdBy) {
             $page = $revision->page;

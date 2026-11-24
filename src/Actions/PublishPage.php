@@ -33,7 +33,7 @@ final class PublishPage
      *
      * @throws PageDefinitionViolationException
      */
-    public function execute(Page $page, ?int $createdBy = null, ?string $label = null): PageRevision
+    public function execute(Page $page, int|string|null $createdBy = null, ?string $label = null): PageRevision
     {
         $violations = $this->validator->validate($page);
 

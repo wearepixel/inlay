@@ -11,8 +11,8 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $handle
  * @property array<string, mixed> $definition
- * @property int|null $created_by
- * @property int|null $updated_by
+ * @property int|string|null $created_by
+ * @property int|string|null $updated_by
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
